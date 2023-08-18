@@ -40,7 +40,7 @@ impl Board {
     }
 
     fn get_by_src(&self, src: &Path) -> &Data {
-        let (_, d) = self.data.iter().filter(|r| &r.0 == src).next().unwrap();
+        let (_, d) = self.data.iter().find(|r| &r.0 == src).unwrap();
         d
     }
 }
@@ -175,10 +175,8 @@ impl Orchestrator {
                     .collect();
 
                 if let Ok(data) = node.process(&params) {
-                    self.board.merge(
-                        data.into_iter()
-                            .map(|r| (Path::new(node.name.clone(), r.0), r.1)),
-                    );
+                    self.board
+                        .merge(data.into_iter().map(|r| (Path::new(node.name, r.0), r.1)));
                 }
                 self.nodes.push(node);
             } else {

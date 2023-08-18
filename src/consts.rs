@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub const OUTPUT: u64 = 0;
 pub const INPUT: u64 = 1;
 pub const SOURCE: u64 = 2;
