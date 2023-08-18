@@ -37,6 +37,10 @@ impl Board {
     fn merge(&mut self, data: impl IntoIterator<Item = (Path, Data)>) {
         self.0.extend(data)
     }
+
+    fn clear(&mut self) {
+        self.0.clear()
+    }
 }
 
 struct Processor {
@@ -107,6 +111,7 @@ impl Links {
 struct Orchestrator {
     nodes: Vec<Processor>,
     links: Links,
+    board: Board,
 }
 
 impl Orchestrator {
@@ -114,6 +119,7 @@ impl Orchestrator {
         Self {
             nodes: Vec::new(),
             links: Links::new(),
+            board: Board::new(),
         }
     }
 
@@ -155,25 +161,25 @@ impl Orchestrator {
         Ok(self)
     }
 
-    fn step(&mut self) -> Result<Board, ()> {
+    fn step(&mut self) -> Result<(), ()> {
         let mut nodes = mem::take(&mut self.nodes);
         self.nodes.reserve(nodes.len());
 
-        let mut board = Board::new();
+        self.board.clear();
 
         while !nodes.is_empty() {
             if let Some(node) = self
-                .index_first_ready_node(&nodes, &board)
+                .index_first_ready_node(&nodes, &self.board)
                 .map(|index| nodes.remove(index))
             {
                 let params: HashMap<_, _> = self
                     .links
                     .iter_by_dst(&node.name)
-                    .map(|r| (&r.dst.field[..], &board.0[&r.src]))
+                    .map(|r| (&r.dst.field[..], &self.board.0[&r.src]))
                     .collect();
 
                 if let Ok(data) = node.process(&params) {
-                    board.merge(
+                    self.board.merge(
                         data.into_iter()
                             .map(|r| (Path::new(node.name.clone(), r.0), r.1)),
                     );
@@ -184,7 +190,7 @@ impl Orchestrator {
             }
         }
 
-        Ok(board)
+        Ok(())
     }
 
     fn index_first_ready_node(&self, nodes: &[Processor], board: &Board) -> Option<usize> {
@@ -307,17 +313,32 @@ impl Transformer for AddOne {
 }
 
 fn main() -> Result<(), ()> {
-    let zero = ZerosGenerator::new();
-    let add_one = AddOne::new();
-
     let mut orchestrator = Orchestrator::new()
-        .add("source", zero)?
-        .add("doubler", add_one)?
-        .connect(Path::new("source", "output"), Path::new("doubler", "input"))?;
+        .add("source", ZerosGenerator::new())?
+        .add("doubler0", AddOne::new())?
+        .connect(
+            Path::new("source", "output"),
+            Path::new("doubler0", "input"),
+        )?
+        .add("doubler1", AddOne::new())?
+        .connect(
+            Path::new("doubler0", "output"),
+            Path::new("doubler1", "input"),
+        )?
+        .add("doubler2", AddOne::new())?
+        .connect(
+            Path::new("doubler1", "output"),
+            Path::new("doubler2", "input"),
+        )?
+        .add("doubler3", AddOne::new())?
+        .connect(
+            Path::new("doubler2", "output"),
+            Path::new("doubler3", "input"),
+        )?;
 
-    let result: Vec<_> = (0..10)
+    let result = (0..1000000)
         .map(|_| orchestrator.step().expect("step"))
-        .collect();
+        .count();
 
     println!("{:?}", result);
     Ok(())
