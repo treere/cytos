@@ -7,16 +7,13 @@ pub enum Data {
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Path {
-    node: String,
-    field: String,
+    node: u64,
+    field: u64,
 }
 
 impl Path {
-    pub fn new(node: impl ToString, field: impl ToString) -> Self {
-        Path {
-            node: node.to_string(),
-            field: field.to_string(),
-        }
+    pub fn new(node: u64, field: u64) -> Self {
+        Path { node, field }
     }
 }
 
@@ -49,14 +46,14 @@ impl Board {
 }
 
 struct Processor {
-    name: String,
+    name: u64,
     fun: Box<dyn Transformer>,
 }
 
 impl Processor {
-    fn new(name: impl ToString, fun: impl Transformer + 'static) -> Self {
+    fn new(name: u64, fun: impl Transformer + 'static) -> Self {
         Self {
-            name: name.to_string(),
+            name,
             fun: Box::new(fun),
         }
     }
@@ -65,7 +62,7 @@ impl Processor {
         self.fun
             .inputs()
             .iter()
-            .map(|x| Path::new(self.name.clone(), x))
+            .map(|x| Path::new(self.name, *x))
             .collect()
     }
 
@@ -73,11 +70,11 @@ impl Processor {
         self.fun
             .outputs()
             .iter()
-            .map(|x| Path::new(self.name.clone(), x))
+            .map(|x| Path::new(self.name, *x))
             .collect()
     }
 
-    fn process(&self, val: &HashMap<&str, &Data>) -> Result<HashMap<&str, Data>, ()> {
+    fn process(&self, val: &HashMap<u64, &Data>) -> Result<HashMap<u64, Data>, ()> {
         self.fun.process(val)
     }
 }
@@ -107,8 +104,7 @@ impl Links {
         self.links.push(link)
     }
 
-    fn iter_by_dst(&self, name: &str) -> impl Iterator<Item = &Link> {
-        let name = name.to_owned();
+    fn iter_by_dst(&self, name: u64) -> impl Iterator<Item = &Link> {
         self.links.iter().filter(move |r| r.dst.node == name)
     }
 }
@@ -128,12 +124,7 @@ impl Orchestrator {
         }
     }
 
-    pub fn add(
-        mut self,
-        name: impl ToString,
-        processor: impl Transformer + 'static,
-    ) -> Result<Self, ()> {
-        let name = name.to_string();
+    pub fn add(mut self, name: u64, processor: impl Transformer + 'static) -> Result<Self, ()> {
         if !self.nodes.iter().any(|n| n.name == name) {
             self.nodes.push(Processor::new(name, processor));
             Ok(self)
@@ -179,8 +170,8 @@ impl Orchestrator {
             {
                 let params: HashMap<_, _> = self
                     .links
-                    .iter_by_dst(&node.name)
-                    .map(|r| (&r.dst.field[..], self.board.get_by_src(&r.src)))
+                    .iter_by_dst(node.name)
+                    .map(|r| (r.dst.field, self.board.get_by_src(&r.src)))
                     .collect();
 
                 if let Ok(data) = node.process(&params) {
@@ -204,7 +195,7 @@ impl Orchestrator {
             .enumerate()
             .filter(|(index, node)| {
                 self.links
-                    .iter_by_dst(&node.name)
+                    .iter_by_dst(node.name)
                     .all(|r| board.contains(&r.src))
             })
             .map(|(index, _)| index)
@@ -213,8 +204,8 @@ impl Orchestrator {
 }
 
 pub trait Transformer {
-    fn inputs(&self) -> &[&str];
-    fn outputs(&self) -> &[&str];
+    fn inputs(&self) -> &[u64];
+    fn outputs(&self) -> &[u64];
 
-    fn process(&self, val: &HashMap<&str, &Data>) -> Result<HashMap<&str, Data>, ()>;
+    fn process(&self, val: &HashMap<u64, &Data>) -> Result<HashMap<u64, Data>, ()>;
 }
