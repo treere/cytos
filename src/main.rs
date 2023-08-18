@@ -155,8 +155,9 @@ impl Orchestrator {
         Ok(self)
     }
 
-    fn step(mut self) -> Result<Board, ()> {
+    fn step(&mut self) -> Result<Board, ()> {
         let mut nodes = mem::take(&mut self.nodes);
+        self.nodes.reserve(nodes.len());
 
         let mut board = Board::new();
 
@@ -177,6 +178,7 @@ impl Orchestrator {
                             .map(|r| (Path::new(node.name.clone(), r.0), r.1)),
                     );
                 }
+                self.nodes.push(node);
             } else {
                 return Err(());
             }
@@ -308,11 +310,14 @@ fn main() -> Result<(), ()> {
     let zero = ZerosGenerator::new();
     let add_one = AddOne::new();
 
-    let result = Orchestrator::new()
+    let mut orchestrator = Orchestrator::new()
         .add("source", zero)?
         .add("doubler", add_one)?
-        .connect(Path::new("source", "output"), Path::new("doubler", "input"))?
-        .step();
+        .connect(Path::new("source", "output"), Path::new("doubler", "input"))?;
+
+    let result: Vec<_> = (0..10)
+        .map(|_| orchestrator.step().expect("step"))
+        .collect();
 
     println!("{:?}", result);
     Ok(())
