@@ -2,6 +2,11 @@
 
 use std::{collections::HashMap, mem};
 
+#[derive(Debug)]
+enum Data {
+    U8(u8),
+}
+
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 struct Path {
     node: String,
@@ -18,7 +23,7 @@ impl Path {
 }
 
 #[derive(Debug)]
-struct Board(HashMap<Path, u8>);
+struct Board(HashMap<Path, Data>);
 
 impl Board {
     fn new() -> Self {
@@ -29,8 +34,8 @@ impl Board {
         self.0.contains_key(path)
     }
 
-    fn merge(&mut self, board: Board) {
-        self.0.extend(board.0)
+    fn merge(&mut self, data: impl IntoIterator<Item = (Path, Data)>) {
+        self.0.extend(data)
     }
 }
 
@@ -63,8 +68,8 @@ impl Processor {
             .collect()
     }
 
-    fn process(&self, val: &HashMap<&str, u8>) -> Result<HashMap<String, u8>, ()> {
-        self.fun.process(&val)
+    fn process(&self, val: &HashMap<&str, &Data>) -> Result<HashMap<&str, Data>, ()> {
+        self.fun.process(val)
     }
 }
 
@@ -118,7 +123,7 @@ impl Orchestrator {
         processor: impl Transformer + 'static,
     ) -> Result<Self, ()> {
         let name = name.to_string();
-        if self.nodes.iter().find(|n| n.name == name).is_none() {
+        if !self.nodes.iter().any(|n| n.name == name) {
             self.nodes.push(Processor::new(name, processor));
             Ok(self)
         } else {
@@ -151,7 +156,7 @@ impl Orchestrator {
     }
 
     fn step(mut self) -> Result<Board, ()> {
-        let mut nodes = mem::replace(&mut self.nodes, Vec::new());
+        let mut nodes = mem::take(&mut self.nodes);
 
         let mut board = Board::new();
 
@@ -163,15 +168,14 @@ impl Orchestrator {
                 let params: HashMap<_, _> = self
                     .links
                     .iter_by_dst(&node.name)
-                    .map(|r| (&r.dst.field[..], board.0[&r.src]))
+                    .map(|r| (&r.dst.field[..], &board.0[&r.src]))
                     .collect();
 
                 if let Ok(data) = node.process(&params) {
-                    board.merge(Board(
-                        data.iter()
-                            .map(|r| (Path::new(node.name.clone(), r.0), *r.1))
-                            .collect(),
-                    ));
+                    board.merge(
+                        data.into_iter()
+                            .map(|r| (Path::new(node.name.clone(), r.0), r.1)),
+                    );
                 }
             } else {
                 return Err(());
@@ -181,7 +185,7 @@ impl Orchestrator {
         Ok(board)
     }
 
-    fn index_first_ready_node(&self, nodes: &Vec<Processor>, board: &Board) -> Option<usize> {
+    fn index_first_ready_node(&self, nodes: &[Processor], board: &Board) -> Option<usize> {
         nodes
             .iter()
             .enumerate()
@@ -196,10 +200,10 @@ impl Orchestrator {
 }
 
 trait Transformer {
-    fn inputs(&self) -> Vec<&'static str>;
-    fn outputs(&self) -> Vec<&'static str>;
+    fn inputs(&self) -> &[&str];
+    fn outputs(&self) -> &[&str];
 
-    fn process(&self, val: &HashMap<&str, u8>) -> Result<HashMap<String, u8>, ()>;
+    fn process(&self, val: &HashMap<&str, &Data>) -> Result<HashMap<&str, Data>, ()>;
 }
 
 struct ZerosGenerator;
@@ -212,17 +216,21 @@ impl ZerosGenerator {
 
 struct ZerosGeneratorProps;
 
-impl From<&HashMap<&str, u8>> for ZerosGeneratorProps {
-    fn from(_value: &HashMap<&str, u8>) -> Self {
-        ZerosGeneratorProps
+impl TryFrom<&HashMap<&str, &Data>> for ZerosGeneratorProps {
+    type Error = ();
+
+    fn try_from(value: &HashMap<&str, &Data>) -> Result<Self, Self::Error> {
+        Ok(ZerosGeneratorProps)
     }
 }
 
 struct ZerosGeneratorOutput(u8);
 
-impl From<ZerosGeneratorOutput> for HashMap<String, u8> {
-    fn from(value: ZerosGeneratorOutput) -> Self {
-        HashMap::from([("output".to_owned(), 0)])
+impl TryFrom<ZerosGeneratorOutput> for HashMap<&str, Data> {
+    type Error = ();
+
+    fn try_from(value: ZerosGeneratorOutput) -> Result<Self, Self::Error> {
+        Ok(HashMap::from([("output", Data::U8(0))]))
     }
 }
 
@@ -233,16 +241,16 @@ impl ZerosGenerator {
 }
 
 impl Transformer for ZerosGenerator {
-    fn inputs(&self) -> Vec<&'static str> {
-        Vec::new()
+    fn inputs(&self) -> &[&str] {
+        &[]
     }
 
-    fn outputs(&self) -> Vec<&'static str> {
-        vec!["output"]
+    fn outputs(&self) -> &[&str] {
+        &["output"]
     }
 
-    fn process(&self, val: &HashMap<&str, u8>) -> Result<HashMap<String, u8>, ()> {
-        Ok(self.run(val.into())?.into())
+    fn process(&self, val: &HashMap<&str, &Data>) -> Result<HashMap<&str, Data>, ()> {
+        self.run(val.try_into()?)?.try_into()
     }
 }
 
@@ -250,17 +258,23 @@ struct AddOne;
 
 struct AddOneProps(u8);
 
-impl From<&HashMap<&str, u8>> for AddOneProps {
-    fn from(value: &HashMap<&str, u8>) -> Self {
-        AddOneProps(value["input"])
+impl TryFrom<&HashMap<&str, &Data>> for AddOneProps {
+    type Error = ();
+
+    fn try_from(value: &HashMap<&str, &Data>) -> Result<Self, Self::Error> {
+        match value["input"] {
+            Data::U8(val) => Ok(AddOneProps(*val)),
+        }
     }
 }
 
 struct AddOneOutput(u8);
 
-impl From<AddOneOutput> for HashMap<String, u8> {
-    fn from(value: AddOneOutput) -> Self {
-        HashMap::from([("output".to_owned(), value.0)])
+impl TryFrom<AddOneOutput> for HashMap<&str, Data> {
+    type Error = ();
+
+    fn try_from(value: AddOneOutput) -> Result<Self, Self::Error> {
+        Ok(HashMap::from([("output", Data::U8(value.0))]))
     }
 }
 
@@ -277,16 +291,16 @@ impl AddOne {
 }
 
 impl Transformer for AddOne {
-    fn inputs(&self) -> Vec<&'static str> {
-        vec!["input"]
+    fn inputs(&self) -> &[&str] {
+        &["input"]
     }
 
-    fn outputs(&self) -> Vec<&'static str> {
-        vec!["output"]
+    fn outputs(&self) -> &[&str] {
+        &["output"]
     }
 
-    fn process(&self, val: &HashMap<&str, u8>) -> Result<HashMap<String, u8>, ()> {
-        Ok(self.run(val.into())?.into())
+    fn process(&self, val: &HashMap<&str, &Data>) -> Result<HashMap<&str, Data>, ()> {
+        self.run(val.try_into()?)?.try_into()
     }
 }
 
