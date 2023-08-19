@@ -1,5 +1,8 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
+pub type NodeId = u64;
+pub type ParamId = u64;
+
 #[derive(Debug)]
 pub enum Data {
     None,
@@ -8,25 +11,25 @@ pub enum Data {
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Path {
-    node: u64,
-    field: u64,
+    node: NodeId,
+    param: ParamId,
 }
 
 impl Path {
-    pub fn new(node: u64, field: u64) -> Self {
-        Path { node, field }
+    pub fn new(node: NodeId, param: ParamId) -> Self {
+        Path { node, param }
     }
 }
 
 struct Processor {
-    name: u64,
+    id: NodeId,
     fun: Box<dyn Transformer>,
 }
 
 impl Processor {
-    fn new(name: u64, fun: impl Transformer + 'static) -> Self {
+    fn new(id: NodeId, fun: impl Transformer + 'static) -> Self {
         Self {
-            name,
+            id,
             fun: Box::new(fun),
         }
     }
@@ -35,7 +38,7 @@ impl Processor {
         self.fun
             .inputs()
             .iter()
-            .map(|x| Path::new(self.name, *x))
+            .map(|x| Path::new(self.id, *x))
             .collect()
     }
 
@@ -43,14 +46,14 @@ impl Processor {
         self.fun
             .outputs()
             .iter()
-            .map(|x| Path::new(self.name, *x))
+            .map(|x| Path::new(self.id, *x))
             .collect()
     }
 
     fn process(
         &self,
-        inputs: &HashMap<u64, Rc<RefCell<Data>>>,
-        outputs: &mut HashMap<u64, Rc<RefCell<Data>>>,
+        inputs: &HashMap<NodeId, Rc<RefCell<Data>>>,
+        outputs: &mut HashMap<NodeId, Rc<RefCell<Data>>>,
     ) -> Result<(), ()> {
         self.fun.process(inputs, outputs)
     }
@@ -58,8 +61,8 @@ impl Processor {
 
 pub struct Orchestrator {
     nodes: Vec<Processor>,
-    outputs: HashMap<u64, HashMap<u64, Rc<RefCell<Data>>>>,
-    inputs: HashMap<u64, HashMap<u64, Rc<RefCell<Data>>>>,
+    outputs: HashMap<NodeId, HashMap<ParamId, Rc<RefCell<Data>>>>,
+    inputs: HashMap<NodeId, HashMap<ParamId, Rc<RefCell<Data>>>>,
 }
 
 impl Orchestrator {
@@ -71,10 +74,10 @@ impl Orchestrator {
         }
     }
 
-    pub fn add(mut self, name: u64, processor: impl Transformer + 'static) -> Result<Self, ()> {
-        if !self.nodes.iter().any(|n| n.name == name) {
+    pub fn add(mut self, id: NodeId, processor: impl Transformer + 'static) -> Result<Self, ()> {
+        if !self.nodes.iter().any(|n| n.id == id) {
             self.outputs.insert(
-                name,
+                id,
                 HashMap::from_iter(
                     processor
                         .outputs()
@@ -83,7 +86,7 @@ impl Orchestrator {
                 ),
             );
 
-            self.nodes.push(Processor::new(name, processor));
+            self.nodes.push(Processor::new(id, processor));
 
             Ok(self)
         } else {
@@ -92,7 +95,7 @@ impl Orchestrator {
     }
 
     pub fn connect(mut self, src: Path, dst: Path) -> Result<Self, ()> {
-        if let Some(inp) = self.nodes.iter().find(|n| n.name == dst.node) {
+        if let Some(inp) = self.nodes.iter().find(|n| n.id == dst.node) {
             if !inp.inputs().contains(&dst) {
                 return Err(());
             }
@@ -101,7 +104,7 @@ impl Orchestrator {
             return Err(());
         };
 
-        if let Some(outp) = self.nodes.iter_mut().find(|n| n.name == src.node) {
+        if let Some(outp) = self.nodes.iter_mut().find(|n| n.id == src.node) {
             if !outp.outputs().contains(&src) {
                 return Err(());
             }
@@ -113,13 +116,13 @@ impl Orchestrator {
         let output = self
             .outputs
             .get(&src.node)
-            .and_then(|node| node.get(&src.field))
+            .and_then(|node| node.get(&src.param))
             .ok_or(())?;
 
         self.inputs
             .entry(dst.node)
             .or_default()
-            .insert(dst.field, output.clone());
+            .insert(dst.param, output.clone());
 
         Ok(self)
     }
@@ -127,9 +130,9 @@ impl Orchestrator {
     pub fn step(&mut self) -> Result<(), ()> {
         for node in self.nodes.iter_mut() {
             node.process(
-                self.inputs.get(&node.name).unwrap_or(&HashMap::new()),
+                self.inputs.get(&node.id).unwrap_or(&HashMap::new()),
                 self.outputs
-                    .get_mut(&node.name)
+                    .get_mut(&node.id)
                     .unwrap_or(&mut HashMap::new()),
             )?;
         }
@@ -139,12 +142,12 @@ impl Orchestrator {
 }
 
 pub trait Transformer {
-    fn inputs(&self) -> &[u64];
-    fn outputs(&self) -> &[u64];
+    fn inputs(&self) -> &[ParamId];
+    fn outputs(&self) -> &[ParamId];
 
     fn process(
         &self,
-        inputs: &HashMap<u64, Rc<RefCell<Data>>>,
-        outputs: &mut HashMap<u64, Rc<RefCell<Data>>>,
+        inputs: &HashMap<ParamId, Rc<RefCell<Data>>>,
+        outputs: &mut HashMap<ParamId, Rc<RefCell<Data>>>,
     ) -> Result<(), ()>;
 }
