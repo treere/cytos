@@ -131,13 +131,11 @@ pub struct Outputs<'a> {
 
 impl<'a> Outputs<'a> {
     pub fn get_mut<'b>(&'b mut self, val: &'b ParamId) -> impl DerefMut<Target = Data> + 'b {
-        let p = self
-            .map
+        self.map
             .iter_mut()
             .find(|(o, _)| o == val)
-            .map(|(_, p)| p)
-            .unwrap();
-        (**p).borrow_mut()
+            .map(|(_, p)| (**p).borrow_mut())
+            .unwrap()
     }
 }
 
@@ -187,8 +185,7 @@ impl Orchestrator {
     }
 
     pub fn value(&mut self, node: NodeId, param: ParamId) -> impl Deref<Target = Data> + '_ {
-        let outputs = self.communication.get_outputs(node);
-        outputs.get(&param)
+        self.communication.get_outputs(node).get(&param)
     }
 }
 
