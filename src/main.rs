@@ -4,7 +4,7 @@ mod consts;
 use architecture::*;
 use consts::*;
 
-use std::{cell::RefCell, collections::HashMap, rc::Rc, time::Instant};
+use std::time::Instant;
 
 struct ZerosGenerator;
 
@@ -23,13 +23,8 @@ impl Transformer for ZerosGenerator {
         &[OUTPUT]
     }
 
-    fn process(
-        &self,
-        _inputs: &HashMap<u64, Rc<RefCell<Data>>>,
-        outputs: &mut HashMap<u64, Rc<RefCell<Data>>>,
-    ) -> Result<(), ()> {
-        let p = outputs.get_mut(&OUTPUT).unwrap();
-        let mut data = (**p).borrow_mut();
+    fn process(&self, _inputs: Params, mut outputs: Outputs) -> Result<(), ()> {
+        let mut data = outputs.get_mut(&OUTPUT);
 
         *data = Data::U8(0);
         Ok(())
@@ -53,16 +48,11 @@ impl Transformer for AddOne {
         &[OUTPUT]
     }
 
-    fn process(
-        &self,
-        inputs: &HashMap<u64, Rc<RefCell<Data>>>,
-        outputs: &mut HashMap<u64, Rc<RefCell<Data>>>,
-    ) -> Result<(), ()> {
-        match *inputs[&INPUT].borrow() {
+    fn process(&self, inputs: Params, mut outputs: Outputs) -> Result<(), ()> {
+        match *inputs.get(&INPUT) {
             Data::None => Err(()),
             Data::U8(v) => {
-                let p = outputs.get_mut(&OUTPUT).unwrap();
-                let mut data = (**p).borrow_mut();
+                let mut data = outputs.get_mut(&OUTPUT);
 
                 *data = Data::U8(v + 1);
 
