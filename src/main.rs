@@ -4,7 +4,7 @@ mod consts;
 use architecture::*;
 use consts::*;
 
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc, time::Instant};
 
 struct ZerosGenerator;
 
@@ -86,11 +86,23 @@ fn main() -> Result<(), ()> {
         .add(DOUBLER4, AddOne::new())?
         .connect(Path::new(DOUBLER3, OUTPUT), Path::new(DOUBLER4, INPUT))?;
 
-    let result = (0..10000000)
+    let steps = 10000000;
+    println!("running {} steps", steps);
+
+    let now = Instant::now();
+
+    let _result = (0..steps)
         .map(|_| orchestrator.step().expect("step"))
         .count();
 
-    println!("steps done {:?}", result);
+    let elapsed_time = now.elapsed();
+    println!("{} seconds.", elapsed_time.as_secs_f64());
+
+    println!("{} step/seconds", steps as f64 / elapsed_time.as_secs_f64());
+    println!(
+        "{} seconds/steps",
+        elapsed_time.as_secs_f64() / steps as f64
+    );
 
     Ok(())
 }

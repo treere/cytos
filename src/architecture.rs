@@ -58,7 +58,6 @@ impl Processor {
 
 pub struct Orchestrator {
     nodes: Vec<Processor>,
-
     outputs: HashMap<u64, HashMap<u64, Rc<RefCell<Data>>>>,
     inputs: HashMap<u64, HashMap<u64, Rc<RefCell<Data>>>>,
 }
@@ -67,7 +66,6 @@ impl Orchestrator {
     pub fn new() -> Self {
         Self {
             nodes: Vec::new(),
-
             outputs: HashMap::new(),
             inputs: HashMap::new(),
         }
