@@ -46,14 +46,6 @@ impl Processor {
             .collect()
     }
 
-    fn outputs(&self) -> Vec<Path> {
-        self.fun
-            .outputs()
-            .iter()
-            .map(|x| Path::new(self.id, *x))
-            .collect()
-    }
-
     fn process(&mut self, inputs: Params, outputs: Outputs) -> Result<(), ()> {
         self.fun.process(inputs, outputs)
     }
@@ -174,23 +166,11 @@ impl Orchestrator {
     }
 
     pub fn connect(mut self, src: Path, dst: Path) -> Result<Self, ()> {
-        if let Some(inp) = self.nodes.iter().find(|n| n.id == dst.node) {
-            if !inp.inputs().contains(&dst) {
-                return Err(());
-            }
-            inp
-        } else {
-            return Err(());
-        };
-
-        if let Some(outp) = self.nodes.iter_mut().find(|n| n.id == src.node) {
-            if !outp.outputs().contains(&src) {
-                return Err(());
-            }
-            outp
-        } else {
-            return Err(());
-        };
+        self.nodes
+            .iter()
+            .find(|n| n.id == dst.node)
+            .and_then(|inp| inp.inputs().contains(&dst).then_some(()))
+            .ok_or(())?;
 
         self.communication.connect(src, dst)?;
 
