@@ -64,6 +64,7 @@ impl TryFrom<&HashMap<u64, &Data>> for AddOneProps {
     fn try_from(value: &HashMap<u64, &Data>) -> Result<Self, Self::Error> {
         match value[&INPUT] {
             Data::U8(val) => Ok(AddOneProps(*val)),
+            _ => Err(()),
         }
     }
 }

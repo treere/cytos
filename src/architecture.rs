@@ -1,7 +1,8 @@
-use std::{collections::HashMap, mem};
+use std::{cell::RefCell, collections::HashMap, mem, rc::Rc};
 
 #[derive(Debug)]
 pub enum Data {
+    None,
     U8(u8),
 }
 
@@ -113,6 +114,8 @@ pub struct Orchestrator {
     nodes: Vec<Processor>,
     links: Links,
     board: Board,
+    outputs: HashMap<u64, HashMap<u64, Rc<RefCell<Data>>>>,
+    inputs: HashMap<u64, HashMap<u64, Rc<RefCell<Data>>>>,
 }
 
 impl Orchestrator {
@@ -121,12 +124,25 @@ impl Orchestrator {
             nodes: Vec::new(),
             links: Links::new(),
             board: Board::new(),
+            outputs: HashMap::new(),
+            inputs: HashMap::new(),
         }
     }
 
     pub fn add(mut self, name: u64, processor: impl Transformer + 'static) -> Result<Self, ()> {
         if !self.nodes.iter().any(|n| n.name == name) {
+            self.outputs.insert(
+                name,
+                HashMap::from_iter(
+                    processor
+                        .outputs()
+                        .iter()
+                        .map(|n| (*n, Rc::new(RefCell::new(Data::None)))),
+                ),
+            );
+
             self.nodes.push(Processor::new(name, processor));
+
             Ok(self)
         } else {
             Err(())
@@ -151,6 +167,17 @@ impl Orchestrator {
         } else {
             return Err(());
         };
+
+        let output = self
+            .outputs
+            .get(&src.node)
+            .and_then(|node| node.get(&src.field))
+            .ok_or(())?;
+
+        self.inputs
+            .entry(dst.node)
+            .or_insert(HashMap::new())
+            .insert(dst.field, output.clone());
 
         self.links.push(Link::new(src, dst));
 
