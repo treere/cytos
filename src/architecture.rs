@@ -94,11 +94,11 @@ impl Communication {
             .map(|(_, p)| p)
             .ok_or(())?;
 
-        if let Some((_, node)) = self.inputs.iter_mut().find(|(o, _)| o == &dst.node) {
-            node.push((dst.param, output.clone()))
-        }
-
-        Ok(())
+        self.inputs
+            .iter_mut()
+            .find(|(o, _)| o == &dst.node)
+            .map(|(_, node)| node.push((dst.param, output.clone())))
+            .ok_or(())
     }
 
     fn get_arguments(&mut self, id: NodeId) -> (Params, Outputs) {
@@ -206,10 +206,9 @@ impl Orchestrator {
         Ok(())
     }
 
-    pub fn value<'a>(&'a mut self, node: NodeId, param: ParamId) -> impl Deref<Target = Data> + 'a {
+    pub fn value(&mut self, node: NodeId, param: ParamId) -> impl Deref<Target = Data> + '_ {
         let outputs = self.communication.get_outputs(node);
-        let p = outputs.get(&param);
-        p
+        outputs.get(&param)
     }
 }
 
