@@ -101,10 +101,18 @@ impl Communication {
         Ok(())
     }
 
-    fn get(&mut self, id: NodeId) -> (Params, Outputs) {
+    fn get_arguments(&mut self, id: NodeId) -> (Params, Outputs) {
         let (_, inputs) = self.inputs.iter().find(|(o, _)| *o == id).unwrap();
         let (_, outputs) = self.outputs.iter_mut().find(|(o, _)| *o == id).unwrap();
         (Params { map: inputs }, Outputs { map: outputs })
+    }
+
+    fn get_outputs(&self, id: NodeId) -> Params {
+        self.outputs
+            .iter()
+            .find(|(o, _)| *o == id)
+            .map(|(_, p)| Params { map: p })
+            .unwrap()
     }
 }
 
@@ -191,17 +199,17 @@ impl Orchestrator {
 
     pub fn step(&mut self) -> Result<(), ()> {
         for node in self.nodes.iter_mut() {
-            let (inputs, outputs) = self.communication.get(node.id);
+            let (inputs, outputs) = self.communication.get_arguments(node.id);
             node.process(inputs, outputs)?;
         }
 
         Ok(())
     }
 
-    pub fn value<'a>(&'a mut self, node: NodeId, param: ParamId) -> Data {
-        let (_, mut outputs) = self.communication.get(node);
-        let p = outputs.get_mut(&param);
-        p.clone()
+    pub fn value<'a>(&'a mut self, node: NodeId, param: ParamId) -> impl Deref<Target = Data> + 'a {
+        let outputs = self.communication.get_outputs(node);
+        let p = outputs.get(&param);
+        p
     }
 }
 

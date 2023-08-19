@@ -81,11 +81,13 @@ fn main() -> Result<(), ()> {
     println!("running {} steps", steps);
     orchestrator.step().expect("step");
 
-    let value = orchestrator.value(DOUBLER4, OUTPUT);
-    println!("first step value {:?}", value);
-    match value {
-        Data::U64(5) => (),
-        _ => unreachable!("error here"),
+    {
+        let value = orchestrator.value(DOUBLER4, OUTPUT);
+        println!("first step value {:?}", *value);
+        match *value {
+            Data::U64(5) => (),
+            _ => unreachable!("error here"),
+        }
     }
 
     let now = Instant::now();
@@ -97,11 +99,13 @@ fn main() -> Result<(), ()> {
     let elapsed_time = now.elapsed();
     println!("{} seconds.", elapsed_time.as_secs_f64());
 
-    let value = orchestrator.value(DOUBLER4, OUTPUT);
-    println!("final value {:?}", value);
-    match value {
-        Data::U64(10000005) => (),
-        _ => unreachable!("error here"),
+    {
+        let value = orchestrator.value(DOUBLER4, OUTPUT);
+        println!("final value {:?}", *value);
+        match *value {
+            Data::U64(10000005) => (),
+            _ => unreachable!("error here"),
+        }
     }
 
     println!("{} step/seconds", steps as f64 / elapsed_time.as_secs_f64());
