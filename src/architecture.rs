@@ -4,7 +4,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::data::Data;
+use crate::{data::Data, map::Map};
 
 pub type NodeId = u32;
 pub type ParamId = u32;
@@ -47,34 +47,6 @@ impl Processor {
     }
 }
 
-struct Map<K, V> {
-    data: Vec<(K, V)>,
-}
-
-impl<K, V> Map<K, V> {
-    fn new() -> Self {
-        Self { data: Vec::new() }
-    }
-
-    fn from_iterator(it: impl Iterator<Item = (K, V)>) -> Self {
-        Self { data: it.collect() }
-    }
-
-    fn insert(&mut self, k: K, v: V) {
-        self.data.push((k, v))
-    }
-}
-
-impl<K: PartialEq, V> Map<K, V> {
-    fn get(&self, k: &K) -> Option<&V> {
-        self.data.iter().find(|(o, _)| o == k).map(|(_, v)| v)
-    }
-
-    fn get_mut(&mut self, k: &K) -> Option<&mut V> {
-        self.data.iter_mut().find(|(o, _)| o == k).map(|(_, v)| v)
-    }
-}
-
 type ParamData = Map<ParamId, Rc<RefCell<Data>>>;
 
 struct Communication {
@@ -95,9 +67,9 @@ impl Communication {
             id,
             Map::from_iterator(
                 processor
-                    .outputs()
-                    .iter()
-                    .map(|n| (*n, Rc::new(RefCell::new(Data::None)))),
+                    .outputs_default()
+                    .into_iter()
+                    .map(|(n, data)| (n, Rc::new(RefCell::new(data)))),
             ),
         );
 
@@ -201,6 +173,7 @@ impl Orchestrator {
 pub trait Transformer {
     fn inputs(&self) -> &[ParamId];
     fn outputs(&self) -> &[ParamId];
+    fn outputs_default(&self) -> Vec<(ParamId, Data)>;
 
     fn process(&mut self, inputs: Params, outputs: Outputs) -> Result<(), ()>;
 }
