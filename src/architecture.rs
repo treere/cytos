@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, mem, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 #[derive(Debug)]
 pub enum Data {
@@ -15,34 +15,6 @@ pub struct Path {
 impl Path {
     pub fn new(node: u64, field: u64) -> Self {
         Path { node, field }
-    }
-}
-
-#[derive(Debug)]
-struct Board {
-    data: Vec<(Path, Data)>,
-}
-
-impl Board {
-    fn new() -> Self {
-        Board { data: Vec::new() }
-    }
-
-    fn contains(&self, path: &Path) -> bool {
-        self.data.iter().any(|r| &r.0 == path)
-    }
-
-    fn merge(&mut self, data: impl IntoIterator<Item = (Path, Data)>) {
-        self.data.extend(data)
-    }
-
-    fn clear(&mut self) {
-        self.data.clear()
-    }
-
-    fn get_by_src(&self, src: &Path) -> &Data {
-        let (_, d) = self.data.iter().find(|r| &r.0 == src).unwrap();
-        d
     }
 }
 
@@ -75,45 +47,18 @@ impl Processor {
             .collect()
     }
 
-    fn process(&self, val: &HashMap<u64, &Data>) -> Result<HashMap<u64, Data>, ()> {
-        self.fun.process(val)
-    }
-}
-
-#[derive(Debug, Clone)]
-struct Link {
-    src: Path,
-    dst: Path,
-}
-
-impl Link {
-    fn new(src: Path, dst: Path) -> Self {
-        Self { src, dst }
-    }
-}
-
-struct Links {
-    links: Vec<Link>,
-}
-
-impl Links {
-    fn new() -> Self {
-        Self { links: Vec::new() }
-    }
-
-    fn push(&mut self, link: Link) {
-        self.links.push(link)
-    }
-
-    fn iter_by_dst(&self, name: u64) -> impl Iterator<Item = &Link> {
-        self.links.iter().filter(move |r| r.dst.node == name)
+    fn process(
+        &self,
+        inputs: &HashMap<u64, Rc<RefCell<Data>>>,
+        outputs: &mut HashMap<u64, Rc<RefCell<Data>>>,
+    ) -> Result<(), ()> {
+        self.fun.process(inputs, outputs)
     }
 }
 
 pub struct Orchestrator {
     nodes: Vec<Processor>,
-    links: Links,
-    board: Board,
+
     outputs: HashMap<u64, HashMap<u64, Rc<RefCell<Data>>>>,
     inputs: HashMap<u64, HashMap<u64, Rc<RefCell<Data>>>>,
 }
@@ -122,8 +67,7 @@ impl Orchestrator {
     pub fn new() -> Self {
         Self {
             nodes: Vec::new(),
-            links: Links::new(),
-            board: Board::new(),
+
             outputs: HashMap::new(),
             inputs: HashMap::new(),
         }
@@ -176,55 +120,23 @@ impl Orchestrator {
 
         self.inputs
             .entry(dst.node)
-            .or_insert(HashMap::new())
+            .or_default()
             .insert(dst.field, output.clone());
-
-        self.links.push(Link::new(src, dst));
 
         Ok(self)
     }
 
     pub fn step(&mut self) -> Result<(), ()> {
-        let mut nodes = mem::take(&mut self.nodes);
-        self.nodes.reserve(nodes.len());
-
-        self.board.clear();
-
-        while !nodes.is_empty() {
-            if let Some(node) = self
-                .index_first_ready_node(&nodes, &self.board)
-                .map(|index| nodes.remove(index))
-            {
-                let params: HashMap<_, _> = self
-                    .links
-                    .iter_by_dst(node.name)
-                    .map(|r| (r.dst.field, self.board.get_by_src(&r.src)))
-                    .collect();
-
-                if let Ok(data) = node.process(&params) {
-                    self.board
-                        .merge(data.into_iter().map(|r| (Path::new(node.name, r.0), r.1)));
-                }
-                self.nodes.push(node);
-            } else {
-                return Err(());
-            }
+        for node in self.nodes.iter_mut() {
+            node.process(
+                self.inputs.get(&node.name).unwrap_or(&HashMap::new()),
+                self.outputs
+                    .get_mut(&node.name)
+                    .unwrap_or(&mut HashMap::new()),
+            )?;
         }
 
         Ok(())
-    }
-
-    fn index_first_ready_node(&self, nodes: &[Processor], board: &Board) -> Option<usize> {
-        nodes
-            .iter()
-            .enumerate()
-            .filter(|(index, node)| {
-                self.links
-                    .iter_by_dst(node.name)
-                    .all(|r| board.contains(&r.src))
-            })
-            .map(|(index, _)| index)
-            .next()
     }
 }
 
@@ -232,5 +144,9 @@ pub trait Transformer {
     fn inputs(&self) -> &[u64];
     fn outputs(&self) -> &[u64];
 
-    fn process(&self, val: &HashMap<u64, &Data>) -> Result<HashMap<u64, Data>, ()>;
+    fn process(
+        &self,
+        inputs: &HashMap<u64, Rc<RefCell<Data>>>,
+        outputs: &mut HashMap<u64, Rc<RefCell<Data>>>,
+    ) -> Result<(), ()>;
 }

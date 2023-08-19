@@ -4,39 +4,13 @@ mod consts;
 use architecture::*;
 use consts::*;
 
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 struct ZerosGenerator;
 
 impl ZerosGenerator {
     fn new() -> Self {
         ZerosGenerator
-    }
-}
-
-struct ZerosGeneratorProps;
-
-impl TryFrom<&HashMap<u64, &Data>> for ZerosGeneratorProps {
-    type Error = ();
-
-    fn try_from(value: &HashMap<u64, &Data>) -> Result<Self, Self::Error> {
-        Ok(ZerosGeneratorProps)
-    }
-}
-
-struct ZerosGeneratorOutput(u8);
-
-impl TryFrom<ZerosGeneratorOutput> for HashMap<u64, Data> {
-    type Error = ();
-
-    fn try_from(value: ZerosGeneratorOutput) -> Result<Self, Self::Error> {
-        Ok(HashMap::from([(OUTPUT, Data::U8(0))]))
-    }
-}
-
-impl ZerosGenerator {
-    fn run(&self, props: ZerosGeneratorProps) -> Result<ZerosGeneratorOutput, ()> {
-        Ok(ZerosGeneratorOutput(0))
     }
 }
 
@@ -49,41 +23,20 @@ impl Transformer for ZerosGenerator {
         &[OUTPUT]
     }
 
-    fn process(&self, val: &HashMap<u64, &Data>) -> Result<HashMap<u64, Data>, ()> {
-        self.run(val.try_into()?)?.try_into()
+    fn process(
+        &self,
+        _inputs: &HashMap<u64, Rc<RefCell<Data>>>,
+        outputs: &mut HashMap<u64, Rc<RefCell<Data>>>,
+    ) -> Result<(), ()> {
+        let p = outputs.get_mut(&OUTPUT).unwrap();
+        let mut data = (**p).borrow_mut();
+
+        *data = Data::U8(0);
+        Ok(())
     }
 }
 
 struct AddOne;
-
-struct AddOneProps(u8);
-
-impl TryFrom<&HashMap<u64, &Data>> for AddOneProps {
-    type Error = ();
-
-    fn try_from(value: &HashMap<u64, &Data>) -> Result<Self, Self::Error> {
-        match value[&INPUT] {
-            Data::U8(val) => Ok(AddOneProps(*val)),
-            _ => Err(()),
-        }
-    }
-}
-
-struct AddOneOutput(u8);
-
-impl TryFrom<AddOneOutput> for HashMap<u64, Data> {
-    type Error = ();
-
-    fn try_from(value: AddOneOutput) -> Result<Self, Self::Error> {
-        Ok(HashMap::from([(OUTPUT, Data::U8(value.0))]))
-    }
-}
-
-impl AddOne {
-    fn run(&self, props: AddOneProps) -> Result<AddOneOutput, ()> {
-        Ok(AddOneOutput(props.0 + 1))
-    }
-}
 
 impl AddOne {
     fn new() -> Self {
@@ -100,8 +53,22 @@ impl Transformer for AddOne {
         &[OUTPUT]
     }
 
-    fn process(&self, val: &HashMap<u64, &Data>) -> Result<HashMap<u64, Data>, ()> {
-        self.run(val.try_into()?)?.try_into()
+    fn process(
+        &self,
+        inputs: &HashMap<u64, Rc<RefCell<Data>>>,
+        outputs: &mut HashMap<u64, Rc<RefCell<Data>>>,
+    ) -> Result<(), ()> {
+        match *inputs[&INPUT].borrow() {
+            Data::None => Err(()),
+            Data::U8(v) => {
+                let p = outputs.get_mut(&OUTPUT).unwrap();
+                let mut data = (**p).borrow_mut();
+
+                *data = Data::U8(v + 1);
+
+                Ok(())
+            }
+        }
     }
 }
 
@@ -119,35 +86,11 @@ fn main() -> Result<(), ()> {
         .add(DOUBLER4, AddOne::new())?
         .connect(Path::new(DOUBLER3, OUTPUT), Path::new(DOUBLER4, INPUT))?;
 
-    let result = (0..1).map(|_| orchestrator.step().expect("step")).count();
+    let result = (0..10000000)
+        .map(|_| orchestrator.step().expect("step"))
+        .count();
 
     println!("steps done {:?}", result);
-
-    let v = vec![
-        std::rc::Rc::new(std::cell::RefCell::new(1)),
-        std::rc::Rc::new(std::cell::RefCell::new(2)),
-    ];
-    {
-        let h = HashMap::from([("a", v[0].borrow())]);
-        let mut p = HashMap::from([("b", v[1].borrow_mut())]);
-
-        let q = p.get_mut("b").unwrap();
-
-        **q += 1;
-    }
-
-    {
-        let h = HashMap::from([("a", v[0].borrow())]);
-        let mut p = HashMap::from([("b", v[1].borrow_mut())]);
-
-        let q = p.get_mut("b").unwrap();
-
-        **q += 1;
-    }
-
-    for p in v.iter() {
-        println!("{:?}", p);
-    }
 
     Ok(())
 }
