@@ -12,16 +12,16 @@ use std::time::Instant;
 
 use crate::architecture::{Orchestrator, Path};
 
-pub const SOURCE: NodeId = 2;
-pub const DOUBLER0: NodeId = 3;
-pub const DOUBLER1: NodeId = 4;
-pub const DOUBLER2: NodeId = 5;
-pub const DOUBLER3: NodeId = 6;
-pub const DOUBLER4: NodeId = 7;
-pub const SOURCE1: NodeId = 8;
-pub const SOURCE2: NodeId = 9;
-pub const DOUBLER: NodeId = 10;
-pub const PIPPO: NodeId = 11;
+pub const SOURCE: NodeId = 1;
+pub const DOUBLER0: NodeId = 2;
+pub const DOUBLER1: NodeId = 3;
+pub const DOUBLER2: NodeId = 4;
+pub const DOUBLER3: NodeId = 5;
+pub const DOUBLER4: NodeId = 6;
+pub const SOURCE1: NodeId = 7;
+pub const SOURCE2: NodeId = 8;
+pub const DOUBLER: NodeId = 9;
+pub const PIPPO: NodeId = 10;
 
 struct IncrementalGenerator(u64);
 
@@ -41,9 +41,8 @@ impl Transformer for IncrementalGenerator {
     }
 
     fn process(&mut self, _inputs: Params, mut outputs: Outputs) -> Result<(), ()> {
-        let mut data = outputs.get_mut(&OUTPUT);
+        *outputs.get_mut(&OUTPUT) = Data::U64(self.0);
 
-        *data = Data::U64(self.0);
         self.0 += 1;
         Ok(())
     }
@@ -69,9 +68,7 @@ impl Transformer for AddOne {
     fn process(&mut self, inputs: Params, mut outputs: Outputs) -> Result<(), ()> {
         match *inputs.get(&INPUT) {
             Data::U64(v) => {
-                let mut data = outputs.get_mut(&OUTPUT);
-
-                *data = Data::U64(v + 1);
+                *outputs.get_mut(&OUTPUT) = Data::U64(v + 1);
 
                 Ok(())
             }

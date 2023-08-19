@@ -47,64 +47,86 @@ impl Processor {
     }
 }
 
+struct Map<K, V> {
+    data: Vec<(K, V)>,
+}
+
+impl<K, V> Map<K, V> {
+    fn new() -> Self {
+        Self { data: Vec::new() }
+    }
+
+    fn from_iterator(it: impl Iterator<Item = (K, V)>) -> Self {
+        Self { data: it.collect() }
+    }
+
+    fn insert(&mut self, k: K, v: V) {
+        self.data.push((k, v))
+    }
+}
+
+impl<K: PartialEq, V> Map<K, V> {
+    fn get(&self, k: &K) -> Option<&V> {
+        self.data.iter().find(|(o, _)| o == k).map(|(_, v)| v)
+    }
+
+    fn get_mut(&mut self, k: &K) -> Option<&mut V> {
+        self.data.iter_mut().find(|(o, _)| o == k).map(|(_, v)| v)
+    }
+}
+
+type ParamData = Map<ParamId, Rc<RefCell<Data>>>;
+
 struct Communication {
-    outputs: Vec<(NodeId, ParamData)>,
-    inputs: Vec<(NodeId, ParamData)>,
+    outputs: Map<NodeId, ParamData>,
+    inputs: Map<NodeId, ParamData>,
 }
 
 impl Communication {
     fn new() -> Self {
         Self {
-            outputs: Vec::new(),
-            inputs: Vec::new(),
+            outputs: Map::new(),
+            inputs: Map::new(),
         }
     }
 
     fn add_output(&mut self, id: NodeId, processor: &impl Transformer) {
-        self.outputs.push((
+        self.outputs.insert(
             id,
-            processor
-                .outputs()
-                .iter()
-                .map(|n| (*n, Rc::new(RefCell::new(Data::None))))
-                .collect(),
-        ));
+            Map::from_iterator(
+                processor
+                    .outputs()
+                    .iter()
+                    .map(|n| (*n, Rc::new(RefCell::new(Data::None)))),
+            ),
+        );
 
-        self.inputs.push((id, Vec::new()));
+        self.inputs.insert(id, Map::new());
     }
 
     fn connect(&mut self, src: Path, dst: Path) -> Result<(), ()> {
         let output = self
             .outputs
-            .iter()
-            .find(|(o, _)| o == &src.node)
-            .and_then(|(_, node)| node.iter().find(|(o, _)| o == &src.param))
-            .map(|(_, p)| p)
+            .get(&src.node)
+            .and_then(|node| node.get(&src.param))
             .ok_or(())?;
 
         self.inputs
-            .iter_mut()
-            .find(|(o, _)| o == &dst.node)
-            .map(|(_, node)| node.push((dst.param, output.clone())))
+            .get_mut(&dst.node)
+            .map(|node| node.insert(dst.param, output.clone()))
             .ok_or(())
     }
 
     fn get_arguments(&mut self, id: NodeId) -> (Params, Outputs) {
-        let (_, inputs) = self.inputs.iter().find(|(o, _)| *o == id).unwrap();
-        let (_, outputs) = self.outputs.iter_mut().find(|(o, _)| *o == id).unwrap();
+        let inputs = self.inputs.get(&id).unwrap();
+        let outputs = self.outputs.get_mut(&id).unwrap();
         (Params { map: inputs }, Outputs { map: outputs })
     }
 
     fn get_outputs(&self, id: NodeId) -> Params {
-        self.outputs
-            .iter()
-            .find(|(o, _)| *o == id)
-            .map(|(_, p)| Params { map: p })
-            .unwrap()
+        self.outputs.get(&id).map(|p| Params { map: p }).unwrap()
     }
 }
-
-type ParamData = Vec<(ParamId, Rc<RefCell<Data>>)>;
 
 pub struct Params<'a> {
     map: &'a ParamData,
@@ -112,12 +134,7 @@ pub struct Params<'a> {
 
 impl<'a> Params<'a> {
     pub fn get(&self, val: &ParamId) -> impl Deref<Target = Data> + 'a {
-        self.map
-            .iter()
-            .find(|(o, _)| o == val)
-            .map(|(_, p)| p)
-            .unwrap()
-            .borrow()
+        self.map.get(val).unwrap().borrow()
     }
 }
 
@@ -127,11 +144,7 @@ pub struct Outputs<'a> {
 
 impl<'a> Outputs<'a> {
     pub fn get_mut<'b>(&'b mut self, val: &'b ParamId) -> impl DerefMut<Target = Data> + 'b {
-        self.map
-            .iter_mut()
-            .find(|(o, _)| o == val)
-            .map(|(_, p)| (**p).borrow_mut())
-            .unwrap()
+        self.map.get_mut(val).map(|p| (**p).borrow_mut()).unwrap()
     }
 }
 
