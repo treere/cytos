@@ -26,29 +26,6 @@ impl Path {
     }
 }
 
-type ParamData = HashMap<ParamId, Rc<RefCell<Data>>>;
-
-pub struct Params<'a> {
-    map: &'a ParamData,
-}
-
-impl<'a> Params<'a> {
-    pub fn get(&self, val: &ParamId) -> impl Deref<Target = Data> + 'a {
-        self.map.get(val).unwrap().borrow()
-    }
-}
-
-pub struct Outputs<'a> {
-    map: &'a mut ParamData,
-}
-
-impl<'a> Outputs<'a> {
-    pub fn get_mut<'b>(&'b mut self, val: &'b ParamId) -> impl DerefMut<Target = Data> + 'b {
-        let p = self.map.get_mut(val).unwrap();
-        (**p).borrow_mut()
-    }
-}
-
 struct Processor {
     id: NodeId,
     fun: Box<dyn Transformer>,
@@ -129,6 +106,29 @@ impl Communication {
         let inputs = self.inputs.get(&id).unwrap();
         let outputs = self.outputs.get_mut(&id).unwrap();
         (Params { map: inputs }, Outputs { map: outputs })
+    }
+}
+
+type ParamData = HashMap<ParamId, Rc<RefCell<Data>>>;
+
+pub struct Params<'a> {
+    map: &'a ParamData,
+}
+
+impl<'a> Params<'a> {
+    pub fn get(&self, val: &ParamId) -> impl Deref<Target = Data> + 'a {
+        self.map.get(val).unwrap().borrow()
+    }
+}
+
+pub struct Outputs<'a> {
+    map: &'a mut ParamData,
+}
+
+impl<'a> Outputs<'a> {
+    pub fn get_mut<'b>(&'b mut self, val: &'b ParamId) -> impl DerefMut<Target = Data> + 'b {
+        let p = self.map.get_mut(val).unwrap();
+        (**p).borrow_mut()
     }
 }
 
