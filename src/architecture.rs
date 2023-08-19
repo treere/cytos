@@ -4,14 +4,10 @@ use std::{
     rc::Rc,
 };
 
-pub type NodeId = u64;
-pub type ParamId = u64;
+use crate::data::Data;
 
-#[derive(Debug)]
-pub enum Data {
-    None,
-    U64(u64),
-}
+pub type NodeId = u32;
+pub type ParamId = u32;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Path {

@@ -1,14 +1,6 @@
 #![allow(dead_code)]
 
-pub const OUTPUT: u64 = 0;
-pub const INPUT: u64 = 1;
-pub const SOURCE: u64 = 2;
-pub const DOUBLER0: u64 = 3;
-pub const DOUBLER1: u64 = 4;
-pub const DOUBLER2: u64 = 5;
-pub const DOUBLER3: u64 = 6;
-pub const DOUBLER4: u64 = 7;
-pub const SOURCE1: u64 = 8;
-pub const SOURCE2: u64 = 9;
-pub const DOUBLER: u64 = 10;
-pub const PIPPO: u64 = 11;
+type ParamId = u32;
+
+pub const OUTPUT: ParamId = 0;
+pub const INPUT: ParamId = 1;

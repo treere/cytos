@@ -1,10 +1,27 @@
 #![allow(unused_variables)]
 mod architecture;
 mod consts;
-use architecture::*;
-use consts::*;
+mod data;
+
+use architecture::{NodeId, Outputs, ParamId, Params, Transformer};
+
+use consts::{INPUT, OUTPUT};
+use data::Data;
 
 use std::time::Instant;
+
+use crate::architecture::{Orchestrator, Path};
+
+pub const SOURCE: NodeId = 2;
+pub const DOUBLER0: NodeId = 3;
+pub const DOUBLER1: NodeId = 4;
+pub const DOUBLER2: NodeId = 5;
+pub const DOUBLER3: NodeId = 6;
+pub const DOUBLER4: NodeId = 7;
+pub const SOURCE1: NodeId = 8;
+pub const SOURCE2: NodeId = 9;
+pub const DOUBLER: NodeId = 10;
+pub const PIPPO: NodeId = 11;
 
 struct IncrementalGenerator(u64);
 
@@ -15,11 +32,11 @@ impl IncrementalGenerator {
 }
 
 impl Transformer for IncrementalGenerator {
-    fn inputs(&self) -> &[u64] {
+    fn inputs(&self) -> &[ParamId] {
         &[]
     }
 
-    fn outputs(&self) -> &[u64] {
+    fn outputs(&self) -> &[ParamId] {
         &[OUTPUT]
     }
 
@@ -41,11 +58,11 @@ impl AddOne {
 }
 
 impl Transformer for AddOne {
-    fn inputs(&self) -> &[u64] {
+    fn inputs(&self) -> &[ParamId] {
         &[INPUT]
     }
 
-    fn outputs(&self) -> &[u64] {
+    fn outputs(&self) -> &[ParamId] {
         &[OUTPUT]
     }
 
