@@ -118,11 +118,36 @@ fn main() -> Result<(), ()> {
         .add(DOUBLER4, AddOne::new())?
         .connect(Path::new(DOUBLER3, OUTPUT), Path::new(DOUBLER4, INPUT))?;
 
-    let result = (0..10000000)
-        .map(|_| orchestrator.step().expect("step"))
-        .count();
+    let result = (0..1).map(|_| orchestrator.step().expect("step")).count();
 
-    println!("{:?}", result);
+    println!("steps done {:?}", result);
+
+    let v = vec![
+        std::rc::Rc::new(std::cell::RefCell::new(1)),
+        std::rc::Rc::new(std::cell::RefCell::new(2)),
+    ];
+    {
+        let h = HashMap::from([("a", v[0].borrow())]);
+        let mut p = HashMap::from([("b", v[1].borrow_mut())]);
+
+        let q = p.get_mut("b").unwrap();
+
+        **q += 1;
+    }
+
+    {
+        let h = HashMap::from([("a", v[0].borrow())]);
+        let mut p = HashMap::from([("b", v[1].borrow_mut())]);
+
+        let q = p.get_mut("b").unwrap();
+
+        **q += 1;
+    }
+
+    for p in v.iter() {
+        println!("{:?}", p);
+    }
+
     Ok(())
 }
 
