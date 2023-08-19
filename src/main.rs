@@ -94,7 +94,7 @@ fn main() -> Result<(), ()> {
         .add(DOUBLER4, AddOne::new())?
         .connect(Path::new(DOUBLER3, OUTPUT), Path::new(DOUBLER4, INPUT))?;
 
-    let steps = 10000000;
+    let steps = 100000000;
     println!("running {} steps", steps);
     orchestrator.step().expect("step");
 
@@ -120,7 +120,7 @@ fn main() -> Result<(), ()> {
         let value = orchestrator.value(DOUBLER4, OUTPUT);
         println!("final value {:?}", *value);
         match *value {
-            Data::U64(10000005) => (),
+            Data::U64(100000005) => (),
             _ => unreachable!("error here"),
         }
     }
