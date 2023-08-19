@@ -7,13 +7,13 @@ use std::{
 pub type NodeId = u64;
 pub type ParamId = u64;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Data {
     None,
     U64(u64),
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Path {
     node: NodeId,
     param: ParamId,
