@@ -1,6 +1,5 @@
 use std::{
     cell::RefCell,
-    collections::HashMap,
     ops::{Deref, DerefMut},
     rc::Rc,
 };
@@ -8,10 +7,10 @@ use std::{
 pub type NodeId = u64;
 pub type ParamId = u64;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Data {
     None,
-    U8(u8),
+    U64(u64),
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -55,61 +54,61 @@ impl Processor {
             .collect()
     }
 
-    fn process(&self, inputs: Params, outputs: Outputs) -> Result<(), ()> {
+    fn process(&mut self, inputs: Params, outputs: Outputs) -> Result<(), ()> {
         self.fun.process(inputs, outputs)
     }
 }
 
 struct Communication {
-    outputs: HashMap<NodeId, ParamData>,
-    inputs: HashMap<NodeId, ParamData>,
+    outputs: Vec<(NodeId, ParamData)>,
+    inputs: Vec<(NodeId, ParamData)>,
 }
 
 impl Communication {
     fn new() -> Self {
         Self {
-            outputs: HashMap::new(),
-            inputs: HashMap::new(),
+            outputs: Vec::new(),
+            inputs: Vec::new(),
         }
     }
 
     fn add_output(&mut self, id: NodeId, processor: &impl Transformer) {
-        self.outputs.insert(
+        self.outputs.push((
             id,
-            HashMap::from_iter(
-                processor
-                    .outputs()
-                    .iter()
-                    .map(|n| (*n, Rc::new(RefCell::new(Data::None)))),
-            ),
-        );
+            processor
+                .outputs()
+                .iter()
+                .map(|n| (*n, Rc::new(RefCell::new(Data::None))))
+                .collect(),
+        ));
 
-        self.inputs.insert(id, HashMap::new());
+        self.inputs.push((id, Vec::new()));
     }
 
     fn connect(&mut self, src: Path, dst: Path) -> Result<(), ()> {
         let output = self
             .outputs
-            .get(&src.node)
-            .and_then(|node| node.get(&src.param))
+            .iter()
+            .find(|(o, _)| o == &src.node)
+            .and_then(|(_, node)| node.iter().find(|(o, _)| o == &src.param))
+            .map(|(_, p)| p)
             .ok_or(())?;
 
-        self.inputs
-            .entry(dst.node)
-            .or_default()
-            .insert(dst.param, output.clone());
+        if let Some((_, node)) = self.inputs.iter_mut().find(|(o, _)| o == &dst.node) {
+            node.push((dst.param, output.clone()))
+        }
 
         Ok(())
     }
 
     fn get(&mut self, id: NodeId) -> (Params, Outputs) {
-        let inputs = self.inputs.get(&id).unwrap();
-        let outputs = self.outputs.get_mut(&id).unwrap();
+        let (_, inputs) = self.inputs.iter().find(|(o, _)| *o == id).unwrap();
+        let (_, outputs) = self.outputs.iter_mut().find(|(o, _)| *o == id).unwrap();
         (Params { map: inputs }, Outputs { map: outputs })
     }
 }
 
-type ParamData = HashMap<ParamId, Rc<RefCell<Data>>>;
+type ParamData = Vec<(ParamId, Rc<RefCell<Data>>)>;
 
 pub struct Params<'a> {
     map: &'a ParamData,
@@ -117,7 +116,12 @@ pub struct Params<'a> {
 
 impl<'a> Params<'a> {
     pub fn get(&self, val: &ParamId) -> impl Deref<Target = Data> + 'a {
-        self.map.get(val).unwrap().borrow()
+        self.map
+            .iter()
+            .find(|(o, _)| o == val)
+            .map(|(_, p)| p)
+            .unwrap()
+            .borrow()
     }
 }
 
@@ -127,7 +131,12 @@ pub struct Outputs<'a> {
 
 impl<'a> Outputs<'a> {
     pub fn get_mut<'b>(&'b mut self, val: &'b ParamId) -> impl DerefMut<Target = Data> + 'b {
-        let p = self.map.get_mut(val).unwrap();
+        let p = self
+            .map
+            .iter_mut()
+            .find(|(o, _)| o == val)
+            .map(|(_, p)| p)
+            .unwrap();
         (**p).borrow_mut()
     }
 }
@@ -188,11 +197,17 @@ impl Orchestrator {
 
         Ok(())
     }
+
+    pub fn value<'a>(&'a mut self, node: NodeId, param: ParamId) -> Data {
+        let (_, mut outputs) = self.communication.get(node);
+        let p = outputs.get_mut(&param);
+        p.clone()
+    }
 }
 
 pub trait Transformer {
     fn inputs(&self) -> &[ParamId];
     fn outputs(&self) -> &[ParamId];
 
-    fn process(&self, inputs: Params, outputs: Outputs) -> Result<(), ()>;
+    fn process(&mut self, inputs: Params, outputs: Outputs) -> Result<(), ()>;
 }

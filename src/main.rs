@@ -6,15 +6,15 @@ use consts::*;
 
 use std::time::Instant;
 
-struct ZerosGenerator;
+struct IncrementalGenerator(u64);
 
-impl ZerosGenerator {
+impl IncrementalGenerator {
     fn new() -> Self {
-        ZerosGenerator
+        IncrementalGenerator(0)
     }
 }
 
-impl Transformer for ZerosGenerator {
+impl Transformer for IncrementalGenerator {
     fn inputs(&self) -> &[u64] {
         &[]
     }
@@ -23,10 +23,11 @@ impl Transformer for ZerosGenerator {
         &[OUTPUT]
     }
 
-    fn process(&self, _inputs: Params, mut outputs: Outputs) -> Result<(), ()> {
+    fn process(&mut self, _inputs: Params, mut outputs: Outputs) -> Result<(), ()> {
         let mut data = outputs.get_mut(&OUTPUT);
 
-        *data = Data::U8(0);
+        *data = Data::U64(self.0);
+        self.0 += 1;
         Ok(())
     }
 }
@@ -48,23 +49,23 @@ impl Transformer for AddOne {
         &[OUTPUT]
     }
 
-    fn process(&self, inputs: Params, mut outputs: Outputs) -> Result<(), ()> {
+    fn process(&mut self, inputs: Params, mut outputs: Outputs) -> Result<(), ()> {
         match *inputs.get(&INPUT) {
-            Data::None => Err(()),
-            Data::U8(v) => {
+            Data::U64(v) => {
                 let mut data = outputs.get_mut(&OUTPUT);
 
-                *data = Data::U8(v + 1);
+                *data = Data::U64(v + 1);
 
                 Ok(())
             }
+            _ => Err(()),
         }
     }
 }
 
 fn main() -> Result<(), ()> {
     let mut orchestrator = Orchestrator::new()
-        .add(SOURCE, ZerosGenerator::new())?
+        .add(SOURCE, IncrementalGenerator::new())?
         .add(DOUBLER0, AddOne::new())?
         .connect(Path::new(SOURCE, OUTPUT), Path::new(DOUBLER0, INPUT))?
         .add(DOUBLER1, AddOne::new())?
@@ -78,6 +79,14 @@ fn main() -> Result<(), ()> {
 
     let steps = 10000000;
     println!("running {} steps", steps);
+    orchestrator.step().expect("step");
+
+    let value = orchestrator.value(DOUBLER4, OUTPUT);
+    println!("first step value {:?}", value);
+    match value {
+        Data::U64(5) => (),
+        _ => unreachable!("error here"),
+    }
 
     let now = Instant::now();
 
@@ -87,6 +96,13 @@ fn main() -> Result<(), ()> {
 
     let elapsed_time = now.elapsed();
     println!("{} seconds.", elapsed_time.as_secs_f64());
+
+    let value = orchestrator.value(DOUBLER4, OUTPUT);
+    println!("final value {:?}", value);
+    match value {
+        Data::U64(10000005) => (),
+        _ => unreachable!("error here"),
+    }
 
     println!("{} step/seconds", steps as f64 / elapsed_time.as_secs_f64());
     println!(
@@ -104,25 +120,25 @@ mod tests {
     #[test]
     fn test_add_success() {
         assert!(Orchestrator::new()
-            .add(SOURCE1, ZerosGenerator::new())
+            .add(SOURCE1, IncrementalGenerator::new())
             .expect("cannot insert")
-            .add(SOURCE2, ZerosGenerator::new())
+            .add(SOURCE2, IncrementalGenerator::new())
             .is_ok())
     }
 
     #[test]
     fn test_add_same_name() {
         assert!(Orchestrator::new()
-            .add(SOURCE, ZerosGenerator::new())
+            .add(SOURCE, IncrementalGenerator::new())
             .expect("cannot insert")
-            .add(SOURCE, ZerosGenerator::new())
+            .add(SOURCE, IncrementalGenerator::new())
             .is_err())
     }
 
     #[test]
     fn test_connect_success() {
         assert!(Orchestrator::new()
-            .add(SOURCE, ZerosGenerator::new())
+            .add(SOURCE, IncrementalGenerator::new())
             .expect("cannot add source")
             .add(DOUBLER, AddOne::new())
             .expect("cannot add doubler")
@@ -133,7 +149,7 @@ mod tests {
     #[test]
     fn test_connect_missing_destination_source() {
         assert!(Orchestrator::new()
-            .add(SOURCE, ZerosGenerator::new())
+            .add(SOURCE, IncrementalGenerator::new())
             .expect("cannot add source")
             .add(DOUBLER, AddOne::new())
             .expect("cannot add doubler")
@@ -144,7 +160,7 @@ mod tests {
     #[test]
     fn test_connect_missing_destination_value() {
         assert!(Orchestrator::new()
-            .add(SOURCE, ZerosGenerator::new())
+            .add(SOURCE, IncrementalGenerator::new())
             .expect("cannot add source")
             .add(DOUBLER, AddOne::new())
             .expect("cannot add doubler")
@@ -155,7 +171,7 @@ mod tests {
     #[test]
     fn test_connect_missing_source_source() {
         assert!(Orchestrator::new()
-            .add(SOURCE, ZerosGenerator::new())
+            .add(SOURCE, IncrementalGenerator::new())
             .expect("cannot add source")
             .add(DOUBLER, AddOne::new())
             .expect("cannot add doubler")
@@ -166,7 +182,7 @@ mod tests {
     #[test]
     fn test_connect_missing_source_value() {
         assert!(Orchestrator::new()
-            .add(SOURCE, ZerosGenerator::new())
+            .add(SOURCE, IncrementalGenerator::new())
             .expect("cannot add source")
             .add(DOUBLER, AddOne::new())
             .expect("cannot add doubler")
