@@ -5,22 +5,19 @@ mod data;
 mod map;
 mod transformer;
 
-use architecture::{NodeId, ParamId};
+use architecture::NodeId;
 
 use data::Data;
 
 use std::time::Instant;
 
 use crate::{
-    architecture::{Orchestrator, Path},
+    architecture::Orchestrator,
     transformer::{
         AddOne, AddOneConfigInput, AddOneConfigOutput, IncrementalGenerator,
         IncrementalGeneratorConfigOutput,
     },
 };
-
-pub const INPUT: ParamId = 0;
-pub const OUTPUT: ParamId = 1;
 
 pub const SOURCE: NodeId = 1;
 pub const DOUBLER0: NodeId = 2;
@@ -33,37 +30,39 @@ fn main() -> Result<(), ()> {
     let mut orchestrator = Orchestrator::new()
         .add(SOURCE, IncrementalGenerator::new())?
         .add(DOUBLER0, AddOne::new())?
-        .connect(
-            Path::new(SOURCE, IncrementalGeneratorConfigOutput::OUTPUT as u32),
-            Path::new(DOUBLER0, AddOneConfigInput::INPUT as u32),
-        )?
         .add(DOUBLER1, AddOne::new())?
-        .connect(
-            Path::new(DOUBLER0, AddOneConfigOutput::OUTPUT as u32),
-            Path::new(DOUBLER1, AddOneConfigInput::INPUT as u32),
-        )?
         .add(DOUBLER2, AddOne::new())?
-        .connect(
-            Path::new(DOUBLER1, AddOneConfigOutput::OUTPUT as u32),
-            Path::new(DOUBLER2, AddOneConfigInput::INPUT as u32),
-        )?
         .add(DOUBLER3, AddOne::new())?
-        .connect(
-            Path::new(DOUBLER2, AddOneConfigOutput::OUTPUT as u32),
-            Path::new(DOUBLER3, AddOneConfigInput::INPUT as u32),
-        )?
         .add(DOUBLER4, AddOne::new())?
         .connect(
-            Path::new(DOUBLER3, AddOneConfigOutput::OUTPUT as u32),
-            Path::new(DOUBLER4, AddOneConfigInput::INPUT as u32),
+            (SOURCE, IncrementalGeneratorConfigOutput::OUTPUT),
+            (DOUBLER0, AddOneConfigInput::INPUT),
+        )?
+        .connect(
+            (DOUBLER0, AddOneConfigOutput::OUTPUT),
+            (DOUBLER1, AddOneConfigInput::INPUT),
+        )?
+        .connect(
+            (DOUBLER1, AddOneConfigOutput::OUTPUT),
+            (DOUBLER2, AddOneConfigInput::INPUT),
+        )?
+        .connect(
+            (DOUBLER2, AddOneConfigOutput::OUTPUT),
+            (DOUBLER3, AddOneConfigInput::INPUT),
+        )?
+        .connect(
+            (DOUBLER3, AddOneConfigOutput::OUTPUT),
+            (DOUBLER4, AddOneConfigInput::INPUT),
         )?;
 
-    let steps = 100000000;
+    let steps = 10000000;
     println!("running {} steps", steps);
     orchestrator.step().expect("step");
 
     {
-        let value = orchestrator.value(DOUBLER4, OUTPUT);
+        let value = orchestrator
+            .value(DOUBLER4, AddOneConfigOutput::OUTPUT)
+            .unwrap();
         println!("first step value {:?}", *value);
         match *value {
             Data::U64(5) => (),
@@ -81,10 +80,12 @@ fn main() -> Result<(), ()> {
     println!("{} seconds.", elapsed_time.as_secs_f64());
 
     {
-        let value = orchestrator.value(DOUBLER4, OUTPUT);
+        let value = orchestrator
+            .value(DOUBLER4, AddOneConfigOutput::OUTPUT)
+            .unwrap();
         println!("final value {:?}", *value);
         match *value {
-            Data::U64(100000005) => (),
+            Data::U64(10000005) => (),
             _ => unreachable!("error here"),
         }
     }

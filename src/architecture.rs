@@ -15,8 +15,14 @@ pub struct Path {
     param: ParamId,
 }
 
+impl From<(NodeId, ParamId)> for Path {
+    fn from((node, param): (NodeId, ParamId)) -> Self {
+        Path::new(node, param)
+    }
+}
+
 impl Path {
-    pub fn new(node: NodeId, param: ParamId) -> Self {
+    fn new(node: NodeId, param: ParamId) -> Self {
         Path { node, param }
     }
 }
@@ -24,23 +30,14 @@ impl Path {
 struct Processor {
     id: NodeId,
     fun: Box<dyn Transformer>,
-    inputs: Vec<Path>,
 }
 
 impl Processor {
-    fn new(
-        id: NodeId,
-        fun: impl Transformer + InputConfiguration + OutputConfiguration + 'static,
-    ) -> Self {
+    fn new(id: NodeId, fun: impl Transformer + 'static) -> Self {
         Self {
             id,
-            inputs: fun.inputs().iter().map(|x| Path::new(id, *x)).collect(),
             fun: Box::new(fun),
         }
-    }
-
-    fn inputs(&self) -> &Vec<Path> {
-        &self.inputs
     }
 
     fn process(&mut self, inputs: Params, outputs: Outputs) -> Result<(), ()> {
@@ -50,6 +47,7 @@ impl Processor {
 
 type ParamData = Map<ParamId, Rc<RefCell<Data>>>;
 
+#[derive(Debug)]
 struct Communication {
     outputs: Map<NodeId, ParamData>,
     inputs: Map<NodeId, ParamData>,
@@ -63,10 +61,10 @@ impl Communication {
         }
     }
 
-    fn add_output(
+    fn add_processor(
         &mut self,
         id: NodeId,
-        processor: &(impl Transformer + InputConfiguration + OutputConfiguration),
+        processor: &(impl InputConfiguration + OutputConfiguration),
     ) {
         self.outputs.insert(
             id,
@@ -98,38 +96,44 @@ impl Communication {
 
         self.inputs
             .get_mut(&dst.node)
-            .map(|node| node.insert(dst.param, output.clone()))
+            .and_then(|node| node.get_mut(&dst.param))
+            .map(|param| *param = output.clone())
             .ok_or(())
     }
 
-    fn get_arguments(&mut self, id: NodeId) -> (Params, Outputs) {
-        let inputs = self.inputs.get(&id).unwrap();
-        let outputs = self.outputs.get_mut(&id).unwrap();
-        (Params { map: inputs }, Outputs { map: outputs })
+    fn get_arguments(&mut self, id: NodeId) -> Option<(Params, Outputs)> {
+        let inputs = self.inputs.get(&id)?;
+        let outputs = self.outputs.get_mut(&id)?;
+        Some((Params { map: inputs }, Outputs { map: outputs }))
     }
 
-    fn get_outputs(&self, id: NodeId) -> Params {
-        self.outputs.get(&id).map(|p| Params { map: p }).unwrap()
+    fn get_outputs(&self, id: NodeId) -> Option<Params> {
+        self.outputs.get(&id).map(|p| Params { map: p })
     }
 }
 
+#[derive(Debug)]
 pub struct Params<'a> {
     map: &'a ParamData,
 }
 
 impl<'a> Params<'a> {
-    pub fn get(&self, val: &ParamId) -> impl Deref<Target = Data> + 'a {
-        self.map.get(val).unwrap().borrow()
+    pub fn get(&self, val: &ParamId) -> Option<impl Deref<Target = Data> + 'a> {
+        self.map.get(val).map(|x| x.borrow())
     }
 }
 
+#[derive(Debug)]
 pub struct Outputs<'a> {
     map: &'a mut ParamData,
 }
 
 impl<'a> Outputs<'a> {
-    pub fn get_mut<'b>(&'b mut self, val: &'b ParamId) -> impl DerefMut<Target = Data> + 'b {
-        self.map.get_mut(val).map(|p| (**p).borrow_mut()).unwrap()
+    pub fn get_mut<'b>(
+        &'b mut self,
+        val: &'b ParamId,
+    ) -> Option<impl DerefMut<Target = Data> + 'b> {
+        self.map.get_mut(val).map(|p| (**p).borrow_mut())
     }
 }
 
@@ -151,8 +155,8 @@ impl Orchestrator {
         id: NodeId,
         processor: impl Transformer + InputConfiguration + OutputConfiguration + 'static,
     ) -> Result<Self, ()> {
-        if !self.nodes.iter().any(|n| n.id == id) {
-            self.communication.add_output(id, &processor);
+        if self.communication.get_outputs(id).is_none() {
+            self.communication.add_processor(id, &processor);
             self.nodes.push(Processor::new(id, processor));
 
             Ok(self)
@@ -161,29 +165,27 @@ impl Orchestrator {
         }
     }
 
-    pub fn connect(mut self, src: Path, dst: Path) -> Result<Self, ()> {
-        self.nodes
-            .iter()
-            .find(|n| n.id == dst.node)
-            .and_then(|inp| inp.inputs().contains(&dst).then_some(()))
-            .ok_or(())?;
-
-        self.communication.connect(src, dst)?;
+    pub fn connect(mut self, src: impl Into<Path>, dst: impl Into<Path>) -> Result<Self, ()> {
+        self.communication.connect(src.into(), dst.into())?;
 
         Ok(self)
     }
 
     pub fn step(&mut self) -> Result<(), ()> {
         for node in self.nodes.iter_mut() {
-            let (inputs, outputs) = self.communication.get_arguments(node.id);
+            let (inputs, outputs) = self.communication.get_arguments(node.id).ok_or(())?;
             node.process(inputs, outputs)?;
         }
 
         Ok(())
     }
 
-    pub fn value(&mut self, node: NodeId, param: ParamId) -> impl Deref<Target = Data> + '_ {
-        self.communication.get_outputs(node).get(&param)
+    pub fn value(
+        &mut self,
+        node: NodeId,
+        param: ParamId,
+    ) -> Option<impl Deref<Target = Data> + '_> {
+        self.communication.get_outputs(node)?.get(&param)
     }
 }
 

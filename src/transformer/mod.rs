@@ -1,12 +1,15 @@
-use crate::{
+pub(crate) use crate::{
     architecture::{
         InputConfiguration, OutputConfiguration, Outputs, ParamId, Params, Transformer,
     },
     data::Data,
 };
 
-pub enum IncrementalGeneratorConfigOutput {
-    OUTPUT = 0,
+#[allow(non_snake_case)]
+pub mod IncrementalGeneratorConfigOutput {
+    use crate::architecture::ParamId;
+
+    pub const OUTPUT: ParamId = 0;
 }
 
 pub struct IncrementalGenerator(u64);
@@ -29,32 +32,37 @@ impl InputConfiguration for IncrementalGenerator {
 
 impl OutputConfiguration for IncrementalGenerator {
     fn outputs(&self) -> &[ParamId] {
-        &[IncrementalGeneratorConfigOutput::OUTPUT as u32]
+        &[IncrementalGeneratorConfigOutput::OUTPUT]
     }
 
     fn outputs_default(&self) -> Vec<(ParamId, Data)> {
-        vec![(
-            IncrementalGeneratorConfigOutput::OUTPUT as u32,
-            Data::U64(0),
-        )]
+        vec![(IncrementalGeneratorConfigOutput::OUTPUT, Data::U64(0))]
     }
 }
 
 impl Transformer for IncrementalGenerator {
     fn process(&mut self, _inputs: Params, mut outputs: Outputs) -> Result<(), ()> {
-        *outputs.get_mut(&(IncrementalGeneratorConfigOutput::OUTPUT as u32)) = Data::U64(self.0);
+        *outputs
+            .get_mut(&(IncrementalGeneratorConfigOutput::OUTPUT))
+            .unwrap() = Data::U64(self.0);
 
         self.0 += 1;
         Ok(())
     }
 }
 
-pub enum AddOneConfigInput {
-    INPUT = 0,
+#[allow(non_snake_case)]
+pub mod AddOneConfigInput {
+    use crate::architecture::ParamId;
+
+    pub const INPUT: ParamId = 0;
 }
 
-pub enum AddOneConfigOutput {
-    OUTPUT = 1,
+#[allow(non_snake_case)]
+pub mod AddOneConfigOutput {
+    use crate::architecture::ParamId;
+
+    pub const OUTPUT: ParamId = 1;
 }
 
 pub struct AddOne;
@@ -67,29 +75,29 @@ impl AddOne {
 
 impl InputConfiguration for AddOne {
     fn inputs(&self) -> &[ParamId] {
-        &[AddOneConfigInput::INPUT as u32]
+        &[AddOneConfigInput::INPUT]
     }
 
     fn inputs_default(&self) -> Vec<(ParamId, Data)> {
-        vec![(AddOneConfigOutput::OUTPUT as u32, Data::U64(0))]
+        vec![(AddOneConfigInput::INPUT, Data::U64(0))]
     }
 }
 
 impl OutputConfiguration for AddOne {
     fn outputs(&self) -> &[ParamId] {
-        &[AddOneConfigOutput::OUTPUT as u32]
+        &[AddOneConfigOutput::OUTPUT]
     }
 
     fn outputs_default(&self) -> Vec<(ParamId, Data)> {
-        vec![(AddOneConfigOutput::OUTPUT as u32, Data::U64(0))]
+        vec![(AddOneConfigOutput::OUTPUT, Data::U64(0))]
     }
 }
 
 impl Transformer for AddOne {
     fn process(&mut self, inputs: Params, mut outputs: Outputs) -> Result<(), ()> {
-        match *inputs.get(&(AddOneConfigInput::INPUT as u32)) {
+        match *inputs.get(&(AddOneConfigInput::INPUT)).unwrap() {
             Data::U64(v) => {
-                *outputs.get_mut(&(AddOneConfigOutput::OUTPUT as u32)) = Data::U64(v + 1);
+                *outputs.get_mut(&(AddOneConfigOutput::OUTPUT)).unwrap() = Data::U64(v + 1);
 
                 Ok(())
             }
@@ -99,7 +107,7 @@ impl Transformer for AddOne {
 
 #[cfg(test)]
 mod tests {
-    use crate::architecture::{NodeId, Orchestrator, Path};
+    use crate::architecture::{NodeId, Orchestrator};
 
     use super::*;
 
@@ -108,6 +116,7 @@ mod tests {
     pub const SOURCE: NodeId = 1;
     pub const DOUBLER: NodeId = 9;
     pub const PIPPO: NodeId = 255;
+    pub const PLUTO: ParamId = 255;
 
     #[test]
     fn test_add_success() {
@@ -135,8 +144,8 @@ mod tests {
             .add(DOUBLER, AddOne::new())
             .expect("cannot add doubler")
             .connect(
-                Path::new(SOURCE, IncrementalGeneratorConfigOutput::OUTPUT as u32),
-                Path::new(DOUBLER, AddOneConfigInput::INPUT as u32)
+                (SOURCE, IncrementalGeneratorConfigOutput::OUTPUT),
+                (DOUBLER, AddOneConfigInput::INPUT)
             )
             .is_ok())
     }
@@ -149,8 +158,8 @@ mod tests {
             .add(DOUBLER, AddOne::new())
             .expect("cannot add doubler")
             .connect(
-                Path::new(SOURCE, IncrementalGeneratorConfigOutput::OUTPUT as u32),
-                Path::new(PIPPO, PIPPO)
+                (SOURCE, IncrementalGeneratorConfigOutput::OUTPUT),
+                (PIPPO, PLUTO)
             )
             .is_err())
     }
@@ -163,8 +172,8 @@ mod tests {
             .add(DOUBLER, AddOne::new())
             .expect("cannot add doubler")
             .connect(
-                Path::new(SOURCE, IncrementalGeneratorConfigOutput::OUTPUT as u32),
-                Path::new(DOUBLER, PIPPO)
+                (SOURCE, IncrementalGeneratorConfigOutput::OUTPUT),
+                (DOUBLER, PLUTO)
             )
             .is_err())
     }
@@ -176,10 +185,7 @@ mod tests {
             .expect("cannot add source")
             .add(DOUBLER, AddOne::new())
             .expect("cannot add doubler")
-            .connect(
-                Path::new(PIPPO, PIPPO),
-                Path::new(DOUBLER, AddOneConfigInput::INPUT as u32)
-            )
+            .connect((PIPPO, PLUTO), (DOUBLER, AddOneConfigInput::INPUT))
             .is_err())
     }
 
@@ -190,10 +196,7 @@ mod tests {
             .expect("cannot add source")
             .add(DOUBLER, AddOne::new())
             .expect("cannot add doubler")
-            .connect(
-                Path::new(SOURCE, PIPPO),
-                Path::new(DOUBLER, AddOneConfigInput::INPUT as u32)
-            )
+            .connect((SOURCE, PLUTO), (DOUBLER, AddOneConfigInput::INPUT))
             .is_err())
     }
 }

@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct Map<K, V> {
     data: Vec<(K, V)>,
 }
