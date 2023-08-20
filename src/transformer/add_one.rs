@@ -6,58 +6,60 @@ use crate::{
 };
 
 #[allow(non_snake_case)]
-pub mod AddOneConfigInput {
+pub mod AddConfigConfigInput {
     use crate::architecture::ParamId;
 
     pub const INPUT: ParamId = 0;
+    pub const INCREMENT: ParamId = 2;
 }
 
 #[allow(non_snake_case)]
-pub mod AddOneConfigOutput {
+pub mod AddValueConfigOutput {
     use crate::architecture::ParamId;
 
     pub const OUTPUT: ParamId = 1;
 }
 
-pub struct AddOne;
+pub struct AddValue;
 
-impl AddOne {
+impl AddValue {
     pub fn new() -> Self {
-        AddOne
+        AddValue
     }
 }
 
-impl InputConfiguration for AddOne {
+impl InputConfiguration for AddValue {
     fn inputs(&self) -> &[ParamId] {
-        &[AddOneConfigInput::INPUT]
+        &[AddConfigConfigInput::INPUT]
     }
 
     fn inputs_default(&self, val: ParamId) -> Data {
         match val {
-            AddOneConfigInput::INPUT => Data::U64(0),
+            AddConfigConfigInput::INPUT => Data::U64(0),
+            AddConfigConfigInput::INCREMENT => Data::U64(1),
             _ => unreachable!(),
         }
     }
 }
 
-impl OutputConfiguration for AddOne {
+impl OutputConfiguration for AddValue {
     fn outputs(&self) -> &[ParamId] {
-        &[AddOneConfigOutput::OUTPUT]
+        &[AddValueConfigOutput::OUTPUT]
     }
 
     fn outputs_default(&self, val: ParamId) -> Data {
         match val {
-            AddOneConfigOutput::OUTPUT => Data::U64(0),
+            AddValueConfigOutput::OUTPUT => Data::U64(0),
             _ => unreachable!(),
         }
     }
 }
 
-impl Transformer for AddOne {
+impl Transformer for AddValue {
     fn process(&mut self, inputs: Params, mut outputs: Outputs) -> Result<(), ()> {
-        match *inputs.get(&(AddOneConfigInput::INPUT)).unwrap() {
+        match *inputs.get(&(AddConfigConfigInput::INPUT)).unwrap() {
             Data::U64(v) => {
-                *outputs.get_mut(&(AddOneConfigOutput::OUTPUT)).unwrap() = Data::U64(v + 1);
+                *outputs.get_mut(&(AddValueConfigOutput::OUTPUT)).unwrap() = Data::U64(v + 1);
 
                 Ok(())
             }

@@ -2,7 +2,7 @@ use proph::{
     architecture::{NodeId, Orchestrator},
     data::Data,
     transformer::{
-        AddOne, AddOneConfigInput, AddOneConfigOutput, IncrementalGenerator,
+        AddConfigConfigInput, AddValue, AddValueConfigOutput, IncrementalGenerator,
         IncrementalGeneratorConfigOutput,
     },
     utils::time_execution,
@@ -18,30 +18,30 @@ pub const DOUBLER4: NodeId = 6;
 fn main() -> Result<(), ()> {
     let mut orchestrator = Orchestrator::new()
         .add(SOURCE, IncrementalGenerator::new())?
-        .add(DOUBLER0, AddOne::new())?
-        .add(DOUBLER1, AddOne::new())?
-        .add(DOUBLER2, AddOne::new())?
-        .add(DOUBLER3, AddOne::new())?
-        .add(DOUBLER4, AddOne::new())?
+        .add(DOUBLER0, AddValue::new())?
+        .add(DOUBLER1, AddValue::new())?
+        .add(DOUBLER2, AddValue::new())?
+        .add(DOUBLER3, AddValue::new())?
+        .add(DOUBLER4, AddValue::new())?
         .connect(
             (SOURCE, IncrementalGeneratorConfigOutput::OUTPUT),
-            (DOUBLER0, AddOneConfigInput::INPUT),
+            (DOUBLER0, AddConfigConfigInput::INPUT),
         )?
         .connect(
-            (DOUBLER0, AddOneConfigOutput::OUTPUT),
-            (DOUBLER1, AddOneConfigInput::INPUT),
+            (DOUBLER0, AddValueConfigOutput::OUTPUT),
+            (DOUBLER1, AddConfigConfigInput::INPUT),
         )?
         .connect(
-            (DOUBLER1, AddOneConfigOutput::OUTPUT),
-            (DOUBLER2, AddOneConfigInput::INPUT),
+            (DOUBLER1, AddValueConfigOutput::OUTPUT),
+            (DOUBLER2, AddConfigConfigInput::INPUT),
         )?
         .connect(
-            (DOUBLER2, AddOneConfigOutput::OUTPUT),
-            (DOUBLER3, AddOneConfigInput::INPUT),
+            (DOUBLER2, AddValueConfigOutput::OUTPUT),
+            (DOUBLER3, AddConfigConfigInput::INPUT),
         )?
         .connect(
-            (DOUBLER3, AddOneConfigOutput::OUTPUT),
-            (DOUBLER4, AddOneConfigInput::INPUT),
+            (DOUBLER3, AddValueConfigOutput::OUTPUT),
+            (DOUBLER4, AddConfigConfigInput::INPUT),
         )?;
 
     let steps = 100000000;
@@ -50,7 +50,7 @@ fn main() -> Result<(), ()> {
 
     {
         let value = orchestrator
-            .value(DOUBLER4, AddOneConfigOutput::OUTPUT)
+            .value(DOUBLER4, AddValueConfigOutput::OUTPUT)
             .unwrap();
         println!("first step value {:?}", *value);
         match *value {
@@ -71,7 +71,7 @@ fn main() -> Result<(), ()> {
 
     {
         let value = orchestrator
-            .value(DOUBLER4, AddOneConfigOutput::OUTPUT)
+            .value(DOUBLER4, AddValueConfigOutput::OUTPUT)
             .unwrap();
         println!("final value {:?}", *value);
         match *value {

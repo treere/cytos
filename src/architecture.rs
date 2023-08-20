@@ -233,7 +233,7 @@ mod tests {
     use crate::{
         architecture::{NodeId, Orchestrator, ParamId},
         transformer::{
-            AddOne, AddOneConfigInput, IncrementalGenerator, IncrementalGeneratorConfigOutput,
+            AddConfigConfigInput, AddValue, IncrementalGenerator, IncrementalGeneratorConfigOutput,
         },
     };
 
@@ -267,11 +267,11 @@ mod tests {
         assert!(Orchestrator::new()
             .add(SOURCE, IncrementalGenerator::new())
             .expect("cannot add source")
-            .add(DOUBLER, AddOne::new())
+            .add(DOUBLER, AddValue::new())
             .expect("cannot add doubler")
             .connect(
                 (SOURCE, IncrementalGeneratorConfigOutput::OUTPUT),
-                (DOUBLER, AddOneConfigInput::INPUT)
+                (DOUBLER, AddConfigConfigInput::INPUT)
             )
             .is_ok())
     }
@@ -281,7 +281,7 @@ mod tests {
         assert!(Orchestrator::new()
             .add(SOURCE, IncrementalGenerator::new())
             .expect("cannot add source")
-            .add(DOUBLER, AddOne::new())
+            .add(DOUBLER, AddValue::new())
             .expect("cannot add doubler")
             .connect(
                 (SOURCE, IncrementalGeneratorConfigOutput::OUTPUT),
@@ -295,7 +295,7 @@ mod tests {
         assert!(Orchestrator::new()
             .add(SOURCE, IncrementalGenerator::new())
             .expect("cannot add source")
-            .add(DOUBLER, AddOne::new())
+            .add(DOUBLER, AddValue::new())
             .expect("cannot add doubler")
             .connect(
                 (SOURCE, IncrementalGeneratorConfigOutput::OUTPUT),
@@ -309,9 +309,9 @@ mod tests {
         assert!(Orchestrator::new()
             .add(SOURCE, IncrementalGenerator::new())
             .expect("cannot add source")
-            .add(DOUBLER, AddOne::new())
+            .add(DOUBLER, AddValue::new())
             .expect("cannot add doubler")
-            .connect((PIPPO, PLUTO), (DOUBLER, AddOneConfigInput::INPUT))
+            .connect((PIPPO, PLUTO), (DOUBLER, AddConfigConfigInput::INPUT))
             .is_err())
     }
 
@@ -320,9 +320,9 @@ mod tests {
         assert!(Orchestrator::new()
             .add(SOURCE, IncrementalGenerator::new())
             .expect("cannot add source")
-            .add(DOUBLER, AddOne::new())
+            .add(DOUBLER, AddValue::new())
             .expect("cannot add doubler")
-            .connect((SOURCE, PLUTO), (DOUBLER, AddOneConfigInput::INPUT))
+            .connect((SOURCE, PLUTO), (DOUBLER, AddConfigConfigInput::INPUT))
             .is_err())
     }
 }
