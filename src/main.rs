@@ -55,7 +55,7 @@ fn main() -> Result<(), ()> {
             (DOUBLER4, AddOneConfigInput::INPUT),
         )?;
 
-    let steps = 10000000;
+    let steps = 100000000;
     println!("running {} steps", steps);
     orchestrator.step().expect("step");
 
@@ -85,7 +85,7 @@ fn main() -> Result<(), ()> {
             .unwrap();
         println!("final value {:?}", *value);
         match *value {
-            Data::U64(10000005) => (),
+            Data::U64(100000005) => (),
             _ => unreachable!("error here"),
         }
     }

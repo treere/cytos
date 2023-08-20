@@ -72,9 +72,9 @@ impl Communication {
             id,
             Map::from_iterator(
                 processor
-                    .outputs_default()
+                    .outputs()
                     .into_iter()
-                    .map(|(n, data)| (n, Rc::new(RefCell::new(data)))),
+                    .map(|n| (*n, Rc::new(RefCell::new(processor.outputs_default(*n))))),
             ),
         );
 
@@ -82,9 +82,9 @@ impl Communication {
             id,
             Map::from_iterator(
                 processor
-                    .inputs_default()
+                    .inputs()
                     .into_iter()
-                    .map(|(n, data)| (n, Rc::new(RefCell::new(data)))),
+                    .map(|n| (*n, Rc::new(RefCell::new(processor.inputs_default(*n))))),
             ),
         )
     }
@@ -220,10 +220,109 @@ pub trait Transformer {
 
 pub trait InputConfiguration {
     fn inputs(&self) -> &[ParamId];
-    fn inputs_default(&self) -> Vec<(ParamId, Data)>;
+    fn inputs_default(&self, val: ParamId) -> Data;
 }
 
 pub trait OutputConfiguration {
     fn outputs(&self) -> &[ParamId];
-    fn outputs_default(&self) -> Vec<(ParamId, Data)>;
+    fn outputs_default(&self, val: ParamId) -> Data;
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        architecture::{NodeId, Orchestrator, ParamId},
+        transformer::{
+            AddOne, AddOneConfigInput, IncrementalGenerator, IncrementalGeneratorConfigOutput,
+        },
+    };
+
+    pub const SOURCE1: NodeId = 7;
+    pub const SOURCE2: NodeId = 8;
+    pub const SOURCE: NodeId = 1;
+    pub const DOUBLER: NodeId = 9;
+    pub const PIPPO: NodeId = 255;
+    pub const PLUTO: ParamId = 255;
+
+    #[test]
+    fn test_add_success() {
+        assert!(Orchestrator::new()
+            .add(SOURCE1, IncrementalGenerator::new())
+            .expect("cannot insert")
+            .add(SOURCE2, IncrementalGenerator::new())
+            .is_ok())
+    }
+
+    #[test]
+    fn test_add_same_name() {
+        assert!(Orchestrator::new()
+            .add(SOURCE, IncrementalGenerator::new())
+            .expect("cannot insert")
+            .add(SOURCE, IncrementalGenerator::new())
+            .is_err())
+    }
+
+    #[test]
+    fn test_connect_success() {
+        assert!(Orchestrator::new()
+            .add(SOURCE, IncrementalGenerator::new())
+            .expect("cannot add source")
+            .add(DOUBLER, AddOne::new())
+            .expect("cannot add doubler")
+            .connect(
+                (SOURCE, IncrementalGeneratorConfigOutput::OUTPUT),
+                (DOUBLER, AddOneConfigInput::INPUT)
+            )
+            .is_ok())
+    }
+
+    #[test]
+    fn test_connect_missing_destination_source() {
+        assert!(Orchestrator::new()
+            .add(SOURCE, IncrementalGenerator::new())
+            .expect("cannot add source")
+            .add(DOUBLER, AddOne::new())
+            .expect("cannot add doubler")
+            .connect(
+                (SOURCE, IncrementalGeneratorConfigOutput::OUTPUT),
+                (PIPPO, PLUTO)
+            )
+            .is_err())
+    }
+
+    #[test]
+    fn test_connect_missing_destination_value() {
+        assert!(Orchestrator::new()
+            .add(SOURCE, IncrementalGenerator::new())
+            .expect("cannot add source")
+            .add(DOUBLER, AddOne::new())
+            .expect("cannot add doubler")
+            .connect(
+                (SOURCE, IncrementalGeneratorConfigOutput::OUTPUT),
+                (DOUBLER, PLUTO)
+            )
+            .is_err())
+    }
+
+    #[test]
+    fn test_connect_missing_source_source() {
+        assert!(Orchestrator::new()
+            .add(SOURCE, IncrementalGenerator::new())
+            .expect("cannot add source")
+            .add(DOUBLER, AddOne::new())
+            .expect("cannot add doubler")
+            .connect((PIPPO, PLUTO), (DOUBLER, AddOneConfigInput::INPUT))
+            .is_err())
+    }
+
+    #[test]
+    fn test_connect_missing_source_value() {
+        assert!(Orchestrator::new()
+            .add(SOURCE, IncrementalGenerator::new())
+            .expect("cannot add source")
+            .add(DOUBLER, AddOne::new())
+            .expect("cannot add doubler")
+            .connect((SOURCE, PLUTO), (DOUBLER, AddOneConfigInput::INPUT))
+            .is_err())
+    }
 }
