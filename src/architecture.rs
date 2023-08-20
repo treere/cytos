@@ -24,22 +24,23 @@ impl Path {
 struct Processor {
     id: NodeId,
     fun: Box<dyn Transformer>,
+    inputs: Vec<Path>,
 }
 
 impl Processor {
-    fn new(id: NodeId, fun: impl Transformer + 'static) -> Self {
+    fn new(
+        id: NodeId,
+        fun: impl Transformer + InputConfiguration + OutputConfiguration + 'static,
+    ) -> Self {
         Self {
             id,
+            inputs: fun.inputs().iter().map(|x| Path::new(id, *x)).collect(),
             fun: Box::new(fun),
         }
     }
 
-    fn inputs(&self) -> Vec<Path> {
-        self.fun
-            .inputs()
-            .iter()
-            .map(|x| Path::new(self.id, *x))
-            .collect()
+    fn inputs(&self) -> &Vec<Path> {
+        &self.inputs
     }
 
     fn process(&mut self, inputs: Params, outputs: Outputs) -> Result<(), ()> {
@@ -62,7 +63,11 @@ impl Communication {
         }
     }
 
-    fn add_output(&mut self, id: NodeId, processor: &impl Transformer) {
+    fn add_output(
+        &mut self,
+        id: NodeId,
+        processor: &(impl Transformer + InputConfiguration + OutputConfiguration),
+    ) {
         self.outputs.insert(
             id,
             Map::from_iterator(
@@ -73,7 +78,15 @@ impl Communication {
             ),
         );
 
-        self.inputs.insert(id, Map::new());
+        self.inputs.insert(
+            id,
+            Map::from_iterator(
+                processor
+                    .inputs_default()
+                    .into_iter()
+                    .map(|(n, data)| (n, Rc::new(RefCell::new(data)))),
+            ),
+        )
     }
 
     fn connect(&mut self, src: Path, dst: Path) -> Result<(), ()> {
@@ -133,7 +146,11 @@ impl Orchestrator {
         }
     }
 
-    pub fn add(mut self, id: NodeId, processor: impl Transformer + 'static) -> Result<Self, ()> {
+    pub fn add(
+        mut self,
+        id: NodeId,
+        processor: impl Transformer + InputConfiguration + OutputConfiguration + 'static,
+    ) -> Result<Self, ()> {
         if !self.nodes.iter().any(|n| n.id == id) {
             self.communication.add_output(id, &processor);
             self.nodes.push(Processor::new(id, processor));
@@ -171,9 +188,15 @@ impl Orchestrator {
 }
 
 pub trait Transformer {
+    fn process(&mut self, inputs: Params, outputs: Outputs) -> Result<(), ()>;
+}
+
+pub trait InputConfiguration {
     fn inputs(&self) -> &[ParamId];
+    fn inputs_default(&self) -> Vec<(ParamId, Data)>;
+}
+
+pub trait OutputConfiguration {
     fn outputs(&self) -> &[ParamId];
     fn outputs_default(&self) -> Vec<(ParamId, Data)>;
-
-    fn process(&mut self, inputs: Params, outputs: Outputs) -> Result<(), ()>;
 }

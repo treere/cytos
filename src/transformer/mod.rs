@@ -1,14 +1,10 @@
-use strum_macros::EnumIter;
-
 use crate::{
-    architecture::{Outputs, ParamId, Params, Transformer},
+    architecture::{
+        InputConfiguration, OutputConfiguration, Outputs, ParamId, Params, Transformer,
+    },
     data::Data,
 };
 
-#[derive(EnumIter, Debug, PartialEq)]
-pub enum IncrementalGeneratorConfigInput {}
-
-#[derive(EnumIter, Debug, PartialEq)]
 pub enum IncrementalGeneratorConfigOutput {
     OUTPUT = 0,
 }
@@ -21,11 +17,17 @@ impl IncrementalGenerator {
     }
 }
 
-impl Transformer for IncrementalGenerator {
+impl InputConfiguration for IncrementalGenerator {
     fn inputs(&self) -> &[ParamId] {
         &[]
     }
 
+    fn inputs_default(&self) -> Vec<(ParamId, Data)> {
+        vec![]
+    }
+}
+
+impl OutputConfiguration for IncrementalGenerator {
     fn outputs(&self) -> &[ParamId] {
         &[IncrementalGeneratorConfigOutput::OUTPUT as u32]
     }
@@ -36,7 +38,9 @@ impl Transformer for IncrementalGenerator {
             Data::U64(0),
         )]
     }
+}
 
+impl Transformer for IncrementalGenerator {
     fn process(&mut self, _inputs: Params, mut outputs: Outputs) -> Result<(), ()> {
         *outputs.get_mut(&(IncrementalGeneratorConfigOutput::OUTPUT as u32)) = Data::U64(self.0);
 
@@ -45,12 +49,10 @@ impl Transformer for IncrementalGenerator {
     }
 }
 
-#[derive(EnumIter, Debug, PartialEq)]
 pub enum AddOneConfigInput {
     INPUT = 0,
 }
 
-#[derive(EnumIter, Debug, PartialEq)]
 pub enum AddOneConfigOutput {
     OUTPUT = 1,
 }
@@ -63,11 +65,17 @@ impl AddOne {
     }
 }
 
-impl Transformer for AddOne {
+impl InputConfiguration for AddOne {
     fn inputs(&self) -> &[ParamId] {
         &[AddOneConfigInput::INPUT as u32]
     }
 
+    fn inputs_default(&self) -> Vec<(ParamId, Data)> {
+        vec![(AddOneConfigOutput::OUTPUT as u32, Data::U64(0))]
+    }
+}
+
+impl OutputConfiguration for AddOne {
     fn outputs(&self) -> &[ParamId] {
         &[AddOneConfigOutput::OUTPUT as u32]
     }
@@ -75,7 +83,9 @@ impl Transformer for AddOne {
     fn outputs_default(&self) -> Vec<(ParamId, Data)> {
         vec![(AddOneConfigOutput::OUTPUT as u32, Data::U64(0))]
     }
+}
 
+impl Transformer for AddOne {
     fn process(&mut self, inputs: Params, mut outputs: Outputs) -> Result<(), ()> {
         match *inputs.get(&(AddOneConfigInput::INPUT as u32)) {
             Data::U64(v) => {
