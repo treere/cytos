@@ -13,7 +13,10 @@ use std::time::Instant;
 
 use crate::{
     architecture::{Orchestrator, Path},
-    transformer::{AddOne, IncrementalGenerator},
+    transformer::{
+        AddOne, AddOneConfigInput, AddOneConfigOutput, IncrementalGenerator,
+        IncrementalGeneratorConfigOutput,
+    },
 };
 
 pub const INPUT: ParamId = 0;
@@ -28,31 +31,31 @@ pub const DOUBLER4: NodeId = 6;
 
 fn main() -> Result<(), ()> {
     let mut orchestrator = Orchestrator::new()
-        .add(SOURCE, IncrementalGenerator::Module::new())?
-        .add(DOUBLER0, AddOne::Module::new())?
+        .add(SOURCE, IncrementalGenerator::new())?
+        .add(DOUBLER0, AddOne::new())?
         .connect(
-            Path::new(SOURCE, IncrementalGenerator::Config::OUTPUT),
-            Path::new(DOUBLER0, AddOne::Config::INPUT),
+            Path::new(SOURCE, IncrementalGeneratorConfigOutput::OUTPUT as u32),
+            Path::new(DOUBLER0, AddOneConfigInput::INPUT as u32),
         )?
-        .add(DOUBLER1, AddOne::Module::new())?
+        .add(DOUBLER1, AddOne::new())?
         .connect(
-            Path::new(DOUBLER0, AddOne::Config::OUTPUT),
-            Path::new(DOUBLER1, AddOne::Config::INPUT),
+            Path::new(DOUBLER0, AddOneConfigOutput::OUTPUT as u32),
+            Path::new(DOUBLER1, AddOneConfigInput::INPUT as u32),
         )?
-        .add(DOUBLER2, AddOne::Module::new())?
+        .add(DOUBLER2, AddOne::new())?
         .connect(
-            Path::new(DOUBLER1, AddOne::Config::OUTPUT),
-            Path::new(DOUBLER2, AddOne::Config::INPUT),
+            Path::new(DOUBLER1, AddOneConfigOutput::OUTPUT as u32),
+            Path::new(DOUBLER2, AddOneConfigInput::INPUT as u32),
         )?
-        .add(DOUBLER3, AddOne::Module::new())?
+        .add(DOUBLER3, AddOne::new())?
         .connect(
-            Path::new(DOUBLER2, AddOne::Config::OUTPUT),
-            Path::new(DOUBLER3, AddOne::Config::INPUT),
+            Path::new(DOUBLER2, AddOneConfigOutput::OUTPUT as u32),
+            Path::new(DOUBLER3, AddOneConfigInput::INPUT as u32),
         )?
-        .add(DOUBLER4, AddOne::Module::new())?
+        .add(DOUBLER4, AddOne::new())?
         .connect(
-            Path::new(DOUBLER3, AddOne::Config::OUTPUT),
-            Path::new(DOUBLER4, AddOne::Config::INPUT),
+            Path::new(DOUBLER3, AddOneConfigOutput::OUTPUT as u32),
+            Path::new(DOUBLER4, AddOneConfigInput::INPUT as u32),
         )?;
 
     let steps = 100000000;
