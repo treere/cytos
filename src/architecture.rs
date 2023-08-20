@@ -1,5 +1,7 @@
 use std::{
     cell::RefCell,
+    cmp::Ordering,
+    collections::HashMap,
     ops::{Deref, DerefMut},
     rc::Rc,
 };
@@ -9,7 +11,7 @@ use crate::{data::Data, map::Map};
 pub type NodeId = u32;
 pub type ParamId = u32;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Path {
     node: NodeId,
     param: ParamId,
@@ -139,6 +141,7 @@ impl<'a> Outputs<'a> {
 
 pub struct Orchestrator {
     nodes: Vec<Processor>,
+    links: Vec<(Path, Path)>,
     communication: Communication,
 }
 
@@ -146,6 +149,7 @@ impl Orchestrator {
     pub fn new() -> Self {
         Self {
             nodes: Vec::new(),
+            links: Vec::new(),
             communication: Communication::new(),
         }
     }
@@ -166,9 +170,30 @@ impl Orchestrator {
     }
 
     pub fn connect(mut self, src: impl Into<Path>, dst: impl Into<Path>) -> Result<Self, ()> {
-        self.communication.connect(src.into(), dst.into())?;
+        let src = src.into();
+        let dst = dst.into();
+        self.communication.connect(src.clone(), dst.clone())?;
+
+        self.links.push((src, dst));
+
+        self.order_nodes();
 
         Ok(self)
+    }
+
+    fn order_nodes(&mut self) {
+        let mut p = HashMap::new();
+        for (s, d) in self.links.iter() {
+            p.entry(d.node).or_insert(Vec::new()).push(s.node)
+        }
+        self.nodes.sort_unstable_by(|s, d| {
+            if p.get(&d.id).map(|v| v.contains(&s.id)).unwrap_or(false) {
+                Ordering::Greater
+            } else {
+                Ordering::Less
+            }
+        });
+        self.nodes.reverse();
     }
 
     pub fn step(&mut self) -> Result<(), ()> {

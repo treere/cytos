@@ -28,12 +28,12 @@ pub const DOUBLER4: NodeId = 6;
 
 fn main() -> Result<(), ()> {
     let mut orchestrator = Orchestrator::new()
-        .add(SOURCE, IncrementalGenerator::new())?
         .add(DOUBLER0, AddOne::new())?
         .add(DOUBLER1, AddOne::new())?
         .add(DOUBLER2, AddOne::new())?
         .add(DOUBLER3, AddOne::new())?
         .add(DOUBLER4, AddOne::new())?
+        .add(SOURCE, IncrementalGenerator::new())?
         .connect(
             (SOURCE, IncrementalGeneratorConfigOutput::OUTPUT),
             (DOUBLER0, AddOneConfigInput::INPUT),
