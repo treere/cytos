@@ -1,22 +1,11 @@
-#![allow(unused_variables)]
-mod architecture;
-
-mod data;
-mod map;
-mod transformer;
-
-use architecture::NodeId;
-
-use data::Data;
-
-use std::time::Instant;
-
-use crate::{
-    architecture::Orchestrator,
+use proph::{
+    architecture::{NodeId, Orchestrator},
+    data::Data,
     transformer::{
         AddOne, AddOneConfigInput, AddOneConfigOutput, IncrementalGenerator,
         IncrementalGeneratorConfigOutput,
     },
+    utils::time_execution,
 };
 
 pub const SOURCE: NodeId = 1;
@@ -28,12 +17,12 @@ pub const DOUBLER4: NodeId = 6;
 
 fn main() -> Result<(), ()> {
     let mut orchestrator = Orchestrator::new()
+        .add(SOURCE, IncrementalGenerator::new())?
         .add(DOUBLER0, AddOne::new())?
         .add(DOUBLER1, AddOne::new())?
         .add(DOUBLER2, AddOne::new())?
         .add(DOUBLER3, AddOne::new())?
         .add(DOUBLER4, AddOne::new())?
-        .add(SOURCE, IncrementalGenerator::new())?
         .connect(
             (SOURCE, IncrementalGeneratorConfigOutput::OUTPUT),
             (DOUBLER0, AddOneConfigInput::INPUT),
@@ -70,14 +59,15 @@ fn main() -> Result<(), ()> {
         }
     }
 
-    let now = Instant::now();
+    let seconds = time_execution(|| {
+        for _ in 0..steps {
+            orchestrator.step().expect("")
+        }
+    });
 
-    let _result = (0..steps)
-        .map(|_| orchestrator.step().expect("step"))
-        .count();
-
-    let elapsed_time = now.elapsed();
-    println!("{} seconds.", elapsed_time.as_secs_f64());
+    println!("{} seconds.", seconds);
+    println!("{} step/seconds", steps as f64 / seconds);
+    println!("{} seconds/steps", seconds / steps as f64);
 
     {
         let value = orchestrator
@@ -89,12 +79,6 @@ fn main() -> Result<(), ()> {
             _ => unreachable!("error here"),
         }
     }
-
-    println!("{} step/seconds", steps as f64 / elapsed_time.as_secs_f64());
-    println!(
-        "{} seconds/steps",
-        elapsed_time.as_secs_f64() / steps as f64
-    );
 
     Ok(())
 }
