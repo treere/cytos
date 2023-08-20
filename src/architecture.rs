@@ -6,7 +6,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::{data::Data, map::Map};
+use crate::{data::Data, map::VecMap};
 
 pub type NodeId = u32;
 pub type ParamId = u32;
@@ -47,19 +47,19 @@ impl Processor {
     }
 }
 
-type ParamData = Map<ParamId, Rc<RefCell<Data>>>;
+type ParamData = VecMap<ParamId, Rc<RefCell<Data>>>;
 
 #[derive(Debug)]
 struct Communication {
-    outputs: Map<NodeId, ParamData>,
-    inputs: Map<NodeId, ParamData>,
+    outputs: VecMap<NodeId, ParamData>,
+    inputs: VecMap<NodeId, ParamData>,
 }
 
 impl Communication {
     fn new() -> Self {
         Self {
-            outputs: Map::new(),
-            inputs: Map::new(),
+            outputs: VecMap::new(),
+            inputs: VecMap::new(),
         }
     }
 
@@ -70,20 +70,20 @@ impl Communication {
     ) {
         self.outputs.insert(
             id,
-            Map::from_iterator(
+            VecMap::from_iterator(
                 processor
                     .outputs()
-                    .into_iter()
+                    .iter()
                     .map(|n| (*n, Rc::new(RefCell::new(processor.outputs_default(*n))))),
             ),
         );
 
         self.inputs.insert(
             id,
-            Map::from_iterator(
+            VecMap::from_iterator(
                 processor
                     .inputs()
-                    .into_iter()
+                    .iter()
                     .map(|n| (*n, Rc::new(RefCell::new(processor.inputs_default(*n))))),
             ),
         )
@@ -143,6 +143,12 @@ pub struct Orchestrator {
     nodes: Vec<Processor>,
     links: Vec<(Path, Path)>,
     communication: Communication,
+}
+
+impl Default for Orchestrator {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Orchestrator {

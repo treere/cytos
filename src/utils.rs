@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-pub fn time_execution<T: FnMut() -> ()>(mut f: T) -> f64 {
+pub fn time_execution<T: FnMut()>(mut f: T) -> f64 {
     let now = Instant::now();
 
     f();
