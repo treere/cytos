@@ -11,4 +11,3 @@ edition = "2021"
 debug = 1
 opt-level = 3
 panic = "abort"
-ltp = true

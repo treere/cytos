@@ -1,5 +1,5 @@
 use proph::{
-    architecture::{NodeId, Orchestrator},
+    architecture::{Graph, NodeId},
     data::Data,
     transformer::{
         AddConfigConfigInput, AddValue, AddValueConfigOutput, IncrementalGenerator,
@@ -15,8 +15,8 @@ pub const DOUBLER2: NodeId = 4;
 pub const DOUBLER3: NodeId = 5;
 pub const DOUBLER4: NodeId = 6;
 
-fn main() -> Result<(), ()> {
-    let mut orchestrator = Orchestrator::new()
+fn main() -> Result<(), String> {
+    let mut orchestrator = Graph::new()
         .add(SOURCE, IncrementalGenerator::new())?
         .add(DOUBLER0, AddValue::new())?
         .add(DOUBLER1, AddValue::new())?
@@ -50,7 +50,7 @@ fn main() -> Result<(), ()> {
 
     {
         let value = orchestrator
-            .value(DOUBLER4, AddValueConfigOutput::OUTPUT)
+            .param_value(DOUBLER4, AddValueConfigOutput::OUTPUT)
             .unwrap();
         println!("first step value {:?}", *value);
         match *value {
@@ -71,7 +71,7 @@ fn main() -> Result<(), ()> {
 
     {
         let value = orchestrator
-            .value(DOUBLER4, AddValueConfigOutput::OUTPUT)
+            .param_value(DOUBLER4, AddValueConfigOutput::OUTPUT)
             .unwrap();
         println!("final value {:?}", *value);
         match *value {

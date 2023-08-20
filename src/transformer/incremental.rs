@@ -1,6 +1,6 @@
 use crate::{
     architecture::{
-        InputConfiguration, OutputConfiguration, Outputs, ParamId, Params, Transformer,
+        InputConfiguration, OutputConfiguration, ParamId, Params, Results, Transformer,
     },
     data::Data,
 };
@@ -25,7 +25,7 @@ impl InputConfiguration for IncrementalGenerator {
         &[]
     }
 
-    fn inputs_default(&self, _val: ParamId) -> Data {
+    fn input_default(&self, _val: ParamId) -> Data {
         unreachable!()
     }
 }
@@ -35,7 +35,7 @@ impl OutputConfiguration for IncrementalGenerator {
         &[IncrementalGeneratorConfigOutput::OUTPUT]
     }
 
-    fn outputs_default(&self, val: ParamId) -> Data {
+    fn output_default(&self, val: ParamId) -> Data {
         match val {
             IncrementalGeneratorConfigOutput::OUTPUT => Data::U64(0),
             _ => unreachable!(),
@@ -44,7 +44,7 @@ impl OutputConfiguration for IncrementalGenerator {
 }
 
 impl Transformer for IncrementalGenerator {
-    fn process(&mut self, _inputs: Params, mut outputs: Outputs) -> Result<(), ()> {
+    fn process(&mut self, _inputs: Params, mut outputs: Results) -> Result<(), &'static str> {
         *outputs
             .get_mut(&(IncrementalGeneratorConfigOutput::OUTPUT))
             .unwrap() = Data::U64(self.0);
