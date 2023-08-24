@@ -1,6 +1,5 @@
 use proph::{
     architecture::{Graph, NodeId},
-    data::Data,
     transformer::{
         AddConfigConfigInput, AddValue, AddValueConfigOutput, IncrementalGenerator,
         IncrementalGeneratorConfigOutput,
@@ -52,11 +51,10 @@ fn main() -> Result<(), String> {
         let value = orchestrator
             .param_value(DOUBLER4, AddValueConfigOutput::OUTPUT)
             .unwrap();
-        println!("first step value {:?}", *value);
-        match *value {
-            Data::U64(5) => (),
-            _ => unreachable!("error here"),
-        }
+
+        let value = value.as_any().downcast_ref::<u64>().unwrap();
+        println!("first step value {:?}", value);
+        assert!(*value == 5);
     }
 
     let seconds = time_execution(|| {
@@ -73,11 +71,10 @@ fn main() -> Result<(), String> {
         let value = orchestrator
             .param_value(DOUBLER4, AddValueConfigOutput::OUTPUT)
             .unwrap();
-        println!("final value {:?}", *value);
-        match *value {
-            Data::U64(100000005) => (),
-            _ => unreachable!("error here"),
-        }
+
+        let value = value.as_any().downcast_ref::<u64>().unwrap();
+        println!("first step value {:?}", value);
+        assert!(*value == 100000005);
     }
 
     Ok(())
