@@ -52,7 +52,7 @@ fn main() -> Result<(), String> {
             .param_value(DOUBLER4, AddValueConfigOutput::OUTPUT)
             .unwrap();
 
-        let value = value.as_any().downcast_ref::<u64>().unwrap();
+        let value = value.downcast_ref::<u64>().unwrap();
         println!("first step value {:?}", value);
         assert!(*value == 5);
     }
@@ -72,7 +72,7 @@ fn main() -> Result<(), String> {
             .param_value(DOUBLER4, AddValueConfigOutput::OUTPUT)
             .unwrap();
 
-        let value = value.as_any().downcast_ref::<u64>().unwrap();
+        let value = value.downcast_ref::<u64>().unwrap();
         println!("first step value {:?}", value);
         assert!(*value == 100000005);
     }

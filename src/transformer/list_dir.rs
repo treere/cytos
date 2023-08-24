@@ -2,7 +2,7 @@ use std::fs::ReadDir;
 
 use crate::architecture::{
     new_shared, InputConfiguration, OutputConfiguration, ParamId, Params, Results, SharedData,
-    SharedType, Transformer,
+    Transformer,
 };
 
 #[allow(non_snake_case)]
@@ -34,16 +34,6 @@ impl InputConfiguration for ListDir {
     }
 }
 
-impl SharedType for String {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-}
-
 impl OutputConfiguration for ListDir {
     fn outputs(&self) -> &[ParamId] {
         &[ListDirConfigOutput::FILE]
@@ -61,7 +51,7 @@ impl Transformer for ListDir {
     fn process(&mut self, _inputs: Params, mut outputs: Results) -> Result<(), &'static str> {
         if let Some(Ok(_file)) = self.reader.next() {
             let mut output = outputs.get_mut(&(ListDirConfigOutput::FILE)).ok_or("BB")?;
-            *output.as_any_mut().downcast_mut::<String>().ok_or("A")? = "pippo".to_owned();
+            *output.downcast_mut::<String>().ok_or("A")? = "pippo".to_owned();
             Ok(())
         } else {
             Err("no files")

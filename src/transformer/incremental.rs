@@ -47,7 +47,7 @@ impl Transformer for IncrementalGenerator {
             .get_mut(&(IncrementalGeneratorConfigOutput::OUTPUT))
             .ok_or("AA")?;
 
-        *output.as_any_mut().downcast_mut::<u64>().ok_or("BB")? = self.0;
+        *output.downcast_mut::<u64>().ok_or("BB")? = self.0;
 
         self.0 += 1;
         Ok(())

@@ -56,15 +56,10 @@ impl Processor {
     }
 }
 
-pub trait SharedType {
-    fn as_any(&self) -> &dyn Any;
-    fn as_any_mut(&mut self) -> &mut dyn Any;
-}
-
 /// Shared param data.
-pub type SharedData = Rc<RefCell<dyn SharedType + 'static>>;
+pub type SharedData = Rc<RefCell<dyn Any + 'static>>;
 
-pub fn new_shared<T: SharedType + 'static>(v: T) -> SharedData {
+pub fn new_shared<T: 'static>(v: T) -> SharedData {
     Rc::new(RefCell::new(v))
 }
 
@@ -151,7 +146,7 @@ pub struct Params<'a> {
 
 impl<'a> Params<'a> {
     /// Get the value of a parameter.
-    pub fn get(&self, val: &ParamId) -> Option<Ref<'a, dyn SharedType>> {
+    pub fn get(&self, val: &ParamId) -> Option<Ref<'a, dyn Any>> {
         self.map.get(val).map(|x| x.borrow())
     }
 }
@@ -164,7 +159,7 @@ pub struct Results<'a> {
 
 impl<'a> Results<'a> {
     /// Get the mutable value.
-    pub fn get_mut(&mut self, val: &ParamId) -> Option<RefMut<'_, dyn SharedType>> {
+    pub fn get_mut(&mut self, val: &ParamId) -> Option<RefMut<'_, dyn Any>> {
         self.map.get_mut(val).map(|p| {
             let v = (**p).borrow_mut();
             v
@@ -172,7 +167,7 @@ impl<'a> Results<'a> {
     }
 
     /// Get the value.
-    pub fn get<'b>(&'b mut self, val: &'b ParamId) -> Option<Ref<'b, dyn SharedType>> {
+    pub fn get<'b>(&'b mut self, val: &'b ParamId) -> Option<Ref<'b, dyn Any>> {
         self.map.get(val).map(|p| (**p).borrow())
     }
 }
@@ -257,7 +252,7 @@ impl Graph {
     }
 
     /// Fetch output parameters
-    pub fn param_value(&mut self, node: NodeId, param: ParamId) -> Option<Ref<'_, dyn SharedType>> {
+    pub fn param_value(&mut self, node: NodeId, param: ParamId) -> Option<Ref<'_, dyn Any>> {
         self.communication.get_outputs(node)?.get(&param)
     }
 }

@@ -1,6 +1,6 @@
 use crate::architecture::{
     new_shared, InputConfiguration, OutputConfiguration, ParamId, Params, Results, SharedData,
-    SharedType, Transformer,
+    Transformer,
 };
 
 #[allow(non_snake_case)]
@@ -23,16 +23,6 @@ pub struct AddValue;
 impl AddValue {
     pub fn new() -> Self {
         AddValue
-    }
-}
-
-impl SharedType for u64 {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
     }
 }
 
@@ -68,14 +58,14 @@ impl Transformer for AddValue {
         let param = inputs
             .get(&(AddConfigConfigInput::INPUT))
             .ok_or("cannot get")?;
-        let param = param.as_any().downcast_ref::<u64>();
+        let param = param.downcast_ref::<u64>();
         match param {
             Some(v) => {
                 let mut output = outputs
                     .get_mut(&(AddValueConfigOutput::OUTPUT))
                     .ok_or("cannot get 2")?;
 
-                *output.as_any_mut().downcast_mut::<u64>().ok_or("AAA")? = v + 1;
+                *output.downcast_mut::<u64>().ok_or("AAA")? = v + 1;
 
                 Ok(())
             }
