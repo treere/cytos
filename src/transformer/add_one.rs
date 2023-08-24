@@ -1,6 +1,8 @@
-use crate::architecture::{
-    new_shared, InputConfiguration, OutputConfiguration, ParamId, Params, Results, SharedData,
-    SharedType, Transformer,
+use crate::{
+    architecture::{
+        InputConfiguration, OutputConfiguration, ParamId, Params, Results, Transformer,
+    },
+    data::Data,
 };
 
 #[allow(non_snake_case)]
@@ -26,25 +28,15 @@ impl AddValue {
     }
 }
 
-impl SharedType for u64 {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-}
-
 impl InputConfiguration for AddValue {
     fn inputs(&self) -> &[ParamId] {
         &[AddConfigConfigInput::INPUT]
     }
 
-    fn input_default(&self, val: ParamId) -> SharedData {
+    fn input_default(&self, val: ParamId) -> Data {
         match val {
-            AddConfigConfigInput::INPUT => new_shared(0u64),
-            AddConfigConfigInput::INCREMENT => new_shared(1u64),
+            AddConfigConfigInput::INPUT => Data::U64(0),
+            AddConfigConfigInput::INCREMENT => Data::U64(1),
             _ => unreachable!(),
         }
     }
@@ -55,9 +47,9 @@ impl OutputConfiguration for AddValue {
         &[AddValueConfigOutput::OUTPUT]
     }
 
-    fn output_default(&self, val: ParamId) -> SharedData {
+    fn output_default(&self, val: ParamId) -> Data {
         match val {
-            AddValueConfigOutput::OUTPUT => new_shared(0u64),
+            AddValueConfigOutput::OUTPUT => Data::U64(0),
             _ => unreachable!(),
         }
     }
@@ -65,21 +57,12 @@ impl OutputConfiguration for AddValue {
 
 impl Transformer for AddValue {
     fn process(&mut self, inputs: Params, mut outputs: Results) -> Result<(), &'static str> {
-        let param = inputs
-            .get(&(AddConfigConfigInput::INPUT))
-            .ok_or("cannot get")?;
-        let param = param.as_any().downcast_ref::<u64>();
-        match param {
-            Some(v) => {
-                let mut output = outputs
-                    .get_mut(&(AddValueConfigOutput::OUTPUT))
-                    .ok_or("cannot get 2")?;
-
-                *output.as_any_mut().downcast_mut::<u64>().ok_or("AAA")? = v + 1;
+        match *inputs.get(&(AddConfigConfigInput::INPUT)).unwrap() {
+            Data::U64(v) => {
+                *outputs.get_mut(&(AddValueConfigOutput::OUTPUT)).unwrap() = Data::U64(v + 1);
 
                 Ok(())
             }
-            _ => Err("unexpected value"),
         }
     }
 }

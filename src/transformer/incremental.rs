@@ -1,6 +1,8 @@
-use crate::architecture::{
-    new_shared, InputConfiguration, OutputConfiguration, ParamId, Params, Results, SharedData,
-    Transformer,
+use crate::{
+    architecture::{
+        InputConfiguration, OutputConfiguration, ParamId, Params, Results, Transformer,
+    },
+    data::Data,
 };
 
 #[allow(non_snake_case)]
@@ -23,7 +25,7 @@ impl InputConfiguration for IncrementalGenerator {
         &[]
     }
 
-    fn input_default(&self, _val: ParamId) -> SharedData {
+    fn input_default(&self, _val: ParamId) -> Data {
         unreachable!()
     }
 }
@@ -33,9 +35,9 @@ impl OutputConfiguration for IncrementalGenerator {
         &[IncrementalGeneratorConfigOutput::OUTPUT]
     }
 
-    fn output_default(&self, val: ParamId) -> SharedData {
+    fn output_default(&self, val: ParamId) -> Data {
         match val {
-            IncrementalGeneratorConfigOutput::OUTPUT => new_shared(0u64),
+            IncrementalGeneratorConfigOutput::OUTPUT => Data::U64(0),
             _ => unreachable!(),
         }
     }
@@ -43,11 +45,9 @@ impl OutputConfiguration for IncrementalGenerator {
 
 impl Transformer for IncrementalGenerator {
     fn process(&mut self, _inputs: Params, mut outputs: Results) -> Result<(), &'static str> {
-        let mut output = outputs
+        *outputs
             .get_mut(&(IncrementalGeneratorConfigOutput::OUTPUT))
-            .ok_or("AA")?;
-
-        *output.as_any_mut().downcast_mut::<u64>().ok_or("BB")? = self.0;
+            .unwrap() = Data::U64(self.0);
 
         self.0 += 1;
         Ok(())

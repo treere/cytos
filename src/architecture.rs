@@ -1,14 +1,14 @@
 //! Struct to manage graph architecture.
 
 use std::{
-    any::Any,
-    cell::{Ref, RefCell, RefMut},
+    cell::RefCell,
     cmp::Ordering,
     collections::HashMap,
+    ops::{Deref, DerefMut},
     rc::Rc,
 };
 
-use crate::containers::VecMap;
+use crate::{containers::VecMap, data::Data};
 
 pub type NodeId = u32;
 pub type ParamId = u32;
@@ -56,21 +56,13 @@ impl Processor {
     }
 }
 
-pub trait SharedType {
-    fn as_any(&self) -> &dyn Any;
-    fn as_any_mut(&mut self) -> &mut dyn Any;
-}
-
 /// Shared param data.
-pub type SharedData = Rc<RefCell<dyn SharedType + 'static>>;
-
-pub fn new_shared<T: SharedType + 'static>(v: T) -> SharedData {
-    Rc::new(RefCell::new(v))
-}
+type SharedData = Rc<RefCell<Data>>;
 
 /// Data shared between nodes.
 type SharedNodeData = VecMap<ParamId, SharedData>;
 
+#[derive(Debug)]
 struct Communication {
     /// Output values per node.
     outputs: VecMap<NodeId, SharedNodeData>,
@@ -100,7 +92,7 @@ impl Communication {
                 processor
                     .outputs()
                     .iter()
-                    .map(|n| (*n, processor.output_default(*n))),
+                    .map(|n| (*n, Rc::new(RefCell::new(processor.output_default(*n))))),
             ),
         );
 
@@ -110,7 +102,7 @@ impl Communication {
                 processor
                     .inputs()
                     .iter()
-                    .map(|n| (*n, processor.input_default(*n))),
+                    .map(|n| (*n, Rc::new(RefCell::new(processor.input_default(*n))))),
             ),
         )
     }
@@ -144,35 +136,35 @@ impl Communication {
 }
 
 /// Parameter struct.
-
+#[derive(Debug)]
 pub struct Params<'a> {
     map: &'a SharedNodeData,
 }
 
 impl<'a> Params<'a> {
     /// Get the value of a parameter.
-    pub fn get(&self, val: &ParamId) -> Option<Ref<'a, dyn SharedType>> {
+    pub fn get(&self, val: &ParamId) -> Option<impl Deref<Target = Data> + 'a> {
         self.map.get(val).map(|x| x.borrow())
     }
 }
 
 /// Result struct.
-
+#[derive(Debug)]
 pub struct Results<'a> {
     map: &'a mut SharedNodeData,
 }
 
 impl<'a> Results<'a> {
     /// Get the mutable value.
-    pub fn get_mut(&mut self, val: &ParamId) -> Option<RefMut<'_, dyn SharedType>> {
-        self.map.get_mut(val).map(|p| {
-            let v = (**p).borrow_mut();
-            v
-        })
+    pub fn get_mut<'b>(
+        &'b mut self,
+        val: &'b ParamId,
+    ) -> Option<impl DerefMut<Target = Data> + 'b> {
+        self.map.get_mut(val).map(|p| (**p).borrow_mut())
     }
 
     /// Get the value.
-    pub fn get<'b>(&'b mut self, val: &'b ParamId) -> Option<Ref<'b, dyn SharedType>> {
+    pub fn get<'b>(&'b mut self, val: &'b ParamId) -> Option<impl Deref<Target = Data> + 'b> {
         self.map.get(val).map(|p| (**p).borrow())
     }
 }
@@ -257,7 +249,11 @@ impl Graph {
     }
 
     /// Fetch output parameters
-    pub fn param_value(&mut self, node: NodeId, param: ParamId) -> Option<Ref<'_, dyn SharedType>> {
+    pub fn param_value(
+        &mut self,
+        node: NodeId,
+        param: ParamId,
+    ) -> Option<impl Deref<Target = Data> + '_> {
         self.communication.get_outputs(node)?.get(&param)
     }
 }
@@ -280,7 +276,7 @@ pub trait InputConfiguration {
     fn inputs(&self) -> &[ParamId];
 
     /// Get the default of a parameter
-    fn input_default(&self, val: ParamId) -> SharedData;
+    fn input_default(&self, val: ParamId) -> Data;
 }
 
 /// Output configuration
@@ -289,7 +285,7 @@ pub trait OutputConfiguration {
     fn outputs(&self) -> &[ParamId];
 
     /// Get the default of a parameter
-    fn output_default(&self, val: ParamId) -> SharedData;
+    fn output_default(&self, val: ParamId) -> Data;
 }
 
 #[cfg(test)]
