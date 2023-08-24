@@ -55,9 +55,7 @@ impl OutputConfiguration for AddValue {
 
 impl Transformer for AddValue {
     fn process(&mut self, inputs: Params, mut outputs: Results) -> Result<(), &'static str> {
-        let param = inputs
-            .get(&(AddConfigConfigInput::INPUT))
-            .ok_or("cannot get")?;
+        let param = inputs.get(&(AddConfigConfigInput::INPUT))?;
         let param = param.downcast_ref::<u64>();
         match param {
             Some(v) => {

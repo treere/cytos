@@ -133,8 +133,11 @@ impl Communication {
     }
 
     /// Get the outputs of a node.
-    fn get_outputs(&self, id: NodeId) -> Option<Params> {
-        self.outputs.get(&id).map(|p| Params { map: p })
+    fn get_outputs(&self, id: NodeId) -> Result<Params, &'static str> {
+        self.outputs
+            .get(&id)
+            .ok_or("missing output")
+            .map(|p| Params { map: p })
     }
 }
 
@@ -146,8 +149,11 @@ pub struct Params<'a> {
 
 impl<'a> Params<'a> {
     /// Get the value of a parameter.
-    pub fn get(&self, val: &ParamId) -> Option<Ref<'a, dyn Any>> {
-        self.map.get(val).map(|x| x.borrow())
+    pub fn get(&self, val: &ParamId) -> Result<Ref<'a, dyn Any>, &'static str> {
+        self.map
+            .get(val)
+            .map(|x| x.borrow())
+            .ok_or("cannot find value")
     }
 }
 
@@ -195,7 +201,7 @@ impl Graph {
         id: NodeId,
         processor: impl Transformer + InputConfiguration + OutputConfiguration + 'static,
     ) -> Result<Self, &'static str> {
-        if self.communication.get_outputs(id).is_none() {
+        if self.communication.get_outputs(id).is_err() {
             self.communication.add_processor(id, &processor);
             self.nodes.push(Processor::new(id, processor));
 
@@ -252,7 +258,11 @@ impl Graph {
     }
 
     /// Fetch output parameters
-    pub fn param_value(&mut self, node: NodeId, param: ParamId) -> Option<Ref<'_, dyn Any>> {
+    pub fn param_value(
+        &mut self,
+        node: NodeId,
+        param: ParamId,
+    ) -> Result<Ref<'_, dyn Any>, &'static str> {
         self.communication.get_outputs(node)?.get(&param)
     }
 }
