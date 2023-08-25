@@ -41,7 +41,7 @@ impl OutputConfiguration for ListDir {
 
     fn output_default(&self, val: ParamId) -> SharedData {
         match val {
-            ListDirConfigOutput::FILE => new_shared("".to_owned()),
+            ListDirConfigOutput::FILE => new_shared(""),
             _ => unreachable!(),
         }
     }
@@ -51,7 +51,7 @@ impl Transformer for ListDir {
     fn process(&mut self, _inputs: Params, mut outputs: Results) -> Result<(), &'static str> {
         if let Some(Ok(_file)) = self.reader.next() {
             let mut output = outputs.get_mut(&(ListDirConfigOutput::FILE)).ok_or("BB")?;
-            *output.downcast_mut::<String>().ok_or("A")? = "pippo".to_owned();
+            *output.downcast_mut::<&'static str>().ok_or("A")? = "pippo";
             Ok(())
         } else {
             Err("no files")
