@@ -280,6 +280,10 @@ impl Graph {
 
         Ok(())
     }
+
+    pub fn param_value(&mut self, node: NodeId) -> Result<Params, &'static str> {
+        self.communication.get_outputs(node)
+    }
 }
 
 impl Default for Graph {

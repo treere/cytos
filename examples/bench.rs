@@ -47,15 +47,13 @@ fn main() -> Result<(), String> {
     println!("running {} steps", steps);
     orchestrator.step().expect("step");
 
-    // {
-    //     let value = orchestrator
-    //         .param_value(DOUBLER4, AddValueConfigOutput::OUTPUT)
-    //         .unwrap();
+    {
+        let value = orchestrator.param_value(DOUBLER4).unwrap();
+        let value = value.get::<u64>(&AddValueConfigOutput::OUTPUT).unwrap();
 
-    //     let value = value.downcast_ref::<u64>().unwrap();
-    //     println!("first step value {:?}", value);
-    //     assert!(*value == 5);
-    // }
+        println!("first step value {:?}", value);
+        assert!(*value == 5);
+    }
 
     let seconds = time_execution(|| {
         for _ in 0..steps {
@@ -67,15 +65,13 @@ fn main() -> Result<(), String> {
     println!("{} step/seconds", steps as f64 / seconds);
     println!("{} seconds/steps", seconds / steps as f64);
 
-    // {
-    //     let value = orchestrator
-    //         .param_value(DOUBLER4, AddValueConfigOutput::OUTPUT)
-    //         .unwrap();
+    {
+        let value = orchestrator.param_value(DOUBLER4).unwrap();
+        let value = value.get::<u64>(&AddValueConfigOutput::OUTPUT).unwrap();
 
-    //     let value = value.downcast_ref::<u64>().unwrap();
-    //     println!("first step value {:?}", value);
-    //     assert!(*value == 100000005);
-    // }
+        println!("first step value {:?}", value);
+        assert!(*value == 100000005);
+    }
 
     Ok(())
 }
