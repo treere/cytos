@@ -149,11 +149,18 @@ pub struct Params<'a> {
 
 impl<'a> Params<'a> {
     /// Get the value of a parameter.
-    pub fn get(&self, val: &ParamId) -> Result<Ref<'a, dyn Any>, &'static str> {
+    pub fn get<T: 'static>(&self, val: &ParamId) -> Result<Ref<'_, T>, &'static str> {
         self.map
             .get(val)
-            .map(|x| x.borrow())
-            .ok_or("cannot find value")
+            .and_then(|x| {
+                let borrow = x.borrow();
+                if borrow.is::<T>() {
+                    Some(Ref::map(borrow, |x| x.downcast_ref::<T>().unwrap()))
+                } else {
+                    None
+                }
+            })
+            .ok_or("wrong type")
     }
 }
 
@@ -165,16 +172,33 @@ pub struct Results<'a> {
 
 impl<'a> Results<'a> {
     /// Get the mutable value.
-    pub fn get_mut(&mut self, val: &ParamId) -> Option<RefMut<'_, dyn Any>> {
-        self.map.get_mut(val).map(|p| {
-            let v = (**p).borrow_mut();
-            v
-        })
+    pub fn get_mut<T: 'static>(&mut self, val: &ParamId) -> Result<RefMut<'_, T>, &'static str> {
+        self.map
+            .get(val)
+            .and_then(|x| {
+                let borrow = x.borrow_mut();
+                if borrow.is::<T>() {
+                    Some(RefMut::map(borrow, |x| x.downcast_mut::<T>().unwrap()))
+                } else {
+                    None
+                }
+            })
+            .ok_or("wrong type")
     }
 
     /// Get the value.
-    pub fn get<'b>(&'b mut self, val: &'b ParamId) -> Option<Ref<'b, dyn Any>> {
-        self.map.get(val).map(|p| (**p).borrow())
+    pub fn get<T: 'static>(&mut self, val: &ParamId) -> Result<Ref<'_, T>, &'static str> {
+        self.map
+            .get(val)
+            .and_then(|x| {
+                let borrow = x.borrow();
+                if borrow.is::<T>() {
+                    Some(Ref::map(borrow, |x| x.downcast_ref::<T>().unwrap()))
+                } else {
+                    None
+                }
+            })
+            .ok_or("wrong type")
     }
 }
 
@@ -255,15 +279,6 @@ impl Graph {
         }
 
         Ok(())
-    }
-
-    /// Fetch output parameters
-    pub fn param_value(
-        &mut self,
-        node: NodeId,
-        param: ParamId,
-    ) -> Result<Ref<'_, dyn Any>, &'static str> {
-        self.communication.get_outputs(node)?.get(&param)
     }
 }
 

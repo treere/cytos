@@ -55,19 +55,12 @@ impl OutputConfiguration for AddValue {
 
 impl Transformer for AddValue {
     fn process(&mut self, inputs: Params, mut outputs: Results) -> Result<(), &'static str> {
-        let param = inputs.get(&(AddConfigConfigInput::INPUT))?;
-        let param = param.downcast_ref::<u64>();
-        match param {
-            Some(v) => {
-                let mut output = outputs
-                    .get_mut(&(AddValueConfigOutput::OUTPUT))
-                    .ok_or("cannot get 2")?;
+        let v = inputs.get::<u64>(&(AddConfigConfigInput::INPUT))?;
 
-                *output.downcast_mut::<u64>().ok_or("AAA")? = v + 1;
+        let mut output = outputs.get_mut::<u64>(&(AddValueConfigOutput::OUTPUT))?;
 
-                Ok(())
-            }
-            _ => Err("unexpected value"),
-        }
+        *output = *v + 1;
+
+        Ok(())
     }
 }

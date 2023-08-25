@@ -43,11 +43,9 @@ impl OutputConfiguration for IncrementalGenerator {
 
 impl Transformer for IncrementalGenerator {
     fn process(&mut self, _inputs: Params, mut outputs: Results) -> Result<(), &'static str> {
-        let mut output = outputs
-            .get_mut(&(IncrementalGeneratorConfigOutput::OUTPUT))
-            .ok_or("AA")?;
+        let mut output = outputs.get_mut(&(IncrementalGeneratorConfigOutput::OUTPUT))?;
 
-        *output.downcast_mut::<u64>().ok_or("BB")? = self.0;
+        *output = self.0;
 
         self.0 += 1;
         Ok(())

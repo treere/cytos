@@ -50,8 +50,8 @@ impl OutputConfiguration for ListDir {
 impl Transformer for ListDir {
     fn process(&mut self, _inputs: Params, mut outputs: Results) -> Result<(), &'static str> {
         if let Some(Ok(_file)) = self.reader.next() {
-            let mut output = outputs.get_mut(&(ListDirConfigOutput::FILE)).ok_or("BB")?;
-            *output.downcast_mut::<&'static str>().ok_or("A")? = "pippo";
+            let mut output = outputs.get_mut(&(ListDirConfigOutput::FILE))?;
+            *output = "pippo";
             Ok(())
         } else {
             Err("no files")
