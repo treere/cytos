@@ -50,7 +50,7 @@ fn main() -> Result<(), String> {
 
     let seconds = time_execution(|| {
         for _ in 0..steps {
-            orchestrator.step().expect("")
+            orchestrator.step().unwrap()
         }
     });
 
