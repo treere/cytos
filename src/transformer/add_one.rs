@@ -4,7 +4,7 @@ use crate::architecture::{
 };
 
 #[allow(non_snake_case)]
-pub mod AddConfigConfigInput {
+pub mod AddValueConfigInput {
     use crate::architecture::ParamId;
 
     pub const INPUT: ParamId = 0;
@@ -28,13 +28,13 @@ impl AddValue {
 
 impl InputConfiguration for AddValue {
     fn inputs(&self) -> &[ParamId] {
-        &[AddConfigConfigInput::INPUT]
+        &[AddValueConfigInput::INPUT]
     }
 
     fn input_default(&self, val: ParamId) -> SharedData {
         match val {
-            AddConfigConfigInput::INPUT => new_shared(0u64),
-            AddConfigConfigInput::INCREMENT => new_shared(1u64),
+            AddValueConfigInput::INPUT => new_shared(0u64),
+            AddValueConfigInput::INCREMENT => new_shared(1u64),
             _ => unreachable!(),
         }
     }
@@ -55,7 +55,7 @@ impl OutputConfiguration for AddValue {
 
 impl Transformer for AddValue {
     fn process(&mut self, inputs: Params, mut outputs: Results) -> Result<(), &'static str> {
-        let v = inputs.get::<u64>(&(AddConfigConfigInput::INPUT))?;
+        let v = inputs.get::<u64>(&(AddValueConfigInput::INPUT))?;
 
         let mut output = outputs.get_mut::<u64>(&(AddValueConfigOutput::OUTPUT))?;
 

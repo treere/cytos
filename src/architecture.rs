@@ -321,7 +321,7 @@ mod tests {
     use crate::{
         architecture::{Graph, NodeId, ParamId},
         transformer::{
-            AddConfigConfigInput, AddValue, IncrementalGenerator, IncrementalGeneratorConfigOutput,
+            AddValue, AddValueConfigInput, IncrementalGenerator, IncrementalGeneratorConfigOutput,
         },
     };
 
@@ -359,7 +359,7 @@ mod tests {
             .expect("cannot add doubler")
             .connect(
                 (SOURCE, IncrementalGeneratorConfigOutput::OUTPUT),
-                (DOUBLER, AddConfigConfigInput::INPUT)
+                (DOUBLER, AddValueConfigInput::INPUT)
             )
             .is_ok())
     }
@@ -399,7 +399,7 @@ mod tests {
             .expect("cannot add source")
             .add(DOUBLER, AddValue::new())
             .expect("cannot add doubler")
-            .connect((PIPPO, PLUTO), (DOUBLER, AddConfigConfigInput::INPUT))
+            .connect((PIPPO, PLUTO), (DOUBLER, AddValueConfigInput::INPUT))
             .is_err())
     }
 
@@ -410,7 +410,7 @@ mod tests {
             .expect("cannot add source")
             .add(DOUBLER, AddValue::new())
             .expect("cannot add doubler")
-            .connect((SOURCE, PLUTO), (DOUBLER, AddConfigConfigInput::INPUT))
+            .connect((SOURCE, PLUTO), (DOUBLER, AddValueConfigInput::INPUT))
             .is_err())
     }
 }

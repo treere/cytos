@@ -1,7 +1,7 @@
 use proph::{
     architecture::{Graph, NodeId},
     transformer::{
-        AddConfigConfigInput, AddValue, AddValueConfigOutput, IncrementalGenerator,
+        AddValue, AddValueConfigInput, AddValueConfigOutput, IncrementalGenerator,
         IncrementalGeneratorConfigOutput,
     },
     utils::time_execution,
@@ -24,23 +24,23 @@ fn main() -> Result<(), String> {
         .add(DOUBLER4, AddValue::new())?
         .connect(
             (SOURCE, IncrementalGeneratorConfigOutput::OUTPUT),
-            (DOUBLER0, AddConfigConfigInput::INPUT),
+            (DOUBLER0, AddValueConfigInput::INPUT),
         )?
         .connect(
             (DOUBLER0, AddValueConfigOutput::OUTPUT),
-            (DOUBLER1, AddConfigConfigInput::INPUT),
+            (DOUBLER1, AddValueConfigInput::INPUT),
         )?
         .connect(
             (DOUBLER1, AddValueConfigOutput::OUTPUT),
-            (DOUBLER2, AddConfigConfigInput::INPUT),
+            (DOUBLER2, AddValueConfigInput::INPUT),
         )?
         .connect(
             (DOUBLER2, AddValueConfigOutput::OUTPUT),
-            (DOUBLER3, AddConfigConfigInput::INPUT),
+            (DOUBLER3, AddValueConfigInput::INPUT),
         )?
         .connect(
             (DOUBLER3, AddValueConfigOutput::OUTPUT),
-            (DOUBLER4, AddConfigConfigInput::INPUT),
+            (DOUBLER4, AddValueConfigInput::INPUT),
         )?;
 
     let steps = 100000000;
