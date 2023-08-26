@@ -1,4 +1,6 @@
-use crate::architecture::{ParamId, Prop, SharedData, Transformer};
+use std::{any::Any, cell::RefCell, rc::Rc};
+
+use crate::architecture::{ParamId, Prop, Transformer};
 
 #[allow(non_snake_case)]
 pub mod AddValueConfigInput {
@@ -42,7 +44,7 @@ impl Transformer for AddValue {
         &[AddValueConfigInput::INPUT]
     }
 
-    fn input(&self, val: ParamId) -> SharedData {
+    fn input(&self, val: ParamId) -> Rc<RefCell<dyn Any + 'static>> {
         match val {
             AddValueConfigInput::INPUT => self.input.get_shared(),
             AddValueConfigInput::INCREMENT => self.increment.get_shared(),
@@ -54,14 +56,18 @@ impl Transformer for AddValue {
         &[AddValueConfigOutput::OUTPUT]
     }
 
-    fn output(&self, val: ParamId) -> SharedData {
+    fn output(&self, val: ParamId) -> Rc<RefCell<dyn Any + 'static>> {
         match val {
             AddValueConfigOutput::OUTPUT => self.output.get_shared(),
             _ => unreachable!(),
         }
     }
 
-    fn set_input(&mut self, name: ParamId, val: SharedData) -> Result<(), &'static str> {
+    fn set_input(
+        &mut self,
+        name: ParamId,
+        val: Rc<RefCell<dyn Any + 'static>>,
+    ) -> Result<(), &'static str> {
         match name {
             AddValueConfigInput::INPUT => self.input.change_value(val),
             AddValueConfigInput::INCREMENT => self.increment.change_value(val),

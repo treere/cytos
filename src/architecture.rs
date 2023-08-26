@@ -55,10 +55,7 @@ impl Processor {
     }
 }
 
-/// Shared param data.
-pub type SharedData = Rc<RefCell<dyn Any + 'static>>;
-
-fn new_shared<T: 'static>(v: T) -> SharedData {
+fn new_shared<T: 'static>(v: T) -> Rc<RefCell<dyn Any + 'static>> {
     Rc::new(RefCell::new(v))
 }
 
@@ -151,7 +148,7 @@ impl Default for Graph {
 
 /// A property
 pub struct Prop<T> {
-    val: SharedData,
+    val: Rc<RefCell<dyn Any + 'static>>,
     _ph: PhantomData<T>,
 }
 
@@ -171,11 +168,14 @@ impl<T: 'static> Prop<T> {
         RefMut::map(self.val.borrow_mut(), |x| x.downcast_mut::<T>().unwrap())
     }
 
-    pub fn get_shared(&self) -> SharedData {
+    pub fn get_shared(&self) -> Rc<RefCell<dyn Any + 'static>> {
         self.val.clone()
     }
 
-    pub fn change_value(&mut self, val: SharedData) -> Result<(), &'static str> {
+    pub fn change_value(
+        &mut self,
+        val: Rc<RefCell<dyn Any + 'static>>,
+    ) -> Result<(), &'static str> {
         self.val = val;
         Ok(())
     }
@@ -190,16 +190,20 @@ pub trait Transformer {
     fn inputs_name(&self) -> &[ParamId];
 
     /// Get the default of a parameter
-    fn input(&self, val: ParamId) -> SharedData;
+    fn input(&self, val: ParamId) -> Rc<RefCell<dyn Any + 'static>>;
 
     /// Set input
-    fn set_input(&mut self, name: ParamId, val: SharedData) -> Result<(), &'static str>;
+    fn set_input(
+        &mut self,
+        name: ParamId,
+        val: Rc<RefCell<dyn Any + 'static>>,
+    ) -> Result<(), &'static str>;
 
     /// Output list
     fn outputs_name(&self) -> &[ParamId];
 
     /// Get the default of a parameter
-    fn output(&self, val: ParamId) -> SharedData;
+    fn output(&self, val: ParamId) -> Rc<RefCell<dyn Any + 'static>>;
 }
 
 #[cfg(test)]
