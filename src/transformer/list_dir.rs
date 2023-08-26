@@ -1,9 +1,6 @@
 use std::fs::ReadDir;
 
-use crate::architecture::{
-    new_shared, InputConfiguration, OutputConfiguration, ParamId, Params, Results, SharedData,
-    Transformer,
-};
+use crate::architecture::{ParamId, Prop, SharedData, Transformer};
 
 #[allow(non_snake_case)]
 pub mod ListDirConfigOutput {
@@ -14,47 +11,50 @@ pub mod ListDirConfigOutput {
 
 pub struct ListDir {
     reader: ReadDir,
+    file: Prop<&'static str>,
 }
 
 impl ListDir {
     pub fn new(dir: String) -> Self {
         Self {
             reader: std::fs::read_dir(dir).unwrap(),
-        }
-    }
-}
-
-impl InputConfiguration for ListDir {
-    fn inputs(&self) -> &[ParamId] {
-        &[]
-    }
-
-    fn input_default(&self, _val: ParamId) -> SharedData {
-        unreachable!()
-    }
-}
-
-impl OutputConfiguration for ListDir {
-    fn outputs(&self) -> &[ParamId] {
-        &[ListDirConfigOutput::FILE]
-    }
-
-    fn output_default(&self, val: ParamId) -> SharedData {
-        match val {
-            ListDirConfigOutput::FILE => new_shared(""),
-            _ => unreachable!(),
+            file: Prop::new(""),
         }
     }
 }
 
 impl Transformer for ListDir {
-    fn process(&mut self, _inputs: Params, mut outputs: Results) -> Result<(), &'static str> {
+    fn step(&mut self) -> Result<(), &'static str> {
         if let Some(Ok(_file)) = self.reader.next() {
-            let mut output = outputs.get_mut(&(ListDirConfigOutput::FILE))?;
-            *output = "pippo";
+            *self.file.set() = "pippo";
             Ok(())
         } else {
             Err("no files")
+        }
+    }
+
+    fn inputs_name(&self) -> &[ParamId] {
+        &[]
+    }
+
+    fn input(&self, _val: ParamId) -> SharedData {
+        unreachable!()
+    }
+    fn outputs_name(&self) -> &[ParamId] {
+        &[ListDirConfigOutput::FILE]
+    }
+
+    fn output(&self, val: ParamId) -> SharedData {
+        match val {
+            ListDirConfigOutput::FILE => self.file.get_shared(),
+            _ => unreachable!(),
+        }
+    }
+
+    fn set_input(&mut self, name: ParamId, val: SharedData) -> Result<(), &'static str> {
+        match name {
+            ListDirConfigOutput::FILE => self.file.change_value(val),
+            _ => unreachable!(),
         }
     }
 }

@@ -1,7 +1,4 @@
-use crate::architecture::{
-    new_shared, InputConfiguration, OutputConfiguration, ParamId, Params, Results, SharedData,
-    Transformer,
-};
+use crate::architecture::{ParamId, Prop, SharedData, Transformer};
 
 #[allow(non_snake_case)]
 pub mod IncrementalGeneratorConfigOutput {
@@ -10,44 +7,47 @@ pub mod IncrementalGeneratorConfigOutput {
     pub const OUTPUT: ParamId = 0;
 }
 
-pub struct IncrementalGenerator(u64);
+pub struct IncrementalGenerator {
+    output: Prop<u64>,
+}
 
 impl IncrementalGenerator {
     pub fn new() -> Self {
-        IncrementalGenerator(0)
-    }
-}
-
-impl InputConfiguration for IncrementalGenerator {
-    fn inputs(&self) -> &[ParamId] {
-        &[]
-    }
-
-    fn input_default(&self, _val: ParamId) -> SharedData {
-        unreachable!()
-    }
-}
-
-impl OutputConfiguration for IncrementalGenerator {
-    fn outputs(&self) -> &[ParamId] {
-        &[IncrementalGeneratorConfigOutput::OUTPUT]
-    }
-
-    fn output_default(&self, val: ParamId) -> SharedData {
-        match val {
-            IncrementalGeneratorConfigOutput::OUTPUT => new_shared(0u64),
-            _ => unreachable!(),
+        IncrementalGenerator {
+            output: Prop::new(0),
         }
     }
 }
 
 impl Transformer for IncrementalGenerator {
-    fn process(&mut self, _inputs: Params, mut outputs: Results) -> Result<(), &'static str> {
-        let mut output = outputs.get_mut(&(IncrementalGeneratorConfigOutput::OUTPUT))?;
-
-        *output = self.0;
-
-        self.0 += 1;
+    fn step(&mut self) -> Result<(), &'static str> {
+        *self.output.set() += 1;
         Ok(())
+    }
+
+    fn inputs_name(&self) -> &[ParamId] {
+        &[]
+    }
+
+    fn input(&self, _val: ParamId) -> SharedData {
+        unreachable!()
+    }
+
+    fn outputs_name(&self) -> &[ParamId] {
+        &[IncrementalGeneratorConfigOutput::OUTPUT]
+    }
+
+    fn output(&self, val: ParamId) -> SharedData {
+        match val {
+            IncrementalGeneratorConfigOutput::OUTPUT => self.output.get_shared(),
+            _ => unreachable!(),
+        }
+    }
+
+    fn set_input(&mut self, name: ParamId, val: SharedData) -> Result<(), &'static str> {
+        match name {
+            IncrementalGeneratorConfigOutput::OUTPUT => self.output.change_value(val),
+            _ => unreachable!(),
+        }
     }
 }

@@ -1,7 +1,4 @@
-use crate::architecture::{
-    new_shared, InputConfiguration, OutputConfiguration, ParamId, Params, Results, SharedData,
-    Transformer,
-};
+use crate::architecture::{ParamId, Prop, SharedData, Transformer};
 
 #[allow(non_snake_case)]
 pub mod AddValueConfigInput {
@@ -18,49 +15,57 @@ pub mod AddValueConfigOutput {
     pub const OUTPUT: ParamId = 1;
 }
 
-pub struct AddValue;
+pub struct AddValue {
+    input: Prop<u64>,
+    increment: Prop<u64>,
+    output: Prop<u64>,
+}
 
 impl AddValue {
     pub fn new() -> Self {
-        AddValue
-    }
-}
-
-impl InputConfiguration for AddValue {
-    fn inputs(&self) -> &[ParamId] {
-        &[AddValueConfigInput::INPUT]
-    }
-
-    fn input_default(&self, val: ParamId) -> SharedData {
-        match val {
-            AddValueConfigInput::INPUT => new_shared(0u64),
-            AddValueConfigInput::INCREMENT => new_shared(1u64),
-            _ => unreachable!(),
-        }
-    }
-}
-
-impl OutputConfiguration for AddValue {
-    fn outputs(&self) -> &[ParamId] {
-        &[AddValueConfigOutput::OUTPUT]
-    }
-
-    fn output_default(&self, val: ParamId) -> SharedData {
-        match val {
-            AddValueConfigOutput::OUTPUT => new_shared(0u64),
-            _ => unreachable!(),
+        AddValue {
+            input: Prop::new(0u64),
+            increment: Prop::new(1u64),
+            output: Prop::new(0u64),
         }
     }
 }
 
 impl Transformer for AddValue {
-    fn process(&mut self, inputs: Params, mut outputs: Results) -> Result<(), &'static str> {
-        let v = inputs.get::<u64>(&(AddValueConfigInput::INPUT))?;
-
-        let mut output = outputs.get_mut::<u64>(&(AddValueConfigOutput::OUTPUT))?;
-
-        *output = *v + 1;
+    fn step(&mut self) -> Result<(), &'static str> {
+        *self.output.set() = *self.input.get() + *self.increment.get();
 
         Ok(())
+    }
+
+    fn inputs_name(&self) -> &[ParamId] {
+        &[AddValueConfigInput::INPUT]
+    }
+
+    fn input(&self, val: ParamId) -> SharedData {
+        match val {
+            AddValueConfigInput::INPUT => self.input.get_shared(),
+            AddValueConfigInput::INCREMENT => self.increment.get_shared(),
+            _ => unreachable!(),
+        }
+    }
+
+    fn outputs_name(&self) -> &[ParamId] {
+        &[AddValueConfigOutput::OUTPUT]
+    }
+
+    fn output(&self, val: ParamId) -> SharedData {
+        match val {
+            AddValueConfigOutput::OUTPUT => self.output.get_shared(),
+            _ => unreachable!(),
+        }
+    }
+
+    fn set_input(&mut self, name: ParamId, val: SharedData) -> Result<(), &'static str> {
+        match name {
+            AddValueConfigInput::INPUT => self.input.change_value(val),
+            AddValueConfigInput::INCREMENT => self.increment.change_value(val),
+            _ => Err("no param"),
+        }
     }
 }
