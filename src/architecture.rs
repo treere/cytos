@@ -161,11 +161,11 @@ impl<T: 'static> Prop<T> {
         self.val.borrow_mut()
     }
 
-    pub fn get_any(&self) -> Rc<dyn Any> {
+    pub fn get_any(&self) -> Rc<GenericProp> {
         self.val.clone()
     }
 
-    pub fn change_value(&mut self, val: Rc<dyn Any>) -> Result<(), &'static str> {
+    pub fn change_value(&mut self, val: Rc<GenericProp>) -> Result<(), &'static str> {
         if let Ok(v) = val.downcast::<RefCell<T>>() {
             self.val = v;
             Ok(())
@@ -174,6 +174,9 @@ impl<T: 'static> Prop<T> {
         }
     }
 }
+
+/// Generic Property to be casted back
+pub type GenericProp = dyn Any;
 
 /// Transformer trait
 pub trait Transformer {
@@ -184,16 +187,16 @@ pub trait Transformer {
     fn inputs_name(&self) -> &[ParamId];
 
     /// Get the default of a parameter
-    fn input(&self, val: ParamId) -> Rc<dyn Any>;
+    fn input(&self, val: ParamId) -> Rc<GenericProp>;
 
     /// Set input
-    fn set_input(&mut self, name: ParamId, val: Rc<dyn Any>) -> Result<(), &'static str>;
+    fn set_input(&mut self, name: ParamId, val: Rc<GenericProp>) -> Result<(), &'static str>;
 
     /// Output list
     fn outputs_name(&self) -> &[ParamId];
 
     /// Get the default of a parameter
-    fn output(&self, val: ParamId) -> Rc<dyn Any>;
+    fn output(&self, val: ParamId) -> Rc<GenericProp>;
 }
 
 #[cfg(test)]

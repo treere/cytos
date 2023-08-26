@@ -1,6 +1,6 @@
-use std::{any::Any, fs::ReadDir, rc::Rc};
+use std::{fs::ReadDir, rc::Rc};
 
-use crate::architecture::{ParamId, Prop, Transformer};
+use crate::architecture::{GenericProp, ParamId, Prop, Transformer};
 
 #[allow(non_snake_case)]
 pub mod ListDirConfigOutput {
@@ -37,21 +37,21 @@ impl Transformer for ListDir {
         &[]
     }
 
-    fn input(&self, _val: ParamId) -> Rc<dyn Any> {
+    fn input(&self, _val: ParamId) -> Rc<GenericProp> {
         unreachable!()
     }
     fn outputs_name(&self) -> &[ParamId] {
         &[ListDirConfigOutput::FILE]
     }
 
-    fn output(&self, val: ParamId) -> Rc<dyn Any> {
+    fn output(&self, val: ParamId) -> Rc<GenericProp> {
         match val {
             ListDirConfigOutput::FILE => self.file.get_any(),
             _ => unreachable!(),
         }
     }
 
-    fn set_input(&mut self, name: ParamId, val: Rc<dyn Any>) -> Result<(), &'static str> {
+    fn set_input(&mut self, name: ParamId, val: Rc<GenericProp>) -> Result<(), &'static str> {
         match name {
             ListDirConfigOutput::FILE => self.file.change_value(val),
             _ => unreachable!(),

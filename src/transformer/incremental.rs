@@ -1,6 +1,6 @@
-use std::{any::Any, rc::Rc};
+use std::rc::Rc;
 
-use crate::architecture::{ParamId, Prop, Transformer};
+use crate::architecture::{GenericProp, ParamId, Prop, Transformer};
 
 #[allow(non_snake_case)]
 pub mod IncrementalGeneratorConfigOutput {
@@ -31,7 +31,7 @@ impl Transformer for IncrementalGenerator {
         &[]
     }
 
-    fn input(&self, _val: ParamId) -> Rc<dyn Any> {
+    fn input(&self, _val: ParamId) -> Rc<GenericProp> {
         unreachable!()
     }
 
@@ -39,14 +39,14 @@ impl Transformer for IncrementalGenerator {
         &[IncrementalGeneratorConfigOutput::OUTPUT]
     }
 
-    fn output(&self, val: ParamId) -> Rc<dyn Any> {
+    fn output(&self, val: ParamId) -> Rc<GenericProp> {
         match val {
             IncrementalGeneratorConfigOutput::OUTPUT => self.output.get_any(),
             _ => unreachable!(),
         }
     }
 
-    fn set_input(&mut self, name: ParamId, val: Rc<dyn Any>) -> Result<(), &'static str> {
+    fn set_input(&mut self, name: ParamId, val: Rc<GenericProp>) -> Result<(), &'static str> {
         match name {
             IncrementalGeneratorConfigOutput::OUTPUT => self.output.change_value(val),
             _ => unreachable!(),

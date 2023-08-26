@@ -1,6 +1,6 @@
-use std::{any::Any, rc::Rc};
+use std::rc::Rc;
 
-use crate::architecture::{ParamId, Prop, Transformer};
+use crate::architecture::{GenericProp, ParamId, Prop, Transformer};
 
 #[allow(non_snake_case)]
 pub mod AddValueConfigInput {
@@ -44,7 +44,7 @@ impl Transformer for AddValue {
         &[AddValueConfigInput::INPUT]
     }
 
-    fn input(&self, val: ParamId) -> Rc<dyn Any> {
+    fn input(&self, val: ParamId) -> Rc<GenericProp> {
         match val {
             AddValueConfigInput::INPUT => self.input.get_any(),
             AddValueConfigInput::INCREMENT => self.increment.get_any(),
@@ -56,14 +56,14 @@ impl Transformer for AddValue {
         &[AddValueConfigOutput::OUTPUT]
     }
 
-    fn output(&self, val: ParamId) -> Rc<dyn Any> {
+    fn output(&self, val: ParamId) -> Rc<GenericProp> {
         match val {
             AddValueConfigOutput::OUTPUT => self.output.get_any(),
             _ => unreachable!(),
         }
     }
 
-    fn set_input(&mut self, name: ParamId, val: Rc<dyn Any>) -> Result<(), &'static str> {
+    fn set_input(&mut self, name: ParamId, val: Rc<GenericProp>) -> Result<(), &'static str> {
         match name {
             AddValueConfigInput::INPUT => self.input.change_value(val),
             AddValueConfigInput::INCREMENT => self.increment.change_value(val),
