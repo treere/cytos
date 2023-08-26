@@ -6,7 +6,7 @@ use crate::architecture::{ParamId, Prop, SharedData, Transformer};
 pub mod ListDirConfigOutput {
     use crate::architecture::ParamId;
 
-    pub const FILE: ParamId = 1;
+    pub const FILE: ParamId = "file";
 }
 
 pub struct ListDir {

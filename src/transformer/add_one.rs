@@ -4,15 +4,15 @@ use crate::architecture::{ParamId, Prop, SharedData, Transformer};
 pub mod AddValueConfigInput {
     use crate::architecture::ParamId;
 
-    pub const INPUT: ParamId = 0;
-    pub const INCREMENT: ParamId = 2;
+    pub const INPUT: ParamId = "input";
+    pub const INCREMENT: ParamId = "increment";
 }
 
 #[allow(non_snake_case)]
 pub mod AddValueConfigOutput {
     use crate::architecture::ParamId;
 
-    pub const OUTPUT: ParamId = 1;
+    pub const OUTPUT: ParamId = "output";
 }
 
 pub struct AddValue {

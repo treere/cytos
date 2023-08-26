@@ -9,8 +9,8 @@ use std::{
     rc::Rc,
 };
 
-pub type NodeId = u32;
-pub type ParamId = u32;
+pub type NodeId = &'static str;
+pub type ParamId = &'static str;
 
 /// Identify a param inside a node.
 #[derive(Debug, PartialEq, Eq, Clone)]

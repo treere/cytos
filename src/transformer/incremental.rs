@@ -4,7 +4,7 @@ use crate::architecture::{ParamId, Prop, SharedData, Transformer};
 pub mod IncrementalGeneratorConfigOutput {
     use crate::architecture::ParamId;
 
-    pub const OUTPUT: ParamId = 0;
+    pub const OUTPUT: ParamId = "output";
 }
 
 pub struct IncrementalGenerator {
