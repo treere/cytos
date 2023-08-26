@@ -1,4 +1,4 @@
-use std::{any::Any, cell::RefCell, rc::Rc};
+use std::{any::Any, rc::Rc};
 
 use crate::architecture::{ParamId, Prop, Transformer};
 
@@ -44,10 +44,10 @@ impl Transformer for AddValue {
         &[AddValueConfigInput::INPUT]
     }
 
-    fn input(&self, val: ParamId) -> Rc<RefCell<dyn Any + 'static>> {
+    fn input(&self, val: ParamId) -> Rc<dyn Any> {
         match val {
-            AddValueConfigInput::INPUT => self.input.get_shared(),
-            AddValueConfigInput::INCREMENT => self.increment.get_shared(),
+            AddValueConfigInput::INPUT => self.input.get_any(),
+            AddValueConfigInput::INCREMENT => self.increment.get_any(),
             _ => unreachable!(),
         }
     }
@@ -56,18 +56,14 @@ impl Transformer for AddValue {
         &[AddValueConfigOutput::OUTPUT]
     }
 
-    fn output(&self, val: ParamId) -> Rc<RefCell<dyn Any + 'static>> {
+    fn output(&self, val: ParamId) -> Rc<dyn Any> {
         match val {
-            AddValueConfigOutput::OUTPUT => self.output.get_shared(),
+            AddValueConfigOutput::OUTPUT => self.output.get_any(),
             _ => unreachable!(),
         }
     }
 
-    fn set_input(
-        &mut self,
-        name: ParamId,
-        val: Rc<RefCell<dyn Any + 'static>>,
-    ) -> Result<(), &'static str> {
+    fn set_input(&mut self, name: ParamId, val: Rc<dyn Any>) -> Result<(), &'static str> {
         match name {
             AddValueConfigInput::INPUT => self.input.change_value(val),
             AddValueConfigInput::INCREMENT => self.increment.change_value(val),

@@ -1,4 +1,4 @@
-use std::{any::Any, cell::RefCell, fs::ReadDir, rc::Rc};
+use std::{any::Any, fs::ReadDir, rc::Rc};
 
 use crate::architecture::{ParamId, Prop, Transformer};
 
@@ -37,25 +37,21 @@ impl Transformer for ListDir {
         &[]
     }
 
-    fn input(&self, _val: ParamId) -> Rc<RefCell<dyn Any + 'static>> {
+    fn input(&self, _val: ParamId) -> Rc<dyn Any> {
         unreachable!()
     }
     fn outputs_name(&self) -> &[ParamId] {
         &[ListDirConfigOutput::FILE]
     }
 
-    fn output(&self, val: ParamId) -> Rc<RefCell<dyn Any + 'static>> {
+    fn output(&self, val: ParamId) -> Rc<dyn Any> {
         match val {
-            ListDirConfigOutput::FILE => self.file.get_shared(),
+            ListDirConfigOutput::FILE => self.file.get_any(),
             _ => unreachable!(),
         }
     }
 
-    fn set_input(
-        &mut self,
-        name: ParamId,
-        val: Rc<RefCell<dyn Any + 'static>>,
-    ) -> Result<(), &'static str> {
+    fn set_input(&mut self, name: ParamId, val: Rc<dyn Any>) -> Result<(), &'static str> {
         match name {
             ListDirConfigOutput::FILE => self.file.change_value(val),
             _ => unreachable!(),

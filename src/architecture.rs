@@ -5,7 +5,6 @@ use std::{
     cell::{Ref, RefCell, RefMut},
     cmp::Ordering,
     collections::HashMap,
-    marker::PhantomData,
     rc::Rc,
 };
 
@@ -53,10 +52,6 @@ impl Processor {
     fn process(&mut self) -> Result<(), &'static str> {
         self.fun.step()
     }
-}
-
-fn new_shared<T: 'static>(v: T) -> Rc<RefCell<dyn Any + 'static>> {
-    Rc::new(RefCell::new(v))
 }
 
 /// Graph.
@@ -148,36 +143,35 @@ impl Default for Graph {
 
 /// A property
 pub struct Prop<T> {
-    val: Rc<RefCell<dyn Any + 'static>>,
-    _ph: PhantomData<T>,
+    val: Rc<RefCell<T>>,
 }
 
 impl<T: 'static> Prop<T> {
     pub fn new(val: T) -> Self {
         Self {
-            val: new_shared(val),
-            _ph: PhantomData,
+            val: Rc::new(RefCell::new(val)),
         }
     }
 
     pub fn get(&self) -> Ref<'_, T> {
-        Ref::map(self.val.borrow(), |x| x.downcast_ref::<T>().unwrap())
+        self.val.borrow()
     }
 
     pub fn set(&self) -> RefMut<'_, T> {
-        RefMut::map(self.val.borrow_mut(), |x| x.downcast_mut::<T>().unwrap())
+        self.val.borrow_mut()
     }
 
-    pub fn get_shared(&self) -> Rc<RefCell<dyn Any + 'static>> {
+    pub fn get_any(&self) -> Rc<dyn Any> {
         self.val.clone()
     }
 
-    pub fn change_value(
-        &mut self,
-        val: Rc<RefCell<dyn Any + 'static>>,
-    ) -> Result<(), &'static str> {
-        self.val = val;
-        Ok(())
+    pub fn change_value(&mut self, val: Rc<dyn Any>) -> Result<(), &'static str> {
+        if let Ok(v) = val.downcast::<RefCell<T>>() {
+            self.val = v;
+            Ok(())
+        } else {
+            Err("invalid type")
+        }
     }
 }
 
@@ -190,20 +184,16 @@ pub trait Transformer {
     fn inputs_name(&self) -> &[ParamId];
 
     /// Get the default of a parameter
-    fn input(&self, val: ParamId) -> Rc<RefCell<dyn Any + 'static>>;
+    fn input(&self, val: ParamId) -> Rc<dyn Any>;
 
     /// Set input
-    fn set_input(
-        &mut self,
-        name: ParamId,
-        val: Rc<RefCell<dyn Any + 'static>>,
-    ) -> Result<(), &'static str>;
+    fn set_input(&mut self, name: ParamId, val: Rc<dyn Any>) -> Result<(), &'static str>;
 
     /// Output list
     fn outputs_name(&self) -> &[ParamId];
 
     /// Get the default of a parameter
-    fn output(&self, val: ParamId) -> Rc<RefCell<dyn Any + 'static>>;
+    fn output(&self, val: ParamId) -> Rc<dyn Any>;
 }
 
 #[cfg(test)]

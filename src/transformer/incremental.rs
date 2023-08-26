@@ -1,4 +1,4 @@
-use std::{any::Any, cell::RefCell, rc::Rc};
+use std::{any::Any, rc::Rc};
 
 use crate::architecture::{ParamId, Prop, Transformer};
 
@@ -31,7 +31,7 @@ impl Transformer for IncrementalGenerator {
         &[]
     }
 
-    fn input(&self, _val: ParamId) -> Rc<RefCell<dyn Any + 'static>> {
+    fn input(&self, _val: ParamId) -> Rc<dyn Any> {
         unreachable!()
     }
 
@@ -39,18 +39,14 @@ impl Transformer for IncrementalGenerator {
         &[IncrementalGeneratorConfigOutput::OUTPUT]
     }
 
-    fn output(&self, val: ParamId) -> Rc<RefCell<dyn Any + 'static>> {
+    fn output(&self, val: ParamId) -> Rc<dyn Any> {
         match val {
-            IncrementalGeneratorConfigOutput::OUTPUT => self.output.get_shared(),
+            IncrementalGeneratorConfigOutput::OUTPUT => self.output.get_any(),
             _ => unreachable!(),
         }
     }
 
-    fn set_input(
-        &mut self,
-        name: ParamId,
-        val: Rc<RefCell<dyn Any + 'static>>,
-    ) -> Result<(), &'static str> {
+    fn set_input(&mut self, name: ParamId, val: Rc<dyn Any>) -> Result<(), &'static str> {
         match name {
             IncrementalGeneratorConfigOutput::OUTPUT => self.output.change_value(val),
             _ => unreachable!(),
