@@ -205,47 +205,40 @@ pub trait Transformer {
 #[cfg(test)]
 mod tests {
     use crate::{
-        architecture::{Graph, NodeId, ParamId},
+        architecture::Graph,
         transformer::{
             AddValue, AddValueConfigInput, IncrementalGenerator, IncrementalGeneratorConfigOutput,
         },
     };
 
-    pub const SOURCE1: NodeId = 7;
-    pub const SOURCE2: NodeId = 8;
-    pub const SOURCE: NodeId = 1;
-    pub const DOUBLER: NodeId = 9;
-    pub const PIPPO: NodeId = 255;
-    pub const PLUTO: ParamId = 255;
-
     #[test]
     fn test_add_success() {
         assert!(Graph::new()
-            .add(SOURCE1, IncrementalGenerator::new())
+            .add("SOURCE1", IncrementalGenerator::new())
             .expect("cannot insert")
-            .add(SOURCE2, IncrementalGenerator::new())
+            .add("SOURCE2", IncrementalGenerator::new())
             .is_ok())
     }
 
     #[test]
     fn test_add_same_name() {
         assert!(Graph::new()
-            .add(SOURCE, IncrementalGenerator::new())
+            .add("SOURCE", IncrementalGenerator::new())
             .expect("cannot insert")
-            .add(SOURCE, IncrementalGenerator::new())
+            .add("SOURCE", IncrementalGenerator::new())
             .is_err())
     }
 
     #[test]
     fn test_connect_success() {
         assert!(Graph::new()
-            .add(SOURCE, IncrementalGenerator::new())
+            .add("SOURCE", IncrementalGenerator::new())
             .expect("cannot add source")
-            .add(DOUBLER, AddValue::new())
+            .add("DOUBLER", AddValue::new())
             .expect("cannot add doubler")
             .connect(
-                (SOURCE, IncrementalGeneratorConfigOutput::OUTPUT),
-                (DOUBLER, AddValueConfigInput::INPUT)
+                ("SOURCE", IncrementalGeneratorConfigOutput::OUTPUT),
+                ("DOUBLER", AddValueConfigInput::INPUT)
             )
             .is_ok())
     }
@@ -253,13 +246,13 @@ mod tests {
     #[test]
     fn test_connect_missing_destination_source() {
         assert!(Graph::new()
-            .add(SOURCE, IncrementalGenerator::new())
+            .add("SOURCE", IncrementalGenerator::new())
             .expect("cannot add source")
-            .add(DOUBLER, AddValue::new())
+            .add("DOUBLER", AddValue::new())
             .expect("cannot add doubler")
             .connect(
-                (SOURCE, IncrementalGeneratorConfigOutput::OUTPUT),
-                (PIPPO, PLUTO)
+                ("SOURCE", IncrementalGeneratorConfigOutput::OUTPUT),
+                ("PIPPO", "PLUTO")
             )
             .is_err())
     }
@@ -267,13 +260,13 @@ mod tests {
     #[test]
     fn test_connect_missing_destination_value() {
         assert!(Graph::new()
-            .add(SOURCE, IncrementalGenerator::new())
+            .add("SOURCE", IncrementalGenerator::new())
             .expect("cannot add source")
-            .add(DOUBLER, AddValue::new())
+            .add("DOUBLER", AddValue::new())
             .expect("cannot add doubler")
             .connect(
-                (SOURCE, IncrementalGeneratorConfigOutput::OUTPUT),
-                (DOUBLER, PLUTO)
+                ("SOURCE", IncrementalGeneratorConfigOutput::OUTPUT),
+                ("DOUBLER", "PLUTO")
             )
             .is_err())
     }
@@ -281,22 +274,22 @@ mod tests {
     #[test]
     fn test_connect_missing_source_source() {
         assert!(Graph::new()
-            .add(SOURCE, IncrementalGenerator::new())
+            .add("SOURCE", IncrementalGenerator::new())
             .expect("cannot add source")
-            .add(DOUBLER, AddValue::new())
+            .add("DOUBLER", AddValue::new())
             .expect("cannot add doubler")
-            .connect((PIPPO, PLUTO), (DOUBLER, AddValueConfigInput::INPUT))
+            .connect(("PIPPO", "PLUTO"), ("DOUBLER", AddValueConfigInput::INPUT))
             .is_err())
     }
 
     #[test]
     fn test_connect_missing_source_value() {
         assert!(Graph::new()
-            .add(SOURCE, IncrementalGenerator::new())
+            .add("SOURCE", IncrementalGenerator::new())
             .expect("cannot add source")
-            .add(DOUBLER, AddValue::new())
+            .add("DOUBLER", AddValue::new())
             .expect("cannot add doubler")
-            .connect((SOURCE, PLUTO), (DOUBLER, AddValueConfigInput::INPUT))
+            .connect(("SOURCE", "PLUTO"), ("DOUBLER", AddValueConfigInput::INPUT))
             .is_err())
     }
 }
