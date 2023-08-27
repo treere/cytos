@@ -1,4 +1,4 @@
-use std::{fs::ReadDir, rc::Rc};
+use std::fs::ReadDir;
 
 use crate::architecture::{GenericProp, OutputProp, ParamId, Transformer};
 
@@ -33,21 +33,14 @@ impl Transformer for ListDir {
         }
     }
 
-    fn input(&self, _val: ParamId) -> Option<Rc<GenericProp>> {
-        None
-    }
-
-    fn output(&self, val: ParamId) -> Option<Rc<GenericProp>> {
+    fn output(&self, val: ParamId) -> Option<GenericProp> {
         match val {
-            ListDirConfigOutput::FILE => Some(self.file.get_any()),
+            ListDirConfigOutput::FILE => Some(self.file.as_generic()),
             _ => None,
         }
     }
 
-    fn link(&mut self, name: ParamId, val: Rc<GenericProp>) -> Result<(), &'static str> {
-        match name {
-            ListDirConfigOutput::FILE => self.file.link(val),
-            _ => Err("missing param"),
-        }
+    fn link(&mut self, _name: ParamId, _val: GenericProp) -> Result<(), &'static str> {
+        Err("missing param")
     }
 }

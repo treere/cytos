@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use crate::architecture::{GenericProp, OutputProp, ParamId, Transformer};
 
 #[allow(non_snake_case)]
@@ -27,21 +25,14 @@ impl Transformer for IncrementalGenerator {
         Ok(())
     }
 
-    fn input(&self, _val: ParamId) -> Option<Rc<GenericProp>> {
-        None
-    }
-
-    fn output(&self, val: ParamId) -> Option<Rc<GenericProp>> {
+    fn output(&self, val: ParamId) -> Option<GenericProp> {
         match val {
-            IncrementalGeneratorConfigOutput::OUTPUT => Some(self.output.get_any()),
+            IncrementalGeneratorConfigOutput::OUTPUT => Some(self.output.as_generic()),
             _ => None,
         }
     }
 
-    fn link(&mut self, name: ParamId, val: Rc<GenericProp>) -> Result<(), &'static str> {
-        match name {
-            IncrementalGeneratorConfigOutput::OUTPUT => self.output.link(val),
-            _ => Err("missing param"),
-        }
+    fn link(&mut self, _name: ParamId, _val: GenericProp) -> Result<(), &'static str> {
+        Err("missing param")
     }
 }

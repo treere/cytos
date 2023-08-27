@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use crate::architecture::{GenericProp, InputProp, OutputProp, ParamId, Transformer};
 
 #[allow(non_snake_case)]
@@ -40,22 +38,14 @@ impl Transformer for AddValue {
         Ok(())
     }
 
-    fn input(&self, val: ParamId) -> Option<Rc<GenericProp>> {
+    fn output(&self, val: ParamId) -> Option<GenericProp> {
         match val {
-            AddValueConfigInput::INPUT => Some(self.input.get_any()),
-            AddValueConfigInput::INCREMENT => Some(self.increment.get_any()),
+            AddValueConfigOutput::OUTPUT => Some(self.output.as_generic()),
             _ => None,
         }
     }
 
-    fn output(&self, val: ParamId) -> Option<Rc<GenericProp>> {
-        match val {
-            AddValueConfigOutput::OUTPUT => Some(self.output.get_any()),
-            _ => None,
-        }
-    }
-
-    fn link(&mut self, name: ParamId, val: Rc<GenericProp>) -> Result<(), &'static str> {
+    fn link(&mut self, name: ParamId, val: GenericProp) -> Result<(), &'static str> {
         match name {
             AddValueConfigInput::INPUT => self.input.change_value(val),
             AddValueConfigInput::INCREMENT => self.increment.change_value(val),

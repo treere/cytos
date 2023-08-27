@@ -157,12 +157,8 @@ impl<T: 'static> InputProp<T> {
         self.val.borrow()
     }
 
-    pub fn get_any(&self) -> Rc<GenericProp> {
-        self.val.clone()
-    }
-
-    pub fn change_value(&mut self, val: Rc<GenericProp>) -> Result<(), &'static str> {
-        if let Ok(v) = val.downcast::<RefCell<T>>() {
+    pub fn change_value(&mut self, val: GenericProp) -> Result<(), &'static str> {
+        if let Ok(v) = val.prop.downcast::<RefCell<T>>() {
             self.val = v;
             Ok(())
         } else {
@@ -190,36 +186,28 @@ impl<T: 'static> OutputProp<T> {
         self.val.borrow_mut()
     }
 
-    pub fn get_any(&self) -> Rc<GenericProp> {
-        self.val.clone()
-    }
-
-    pub fn link(&mut self, val: Rc<GenericProp>) -> Result<(), &'static str> {
-        if let Ok(v) = val.downcast::<RefCell<T>>() {
-            self.val = v;
-            Ok(())
-        } else {
-            Err("invalid type")
+    pub fn as_generic(&self) -> GenericProp {
+        GenericProp {
+            prop: self.val.clone(),
         }
     }
 }
 
 /// Generic Property to be casted back
-pub type GenericProp = dyn Any;
+pub struct GenericProp {
+    prop: Rc<dyn Any>,
+}
 
 /// Transformer trait
 pub trait Transformer {
     /// Process an input
     fn step(&mut self) -> Result<(), &'static str>;
 
-    /// Get the default of a parameter
-    fn input(&self, val: ParamId) -> Option<Rc<GenericProp>>;
-
     /// Set input
-    fn link(&mut self, name: ParamId, val: Rc<GenericProp>) -> Result<(), &'static str>;
+    fn link(&mut self, name: ParamId, val: GenericProp) -> Result<(), &'static str>;
 
     /// Get the default of a parameter
-    fn output(&self, val: ParamId) -> Option<Rc<GenericProp>>;
+    fn output(&self, val: ParamId) -> Option<GenericProp>;
 }
 
 #[cfg(test)]
