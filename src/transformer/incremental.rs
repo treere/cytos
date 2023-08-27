@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::architecture::{GenericProp, ParamId, Prop, Transformer};
+use crate::architecture::{GenericProp, OutputProp, ParamId, Transformer};
 
 #[allow(non_snake_case)]
 pub mod IncrementalGeneratorConfigOutput {
@@ -10,13 +10,13 @@ pub mod IncrementalGeneratorConfigOutput {
 }
 
 pub struct IncrementalGenerator {
-    output: Prop<u64>,
+    output: OutputProp<u64>,
 }
 
 impl IncrementalGenerator {
     pub fn new() -> Self {
         IncrementalGenerator {
-            output: Prop::new(0),
+            output: OutputProp::new(0),
         }
     }
 }
@@ -27,29 +27,21 @@ impl Transformer for IncrementalGenerator {
         Ok(())
     }
 
-    fn inputs_name(&self) -> &[ParamId] {
-        &[]
+    fn input(&self, _val: ParamId) -> Option<Rc<GenericProp>> {
+        None
     }
 
-    fn input(&self, _val: ParamId) -> Rc<GenericProp> {
-        unreachable!()
-    }
-
-    fn outputs_name(&self) -> &[ParamId] {
-        &[IncrementalGeneratorConfigOutput::OUTPUT]
-    }
-
-    fn output(&self, val: ParamId) -> Rc<GenericProp> {
+    fn output(&self, val: ParamId) -> Option<Rc<GenericProp>> {
         match val {
-            IncrementalGeneratorConfigOutput::OUTPUT => self.output.get_any(),
-            _ => unreachable!(),
+            IncrementalGeneratorConfigOutput::OUTPUT => Some(self.output.get_any()),
+            _ => None,
         }
     }
 
     fn set_input(&mut self, name: ParamId, val: Rc<GenericProp>) -> Result<(), &'static str> {
         match name {
             IncrementalGeneratorConfigOutput::OUTPUT => self.output.change_value(val),
-            _ => unreachable!(),
+            _ => Err("missing param"),
         }
     }
 }

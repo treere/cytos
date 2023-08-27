@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::architecture::{GenericProp, ParamId, Prop, Transformer};
+use crate::architecture::{GenericProp, InputProp, OutputProp, ParamId, Transformer};
 
 #[allow(non_snake_case)]
 pub mod AddValueConfigInput {
@@ -18,17 +18,17 @@ pub mod AddValueConfigOutput {
 }
 
 pub struct AddValue {
-    input: Prop<u64>,
-    increment: Prop<u64>,
-    output: Prop<u64>,
+    input: InputProp<u64>,
+    increment: InputProp<u64>,
+    output: OutputProp<u64>,
 }
 
 impl AddValue {
     pub fn new() -> Self {
         AddValue {
-            input: Prop::new(0u64),
-            increment: Prop::new(1u64),
-            output: Prop::new(0u64),
+            input: InputProp::new(0u64),
+            increment: InputProp::new(1u64),
+            output: OutputProp::new(0u64),
         }
     }
 }
@@ -40,26 +40,18 @@ impl Transformer for AddValue {
         Ok(())
     }
 
-    fn inputs_name(&self) -> &[ParamId] {
-        &[AddValueConfigInput::INPUT]
-    }
-
-    fn input(&self, val: ParamId) -> Rc<GenericProp> {
+    fn input(&self, val: ParamId) -> Option<Rc<GenericProp>> {
         match val {
-            AddValueConfigInput::INPUT => self.input.get_any(),
-            AddValueConfigInput::INCREMENT => self.increment.get_any(),
-            _ => unreachable!(),
+            AddValueConfigInput::INPUT => Some(self.input.get_any()),
+            AddValueConfigInput::INCREMENT => Some(self.increment.get_any()),
+            _ => None,
         }
     }
 
-    fn outputs_name(&self) -> &[ParamId] {
-        &[AddValueConfigOutput::OUTPUT]
-    }
-
-    fn output(&self, val: ParamId) -> Rc<GenericProp> {
+    fn output(&self, val: ParamId) -> Option<Rc<GenericProp>> {
         match val {
-            AddValueConfigOutput::OUTPUT => self.output.get_any(),
-            _ => unreachable!(),
+            AddValueConfigOutput::OUTPUT => Some(self.output.get_any()),
+            _ => None,
         }
     }
 

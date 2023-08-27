@@ -94,7 +94,7 @@ impl Graph {
             .iter()
             .find(|p| p.id == src.node)
             .ok_or("cannot find source")
-            .map(|s| s.fun.output(src.param))?;
+            .and_then(|s| s.fun.output(src.param).ok_or("cannot find param"))?;
 
         self.nodes
             .iter_mut()
@@ -142,11 +142,40 @@ impl Default for Graph {
 }
 
 /// A property
-pub struct Prop<T> {
+pub struct InputProp<T> {
     val: Rc<RefCell<T>>,
 }
 
-impl<T: 'static> Prop<T> {
+impl<T: 'static> InputProp<T> {
+    pub fn new(val: T) -> Self {
+        Self {
+            val: Rc::new(RefCell::new(val)),
+        }
+    }
+
+    pub fn get(&self) -> Ref<'_, T> {
+        self.val.borrow()
+    }
+
+    pub fn get_any(&self) -> Rc<GenericProp> {
+        self.val.clone()
+    }
+
+    pub fn change_value(&mut self, val: Rc<GenericProp>) -> Result<(), &'static str> {
+        if let Ok(v) = val.downcast::<RefCell<T>>() {
+            self.val = v;
+            Ok(())
+        } else {
+            Err("invalid type")
+        }
+    }
+}
+
+pub struct OutputProp<T> {
+    val: Rc<RefCell<T>>,
+}
+
+impl<T: 'static> OutputProp<T> {
     pub fn new(val: T) -> Self {
         Self {
             val: Rc::new(RefCell::new(val)),
@@ -183,20 +212,14 @@ pub trait Transformer {
     /// Process an input
     fn step(&mut self) -> Result<(), &'static str>;
 
-    /// Inputs list
-    fn inputs_name(&self) -> &[ParamId];
-
     /// Get the default of a parameter
-    fn input(&self, val: ParamId) -> Rc<GenericProp>;
+    fn input(&self, val: ParamId) -> Option<Rc<GenericProp>>;
 
     /// Set input
     fn set_input(&mut self, name: ParamId, val: Rc<GenericProp>) -> Result<(), &'static str>;
 
-    /// Output list
-    fn outputs_name(&self) -> &[ParamId];
-
     /// Get the default of a parameter
-    fn output(&self, val: ParamId) -> Rc<GenericProp>;
+    fn output(&self, val: ParamId) -> Option<Rc<GenericProp>>;
 }
 
 #[cfg(test)]

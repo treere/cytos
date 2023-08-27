@@ -1,6 +1,6 @@
 use std::{fs::ReadDir, rc::Rc};
 
-use crate::architecture::{GenericProp, ParamId, Prop, Transformer};
+use crate::architecture::{GenericProp, OutputProp, ParamId, Transformer};
 
 #[allow(non_snake_case)]
 pub mod ListDirConfigOutput {
@@ -11,14 +11,14 @@ pub mod ListDirConfigOutput {
 
 pub struct ListDir {
     reader: ReadDir,
-    file: Prop<&'static str>,
+    file: OutputProp<&'static str>,
 }
 
 impl ListDir {
     pub fn new(dir: String) -> Self {
         Self {
             reader: std::fs::read_dir(dir).unwrap(),
-            file: Prop::new(""),
+            file: OutputProp::new(""),
         }
     }
 }
@@ -33,21 +33,14 @@ impl Transformer for ListDir {
         }
     }
 
-    fn inputs_name(&self) -> &[ParamId] {
-        &[]
+    fn input(&self, _val: ParamId) -> Option<Rc<GenericProp>> {
+        None
     }
 
-    fn input(&self, _val: ParamId) -> Rc<GenericProp> {
-        unreachable!()
-    }
-    fn outputs_name(&self) -> &[ParamId] {
-        &[ListDirConfigOutput::FILE]
-    }
-
-    fn output(&self, val: ParamId) -> Rc<GenericProp> {
+    fn output(&self, val: ParamId) -> Option<Rc<GenericProp>> {
         match val {
-            ListDirConfigOutput::FILE => self.file.get_any(),
-            _ => unreachable!(),
+            ListDirConfigOutput::FILE => Some(self.file.get_any()),
+            _ => None,
         }
     }
 
