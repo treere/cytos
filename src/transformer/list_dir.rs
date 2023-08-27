@@ -44,10 +44,10 @@ impl Transformer for ListDir {
         }
     }
 
-    fn set_input(&mut self, name: ParamId, val: Rc<GenericProp>) -> Result<(), &'static str> {
+    fn link(&mut self, name: ParamId, val: Rc<GenericProp>) -> Result<(), &'static str> {
         match name {
             ListDirConfigOutput::FILE => self.file.change_value(val),
-            _ => unreachable!(),
+            _ => Err("missing param"),
         }
     }
 }

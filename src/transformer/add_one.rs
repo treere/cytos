@@ -55,7 +55,7 @@ impl Transformer for AddValue {
         }
     }
 
-    fn set_input(&mut self, name: ParamId, val: Rc<GenericProp>) -> Result<(), &'static str> {
+    fn link(&mut self, name: ParamId, val: Rc<GenericProp>) -> Result<(), &'static str> {
         match name {
             AddValueConfigInput::INPUT => self.input.change_value(val),
             AddValueConfigInput::INCREMENT => self.increment.change_value(val),

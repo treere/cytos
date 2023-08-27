@@ -100,7 +100,7 @@ impl Graph {
             .iter_mut()
             .find(|p| p.id == dst.node)
             .ok_or("cannot find dest")
-            .and_then(|d| d.fun.set_input(dst.param, output))?;
+            .and_then(|d| d.fun.link(dst.param, output))?;
 
         self.links.push((src, dst));
 
@@ -216,7 +216,7 @@ pub trait Transformer {
     fn input(&self, val: ParamId) -> Option<Rc<GenericProp>>;
 
     /// Set input
-    fn set_input(&mut self, name: ParamId, val: Rc<GenericProp>) -> Result<(), &'static str>;
+    fn link(&mut self, name: ParamId, val: Rc<GenericProp>) -> Result<(), &'static str>;
 
     /// Get the default of a parameter
     fn output(&self, val: ParamId) -> Option<Rc<GenericProp>>;
