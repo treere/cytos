@@ -40,7 +40,7 @@ impl Transformer for IncrementalGenerator {
 
     fn link(&mut self, name: ParamId, val: Rc<GenericProp>) -> Result<(), &'static str> {
         match name {
-            IncrementalGeneratorConfigOutput::OUTPUT => self.output.change_value(val),
+            IncrementalGeneratorConfigOutput::OUTPUT => self.output.link(val),
             _ => Err("missing param"),
         }
     }

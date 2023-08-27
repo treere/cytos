@@ -46,7 +46,7 @@ impl Transformer for ListDir {
 
     fn link(&mut self, name: ParamId, val: Rc<GenericProp>) -> Result<(), &'static str> {
         match name {
-            ListDirConfigOutput::FILE => self.file.change_value(val),
+            ListDirConfigOutput::FILE => self.file.link(val),
             _ => Err("missing param"),
         }
     }

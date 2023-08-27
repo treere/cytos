@@ -194,7 +194,7 @@ impl<T: 'static> OutputProp<T> {
         self.val.clone()
     }
 
-    pub fn change_value(&mut self, val: Rc<GenericProp>) -> Result<(), &'static str> {
+    pub fn link(&mut self, val: Rc<GenericProp>) -> Result<(), &'static str> {
         if let Ok(v) = val.downcast::<RefCell<T>>() {
             self.val = v;
             Ok(())
