@@ -14,7 +14,7 @@ pub type ParamId = &'static str;
 
 /// Identify a param inside a node.
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Path {
+struct Path {
     node: NodeId,
     param: ParamId,
 }
