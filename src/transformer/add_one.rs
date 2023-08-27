@@ -1,4 +1,6 @@
-use crate::architecture::{GenericProp, InputProp, OutputProp, ParamId, Transformer};
+use crate::architecture::{
+    GenericInputProp, GenericOutputProp, InputProp, OutputProp, ParamId, Transformer,
+};
 
 #[allow(non_snake_case)]
 pub mod AddValueConfigInput {
@@ -44,18 +46,34 @@ impl Transformer for AddValue {
         Ok(())
     }
 
-    fn output(&self, val: ParamId) -> Option<GenericProp> {
+    fn link(&mut self, name: ParamId, val: GenericOutputProp) -> Result<(), &'static str> {
+        match name {
+            AddValueConfigInput::INPUT => self.input.change_value(val),
+            AddValueConfigInput::INCREMENT => self.increment.change_value(val),
+            _ => Err("no param"),
+        }
+    }
+
+    fn output(&self, val: ParamId) -> Option<GenericOutputProp> {
         match val {
             AddValueConfigOutput::OUTPUT => Some(self.output.as_generic()),
             _ => None,
         }
     }
 
-    fn link(&mut self, name: ParamId, val: GenericProp) -> Result<(), &'static str> {
-        match name {
-            AddValueConfigInput::INPUT => self.input.change_value(val),
-            AddValueConfigInput::INCREMENT => self.increment.change_value(val),
-            _ => Err("no param"),
+    fn input(&self, val: ParamId) -> Option<GenericInputProp> {
+        match val {
+            AddValueConfigInput::INPUT => Some(self.input.as_generic()),
+            AddValueConfigInput::INCREMENT => Some(self.increment.as_generic()),
+            _ => None,
         }
+    }
+
+    fn input_names(&self) -> &[ParamId] {
+        &[AddValueConfigInput::INPUT, AddValueConfigInput::INCREMENT]
+    }
+
+    fn output_names(&self) -> &[ParamId] {
+        &[AddValueConfigOutput::OUTPUT]
     }
 }

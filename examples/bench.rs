@@ -42,11 +42,14 @@ fn main() -> Result<(), String> {
 
     {
         let value = orchestrator.param_value("DOUBLER4").unwrap();
-        let value = value.output(&AddValueConfigOutput::OUTPUT).unwrap();
-        let value = *value.try_read::<u64>().unwrap().borrow();
-
-        println!("first step value {:?}", value);
-        assert_eq!(value, 6);
+        value
+            .output(&AddValueConfigOutput::OUTPUT)
+            .unwrap()
+            .try_read::<u64>(|value| {
+                println!("first step value {:?}", value);
+                assert_eq!(*value, 6);
+            })
+            .unwrap();
     }
 
     let seconds = time_execution(|| {
@@ -61,11 +64,14 @@ fn main() -> Result<(), String> {
 
     {
         let value = orchestrator.param_value("DOUBLER4").unwrap();
-        let value = value.output(&AddValueConfigOutput::OUTPUT).unwrap();
-        let value = *value.try_read::<u64>().unwrap().borrow();
-
-        println!("first step value {:?}", value);
-        assert_eq!(value, 100000006);
+        value
+            .output(&AddValueConfigOutput::OUTPUT)
+            .unwrap()
+            .try_read::<u64>(|value| {
+                println!("final value {:?}", value);
+                assert_eq!(*value, 100000006);
+            })
+            .unwrap();
     }
 
     Ok(())

@@ -58,16 +58,12 @@ impl Processor {
 /// Graph.
 pub struct Graph {
     nodes: Vec<Processor>,
-    links: Vec<(Path, Path)>,
 }
 
 impl Graph {
     /// Created a new instance.
     pub fn new() -> Self {
-        Self {
-            nodes: Vec::new(),
-            links: Vec::new(),
-        }
+        Self { nodes: Vec::new() }
     }
 
     /// Add a processor with a given id to the graph.
@@ -107,27 +103,9 @@ impl Graph {
             .ok_or("cannot find dest")
             .and_then(|d| d.fun.link(dst.param, output))?;
 
-        self.links.push((src, dst));
-
         self.order_nodes();
 
         Ok(self)
-    }
-
-    /// Reorder nodes so there cannot a required node after.
-    fn order_nodes(&mut self) {
-        let mut p = HashMap::new();
-        for (s, d) in self.links.iter() {
-            p.entry(d.node).or_insert(Vec::new()).push(s.node)
-        }
-        self.nodes.sort_unstable_by(|s, d| {
-            if p.get(&d.id).map(|v| v.contains(&s.id)).unwrap_or(false) {
-                Ordering::Greater
-            } else {
-                Ordering::Less
-            }
-        });
-        self.nodes.reverse();
     }
 
     /// Comute one step of processing
@@ -144,6 +122,60 @@ impl Graph {
             .iter()
             .find(|x| x.id == node)
             .map(|p| p.fun.deref())
+    }
+
+    /// Reorder nodes so there cannot a required node after.
+    fn order_nodes(&mut self) {
+        let links = self.find_links();
+
+        let mut p = HashMap::new();
+        for (s, d) in links.iter() {
+            p.entry(d.node).or_insert(Vec::new()).push(s.node)
+        }
+        self.nodes.sort_unstable_by(|s, d| {
+            if p.get(&d.id).map(|v| v.contains(&s.id)).unwrap_or(false) {
+                Ordering::Greater
+            } else {
+                Ordering::Less
+            }
+        });
+        self.nodes.reverse();
+    }
+
+    fn find_links(&self) -> Vec<(Path, Path)> {
+        let inputs: Vec<_> = self
+            .nodes
+            .iter()
+            .flat_map(|n| {
+                n.fun
+                    .input_names()
+                    .iter()
+                    .map(|p| (Path::new(n.id, p), n.fun.input(p).unwrap()))
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+
+        let outputs: Vec<_> = self
+            .nodes
+            .iter()
+            .flat_map(|n| {
+                n.fun
+                    .output_names()
+                    .iter()
+                    .map(|p| (Path::new(n.id, p), n.fun.output(p).unwrap()))
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+
+        let mut v = vec![];
+        for i in inputs.iter() {
+            for j in outputs.iter() {
+                if Rc::ptr_eq(&i.1.prop, &j.1.prop) {
+                    v.push((j.0.clone(), i.0.clone()));
+                }
+            }
+        }
+        v
     }
 }
 
@@ -169,12 +201,18 @@ impl<T: 'static> InputProp<T> {
         self.val.borrow()
     }
 
-    pub fn change_value(&mut self, val: GenericProp) -> Result<(), &'static str> {
+    pub fn change_value(&mut self, val: GenericOutputProp) -> Result<(), &'static str> {
         if let Ok(v) = val.prop.downcast::<RefCell<T>>() {
             self.val = v;
             Ok(())
         } else {
             Err("invalid type")
+        }
+    }
+
+    pub fn as_generic(&self) -> GenericInputProp {
+        GenericInputProp {
+            prop: self.val.clone(),
         }
     }
 }
@@ -198,25 +236,45 @@ impl<T: 'static> OutputProp<T> {
         self.val.borrow_mut()
     }
 
-    pub fn as_generic(&self) -> GenericProp {
-        GenericProp {
+    pub fn as_generic(&self) -> GenericOutputProp {
+        GenericOutputProp {
             prop: self.val.clone(),
         }
     }
 }
 
 /// Generic Property to be casted back
-pub struct GenericProp {
+pub struct GenericOutputProp {
     prop: Rc<dyn Any>,
 }
 
-impl GenericProp {
-    pub fn try_read<T: 'static>(&self) -> Result<Rc<RefCell<T>>, &'static str> {
+impl GenericOutputProp {
+    pub fn try_read<T: 'static>(&self, f: impl Fn(&T)) -> Result<(), &'static str> {
         if let Ok(v) = self.prop.clone().downcast::<RefCell<T>>() {
-            Ok(v)
+            f(v.borrow().deref());
+            Ok(())
         } else {
             Err("wrong type")
         }
+    }
+}
+
+pub struct GenericInputProp {
+    prop: Rc<dyn Any>,
+}
+
+impl GenericInputProp {
+    pub fn try_read<T: 'static>(&self, f: impl Fn(&T)) -> Result<(), &'static str> {
+        if let Ok(v) = self.prop.clone().downcast::<RefCell<T>>() {
+            f(v.borrow().deref());
+            Ok(())
+        } else {
+            Err("wrong type")
+        }
+    }
+
+    pub fn is_linked_to(&self, other: &GenericOutputProp) -> bool {
+        Rc::ptr_eq(&self.prop, &other.prop)
     }
 }
 
@@ -226,10 +284,20 @@ pub trait Transformer {
     fn step(&mut self) -> Result<(), &'static str>;
 
     /// Set input
-    fn link(&mut self, name: ParamId, val: GenericProp) -> Result<(), &'static str>;
+    fn link(&mut self, name: ParamId, val: GenericOutputProp) -> Result<(), &'static str>;
 
     /// Get the default of a parameter
-    fn output(&self, val: ParamId) -> Option<GenericProp>;
+    fn output(&self, val: ParamId) -> Option<GenericOutputProp>;
+
+    fn input(&self, val: ParamId) -> Option<GenericInputProp>;
+
+    fn input_names(&self) -> &[ParamId] {
+        &[]
+    }
+
+    fn output_names(&self) -> &[ParamId] {
+        &[]
+    }
 }
 
 #[cfg(test)]

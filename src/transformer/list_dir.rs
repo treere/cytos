@@ -1,6 +1,6 @@
 use std::fs::ReadDir;
 
-use crate::architecture::{GenericProp, OutputProp, ParamId, Transformer};
+use crate::architecture::{GenericInputProp, GenericOutputProp, OutputProp, ParamId, Transformer};
 
 #[allow(non_snake_case)]
 pub mod ListDirConfigOutput {
@@ -33,14 +33,22 @@ impl Transformer for ListDir {
         }
     }
 
-    fn output(&self, val: ParamId) -> Option<GenericProp> {
+    fn output(&self, val: ParamId) -> Option<GenericOutputProp> {
         match val {
             ListDirConfigOutput::FILE => Some(self.file.as_generic()),
             _ => None,
         }
     }
 
-    fn link(&mut self, _name: ParamId, _val: GenericProp) -> Result<(), &'static str> {
+    fn input(&self, _val: ParamId) -> Option<GenericInputProp> {
+        None
+    }
+
+    fn link(&mut self, _name: ParamId, _val: GenericOutputProp) -> Result<(), &'static str> {
         Err("missing param")
+    }
+
+    fn output_names(&self) -> &[ParamId] {
+        &[ListDirConfigOutput::FILE]
     }
 }
