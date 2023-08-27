@@ -5,6 +5,7 @@ use std::{
     cell::{Ref, RefCell, RefMut},
     cmp::Ordering,
     collections::HashMap,
+    ops::Deref,
     rc::Rc,
 };
 
@@ -137,6 +138,13 @@ impl Graph {
 
         Ok(())
     }
+
+    pub fn param_value(&self, node: NodeId) -> Option<&dyn Transformer> {
+        self.nodes
+            .iter()
+            .find(|x| x.id == node)
+            .map(|p| p.fun.deref())
+    }
 }
 
 impl Default for Graph {
@@ -200,6 +208,16 @@ impl<T: 'static> OutputProp<T> {
 /// Generic Property to be casted back
 pub struct GenericProp {
     prop: Rc<dyn Any>,
+}
+
+impl GenericProp {
+    pub fn try_read<T: 'static>(&self) -> Result<Rc<RefCell<T>>, &'static str> {
+        if let Ok(v) = self.prop.clone().downcast::<RefCell<T>>() {
+            Ok(v)
+        } else {
+            Err("wrong type")
+        }
+    }
 }
 
 /// Transformer trait
