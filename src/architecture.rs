@@ -75,19 +75,23 @@ impl Graph {
         id: NodeId,
         processor: impl Transformer + 'static,
     ) -> Result<Self, &'static str> {
-        self.nodes.push(Processor::new(id, processor));
+        if self.nodes.iter().find(|x| x.id == id).is_none() {
+            self.nodes.push(Processor::new(id, processor));
 
-        Ok(self)
+            Ok(self)
+        } else {
+            Err("already exist")
+        }
     }
 
     /// Connects a output data to an input one.
     pub fn connect(
         mut self,
-        src: impl Into<Path>,
-        dst: impl Into<Path>,
+        src: (NodeId, ParamId),
+        dst: (NodeId, ParamId),
     ) -> Result<Self, &'static str> {
-        let src = src.into();
-        let dst = dst.into();
+        let src: Path = src.into();
+        let dst: Path = dst.into();
 
         let output = self
             .nodes
