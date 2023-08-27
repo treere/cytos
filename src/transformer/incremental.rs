@@ -19,6 +19,12 @@ impl IncrementalGenerator {
     }
 }
 
+impl Default for IncrementalGenerator {
+    fn default() -> Self {
+        IncrementalGenerator::new()
+    }
+}
+
 impl Transformer for IncrementalGenerator {
     fn step(&mut self) -> Result<(), &'static str> {
         *self.output.set() += 1;

@@ -31,6 +31,12 @@ impl AddValue {
     }
 }
 
+impl Default for AddValue {
+    fn default() -> Self {
+        AddValue::new()
+    }
+}
+
 impl Transformer for AddValue {
     fn step(&mut self) -> Result<(), &'static str> {
         *self.output.set() = *self.input.get() + *self.increment.get();

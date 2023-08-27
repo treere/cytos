@@ -76,7 +76,7 @@ impl Graph {
         id: NodeId,
         processor: impl Transformer + 'static,
     ) -> Result<Self, &'static str> {
-        if self.nodes.iter().find(|x| x.id == id).is_none() {
+        if self.nodes.iter().all(|x| x.id != id) {
             self.nodes.push(Processor::new(id, processor));
 
             Ok(self)
