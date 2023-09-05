@@ -11,25 +11,7 @@ use std::{
 
 pub type NodeId = String;
 pub type ParamId = String;
-
-/// Identify a param inside a node.
-#[derive(Debug, PartialEq, Eq, Clone)]
-struct Path {
-    node: NodeId,
-    param: ParamId,
-}
-
-impl Path {
-    fn new(node: NodeId, param: ParamId) -> Self {
-        Path { node, param }
-    }
-}
-
-impl From<(NodeId, ParamId)> for Path {
-    fn from((node, param): (NodeId, ParamId)) -> Self {
-        Path::new(node, param)
-    }
-}
+type Path = (NodeId, ParamId);
 
 /// A wrapper around a [`Transformer`] keeping trace of the node id.
 pub struct Processor {
@@ -78,26 +60,19 @@ impl Graph {
     }
 
     /// Connects a output data to an input one.
-    pub fn connect(
-        mut self,
-        src: (NodeId, ParamId),
-        dst: (NodeId, ParamId),
-    ) -> Result<Self, &'static str> {
-        let src: Path = src.into();
-        let dst: Path = dst.into();
-
+    pub fn connect(mut self, src: Path, dst: Path) -> Result<Self, &'static str> {
         let output = self
             .nodes
             .iter()
-            .find(|p| p.id == src.node)
+            .find(|p| p.id == src.0)
             .ok_or("cannot find source")
-            .and_then(|s| s.fun.output(src.param).ok_or("cannot find param"))?;
+            .and_then(|s| s.fun.output(src.1).ok_or("cannot find param"))?;
 
         self.nodes
             .iter_mut()
-            .find(|p| p.id == dst.node)
+            .find(|p| p.id == dst.0)
             .ok_or("cannot find dest")
-            .and_then(|d| d.fun.link(dst.param, output))?;
+            .and_then(|d| d.fun.link(dst.1, output))?;
 
         self.order_nodes();
 
@@ -126,9 +101,7 @@ impl Graph {
 
         let mut p = HashMap::new();
         for (s, d) in links.iter() {
-            p.entry(d.node.clone())
-                .or_insert(Vec::new())
-                .push(s.node.clone())
+            p.entry(d.0.clone()).or_insert(Vec::new()).push(s.0.clone())
         }
         self.nodes.sort_unstable_by(|s, d| {
             if p.get(&d.id).map(|v| v.contains(&s.id)).unwrap_or(false) {
@@ -148,12 +121,7 @@ impl Graph {
                 n.fun
                     .input_names()
                     .iter()
-                    .map(|p| {
-                        (
-                            Path::new(n.id.clone(), p.clone()),
-                            n.fun.input(p.clone()).unwrap(),
-                        )
-                    })
+                    .map(|p| ((n.id.clone(), p.clone()), n.fun.input(p.clone()).unwrap()))
                     .collect::<Vec<_>>()
             })
             .collect();
@@ -165,12 +133,7 @@ impl Graph {
                 n.fun
                     .output_names()
                     .iter()
-                    .map(|p| {
-                        (
-                            Path::new(n.id.clone(), p.clone()),
-                            n.fun.output(p.clone()).unwrap(),
-                        )
-                    })
+                    .map(|p| ((n.id.clone(), p.clone()), n.fun.output(p.clone()).unwrap()))
                     .collect::<Vec<_>>()
             })
             .collect();
