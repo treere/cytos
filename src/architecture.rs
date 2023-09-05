@@ -1,13 +1,6 @@
 //! Struct to manage graph architecture.
 
-use std::{
-    any::Any,
-    cell::{Ref, RefCell, RefMut},
-    cmp::Ordering,
-    collections::HashMap,
-    ops::Deref,
-    rc::Rc,
-};
+use std::{any::Any, cell::UnsafeCell, cmp::Ordering, collections::HashMap, ops::Deref, rc::Rc};
 
 pub type NodeId = String;
 pub type ParamId = String;
@@ -158,22 +151,22 @@ impl Default for Graph {
 
 /// A property
 pub struct InputProp<T> {
-    val: Rc<RefCell<T>>,
+    val: Rc<UnsafeCell<T>>,
 }
 
 impl<T: 'static> InputProp<T> {
     pub fn new(val: T) -> Self {
         Self {
-            val: Rc::new(RefCell::new(val)),
+            val: Rc::new(UnsafeCell::new(val)),
         }
     }
 
-    pub fn get(&self) -> Ref<'_, T> {
-        self.val.borrow()
+    pub fn get(&self) -> &T {
+        unsafe { &*self.val.get() }
     }
 
     pub fn change_value(&mut self, val: GenericOutputProp) -> Result<(), &'static str> {
-        if let Ok(v) = val.prop.downcast::<RefCell<T>>() {
+        if let Ok(v) = val.prop.downcast::<UnsafeCell<T>>() {
             self.val = v;
             Ok(())
         } else {
@@ -189,22 +182,22 @@ impl<T: 'static> InputProp<T> {
 }
 
 pub struct OutputProp<T> {
-    val: Rc<RefCell<T>>,
+    val: Rc<UnsafeCell<T>>,
 }
 
 impl<T: 'static> OutputProp<T> {
     pub fn new(val: T) -> Self {
         Self {
-            val: Rc::new(RefCell::new(val)),
+            val: Rc::new(UnsafeCell::new(val)),
         }
     }
 
-    pub fn get(&self) -> Ref<'_, T> {
-        self.val.borrow()
+    pub fn get(&self) -> &T {
+        unsafe { &*self.val.get() }
     }
 
-    pub fn set(&self) -> RefMut<'_, T> {
-        self.val.borrow_mut()
+    pub fn set(&self) -> &mut T {
+        unsafe { &mut *self.val.get() }
     }
 
     pub fn as_generic(&self) -> GenericOutputProp {
@@ -221,8 +214,8 @@ pub struct GenericOutputProp {
 
 impl GenericOutputProp {
     pub fn try_read<T: 'static>(&self, f: impl Fn(&T)) -> Result<(), &'static str> {
-        if let Ok(v) = self.prop.clone().downcast::<RefCell<T>>() {
-            f(v.borrow().deref());
+        if let Ok(v) = self.prop.clone().downcast::<UnsafeCell<T>>() {
+            f(unsafe { &*v.get() });
             Ok(())
         } else {
             Err("wrong type")
@@ -236,8 +229,8 @@ pub struct GenericInputProp {
 
 impl GenericInputProp {
     pub fn try_read<T: 'static>(&self, f: impl Fn(&T)) -> Result<(), &'static str> {
-        if let Ok(v) = self.prop.clone().downcast::<RefCell<T>>() {
-            f(v.borrow().deref());
+        if let Ok(v) = self.prop.clone().downcast::<UnsafeCell<T>>() {
+            f(unsafe { &*v.get() });
             Ok(())
         } else {
             Err("wrong type")
