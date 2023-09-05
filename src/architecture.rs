@@ -67,7 +67,7 @@ impl Graph {
     }
 
     /// Add a processor with a given id to the graph.
-    pub fn add(mut self, processor: Processor) -> Result<Self, &'static str> {
+    pub fn insert(mut self, processor: Processor) -> Result<Self, &'static str> {
         if self.nodes.iter().all(|x| x.id != processor.id) {
             self.nodes.push(processor);
 
@@ -320,12 +320,12 @@ mod tests {
     #[test]
     fn test_add_success() {
         assert!(Graph::new()
-            .add(Processor::new(
+            .insert(Processor::new(
                 "SOURCE1".to_string(),
                 IncrementalGenerator::new()
             ))
             .expect("cannot insert")
-            .add(Processor::new(
+            .insert(Processor::new(
                 "SOURCE2".to_string(),
                 IncrementalGenerator::new()
             ))
@@ -335,12 +335,12 @@ mod tests {
     #[test]
     fn test_add_same_name() {
         assert!(Graph::new()
-            .add(Processor::new(
+            .insert(Processor::new(
                 "SOURCE".to_string(),
                 IncrementalGenerator::new()
             ))
             .expect("cannot insert")
-            .add(Processor::new(
+            .insert(Processor::new(
                 "SOURCE".to_string(),
                 IncrementalGenerator::new()
             ))
@@ -350,12 +350,12 @@ mod tests {
     #[test]
     fn test_connect_success() {
         assert!(Graph::new()
-            .add(Processor::new(
+            .insert(Processor::new(
                 "SOURCE".to_owned(),
                 IncrementalGenerator::new()
             ))
             .expect("cannot add source")
-            .add(Processor::new("DOUBLER".to_owned(), AddValue::new()))
+            .insert(Processor::new("DOUBLER".to_owned(), AddValue::new()))
             .expect("cannot add doubler")
             .connect(
                 (
@@ -370,12 +370,12 @@ mod tests {
     #[test]
     fn test_connect_missing_destination_source() {
         assert!(Graph::new()
-            .add(Processor::new(
+            .insert(Processor::new(
                 "SOURCE".to_owned(),
                 IncrementalGenerator::new()
             ))
             .expect("cannot add source")
-            .add(Processor::new("DOUBLER".to_owned(), AddValue::new()))
+            .insert(Processor::new("DOUBLER".to_owned(), AddValue::new()))
             .expect("cannot add doubler")
             .connect(
                 (
@@ -390,12 +390,12 @@ mod tests {
     #[test]
     fn test_connect_missing_destination_value() {
         assert!(Graph::new()
-            .add(Processor::new(
+            .insert(Processor::new(
                 "SOURCE".to_owned(),
                 IncrementalGenerator::new()
             ))
             .expect("cannot add source")
-            .add(Processor::new("DOUBLER".to_owned(), AddValue::new()))
+            .insert(Processor::new("DOUBLER".to_owned(), AddValue::new()))
             .expect("cannot add doubler")
             .connect(
                 (
@@ -410,12 +410,12 @@ mod tests {
     #[test]
     fn test_connect_missing_source_source() {
         assert!(Graph::new()
-            .add(Processor::new(
+            .insert(Processor::new(
                 "SOURCE".to_owned(),
                 IncrementalGenerator::new()
             ))
             .expect("cannot add source")
-            .add(Processor::new("DOUBLER".to_owned(), AddValue::new()))
+            .insert(Processor::new("DOUBLER".to_owned(), AddValue::new()))
             .expect("cannot add doubler")
             .connect(
                 ("PIPPO".to_owned(), "PLUTO".to_owned()),
@@ -427,12 +427,12 @@ mod tests {
     #[test]
     fn test_connect_missing_source_value() {
         assert!(Graph::new()
-            .add(Processor::new(
+            .insert(Processor::new(
                 "SOURCE".to_owned(),
                 IncrementalGenerator::new()
             ))
             .expect("cannot add source")
-            .add(Processor::new("DOUBLER".to_owned(), AddValue::new()))
+            .insert(Processor::new("DOUBLER".to_owned(), AddValue::new()))
             .expect("cannot add doubler")
             .connect(
                 ("SOURCE".to_owned(), "PLUTO".to_owned()),

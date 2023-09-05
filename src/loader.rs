@@ -15,7 +15,7 @@ impl Graph {
 
         let mut g = G::new();
         for node in l.nodes.iter() {
-            g = g.add(crate::transformer::load(
+            g = g.insert(crate::transformer::load(
                 node.name.as_str(),
                 node.typ.as_str(),
             ))?;
