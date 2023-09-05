@@ -3,7 +3,7 @@ use proph::{loader, transformer::AddValueConfigOutput, utils::time_execution};
 fn main() -> Result<(), String> {
     let mut orchestrator = loader::Graph::load(include_str!("bench.json"))?;
 
-    let steps = 100000000;
+    let steps = 1000000000;
     println!("running {} steps", steps);
     orchestrator.step().expect("step");
 
@@ -36,7 +36,7 @@ fn main() -> Result<(), String> {
             .unwrap()
             .try_read::<u64>(|value| {
                 println!("final value {:?}", value);
-                assert_eq!(*value, 100000006);
+                assert_eq!(*value, 1000000006);
             })
             .unwrap();
     }
