@@ -9,8 +9,8 @@ use std::{
     rc::Rc,
 };
 
-pub type NodeId = &'static str;
-pub type ParamId = &'static str;
+pub type NodeId = String;
+pub type ParamId = String;
 
 /// Identify a param inside a node.
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -32,7 +32,7 @@ impl From<(NodeId, ParamId)> for Path {
 }
 
 /// A wrapper around a [`Transformer`] keeping trace of the node id.
-struct Processor {
+pub struct Processor {
     /// Node identifier.
     id: NodeId,
 
@@ -42,7 +42,7 @@ struct Processor {
 
 impl Processor {
     /// Create a new Processor.
-    fn new(id: NodeId, fun: impl Transformer + 'static) -> Self {
+    pub fn new(id: NodeId, fun: impl Transformer + 'static) -> Self {
         Self {
             id,
             fun: Box::new(fun),
@@ -67,13 +67,9 @@ impl Graph {
     }
 
     /// Add a processor with a given id to the graph.
-    pub fn add(
-        mut self,
-        id: NodeId,
-        processor: impl Transformer + 'static,
-    ) -> Result<Self, &'static str> {
-        if self.nodes.iter().all(|x| x.id != id) {
-            self.nodes.push(Processor::new(id, processor));
+    pub fn add(mut self, processor: Processor) -> Result<Self, &'static str> {
+        if self.nodes.iter().all(|x| x.id != processor.id) {
+            self.nodes.push(processor);
 
             Ok(self)
         } else {
@@ -130,7 +126,9 @@ impl Graph {
 
         let mut p = HashMap::new();
         for (s, d) in links.iter() {
-            p.entry(d.node).or_insert(Vec::new()).push(s.node)
+            p.entry(d.node.clone())
+                .or_insert(Vec::new())
+                .push(s.node.clone())
         }
         self.nodes.sort_unstable_by(|s, d| {
             if p.get(&d.id).map(|v| v.contains(&s.id)).unwrap_or(false) {
@@ -150,7 +148,12 @@ impl Graph {
                 n.fun
                     .input_names()
                     .iter()
-                    .map(|p| (Path::new(n.id, p), n.fun.input(p).unwrap()))
+                    .map(|p| {
+                        (
+                            Path::new(n.id.clone(), p.clone()),
+                            n.fun.input(p.clone()).unwrap(),
+                        )
+                    })
                     .collect::<Vec<_>>()
             })
             .collect();
@@ -162,7 +165,12 @@ impl Graph {
                 n.fun
                     .output_names()
                     .iter()
-                    .map(|p| (Path::new(n.id, p), n.fun.output(p).unwrap()))
+                    .map(|p| {
+                        (
+                            Path::new(n.id.clone(), p.clone()),
+                            n.fun.output(p.clone()).unwrap(),
+                        )
+                    })
                     .collect::<Vec<_>>()
             })
             .collect();
@@ -291,19 +299,19 @@ pub trait Transformer {
 
     fn input(&self, val: ParamId) -> Option<GenericInputProp>;
 
-    fn input_names(&self) -> &[ParamId] {
-        &[]
+    fn input_names(&self) -> Vec<ParamId> {
+        vec![]
     }
 
-    fn output_names(&self) -> &[ParamId] {
-        &[]
+    fn output_names(&self) -> Vec<ParamId> {
+        vec![]
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{
-        architecture::Graph,
+        architecture::{Graph, Processor},
         transformer::{
             AddValue, AddValueConfigInput, IncrementalGenerator, IncrementalGeneratorConfigOutput,
         },
@@ -312,31 +320,49 @@ mod tests {
     #[test]
     fn test_add_success() {
         assert!(Graph::new()
-            .add("SOURCE1", IncrementalGenerator::new())
+            .add(Processor::new(
+                "SOURCE1".to_string(),
+                IncrementalGenerator::new()
+            ))
             .expect("cannot insert")
-            .add("SOURCE2", IncrementalGenerator::new())
+            .add(Processor::new(
+                "SOURCE2".to_string(),
+                IncrementalGenerator::new()
+            ))
             .is_ok())
     }
 
     #[test]
     fn test_add_same_name() {
         assert!(Graph::new()
-            .add("SOURCE", IncrementalGenerator::new())
+            .add(Processor::new(
+                "SOURCE".to_string(),
+                IncrementalGenerator::new()
+            ))
             .expect("cannot insert")
-            .add("SOURCE", IncrementalGenerator::new())
+            .add(Processor::new(
+                "SOURCE".to_string(),
+                IncrementalGenerator::new()
+            ))
             .is_err())
     }
 
     #[test]
     fn test_connect_success() {
         assert!(Graph::new()
-            .add("SOURCE", IncrementalGenerator::new())
+            .add(Processor::new(
+                "SOURCE".to_owned(),
+                IncrementalGenerator::new()
+            ))
             .expect("cannot add source")
-            .add("DOUBLER", AddValue::new())
+            .add(Processor::new("DOUBLER".to_owned(), AddValue::new()))
             .expect("cannot add doubler")
             .connect(
-                ("SOURCE", IncrementalGeneratorConfigOutput::OUTPUT),
-                ("DOUBLER", AddValueConfigInput::INPUT)
+                (
+                    "SOURCE".to_owned(),
+                    IncrementalGeneratorConfigOutput::OUTPUT.to_owned()
+                ),
+                ("DOUBLER".to_owned(), AddValueConfigInput::INPUT.to_owned())
             )
             .is_ok())
     }
@@ -344,13 +370,19 @@ mod tests {
     #[test]
     fn test_connect_missing_destination_source() {
         assert!(Graph::new()
-            .add("SOURCE", IncrementalGenerator::new())
+            .add(Processor::new(
+                "SOURCE".to_owned(),
+                IncrementalGenerator::new()
+            ))
             .expect("cannot add source")
-            .add("DOUBLER", AddValue::new())
+            .add(Processor::new("DOUBLER".to_owned(), AddValue::new()))
             .expect("cannot add doubler")
             .connect(
-                ("SOURCE", IncrementalGeneratorConfigOutput::OUTPUT),
-                ("PIPPO", "PLUTO")
+                (
+                    "SOURCE".to_owned(),
+                    IncrementalGeneratorConfigOutput::OUTPUT.to_owned()
+                ),
+                ("PIPPO".to_owned(), "PLUTO".to_owned())
             )
             .is_err())
     }
@@ -358,13 +390,19 @@ mod tests {
     #[test]
     fn test_connect_missing_destination_value() {
         assert!(Graph::new()
-            .add("SOURCE", IncrementalGenerator::new())
+            .add(Processor::new(
+                "SOURCE".to_owned(),
+                IncrementalGenerator::new()
+            ))
             .expect("cannot add source")
-            .add("DOUBLER", AddValue::new())
+            .add(Processor::new("DOUBLER".to_owned(), AddValue::new()))
             .expect("cannot add doubler")
             .connect(
-                ("SOURCE", IncrementalGeneratorConfigOutput::OUTPUT),
-                ("DOUBLER", "PLUTO")
+                (
+                    "SOURCE".to_owned(),
+                    IncrementalGeneratorConfigOutput::OUTPUT.to_owned()
+                ),
+                ("DOUBLER".to_owned(), "PLUTO".to_owned())
             )
             .is_err())
     }
@@ -372,22 +410,34 @@ mod tests {
     #[test]
     fn test_connect_missing_source_source() {
         assert!(Graph::new()
-            .add("SOURCE", IncrementalGenerator::new())
+            .add(Processor::new(
+                "SOURCE".to_owned(),
+                IncrementalGenerator::new()
+            ))
             .expect("cannot add source")
-            .add("DOUBLER", AddValue::new())
+            .add(Processor::new("DOUBLER".to_owned(), AddValue::new()))
             .expect("cannot add doubler")
-            .connect(("PIPPO", "PLUTO"), ("DOUBLER", AddValueConfigInput::INPUT))
+            .connect(
+                ("PIPPO".to_owned(), "PLUTO".to_owned()),
+                ("DOUBLER".to_owned(), AddValueConfigInput::INPUT.to_owned())
+            )
             .is_err())
     }
 
     #[test]
     fn test_connect_missing_source_value() {
         assert!(Graph::new()
-            .add("SOURCE", IncrementalGenerator::new())
+            .add(Processor::new(
+                "SOURCE".to_owned(),
+                IncrementalGenerator::new()
+            ))
             .expect("cannot add source")
-            .add("DOUBLER", AddValue::new())
+            .add(Processor::new("DOUBLER".to_owned(), AddValue::new()))
             .expect("cannot add doubler")
-            .connect(("SOURCE", "PLUTO"), ("DOUBLER", AddValueConfigInput::INPUT))
+            .connect(
+                ("SOURCE".to_owned(), "PLUTO".to_owned()),
+                ("DOUBLER".to_owned(), AddValueConfigInput::INPUT.to_owned())
+            )
             .is_err())
     }
 }

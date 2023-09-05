@@ -4,17 +4,13 @@ use crate::architecture::{
 
 #[allow(non_snake_case)]
 pub mod AddValueConfigInput {
-    use crate::architecture::ParamId;
-
-    pub const INPUT: ParamId = "input";
-    pub const INCREMENT: ParamId = "increment";
+    pub const INPUT: &str = "input";
+    pub const INCREMENT: &str = "increment";
 }
 
 #[allow(non_snake_case)]
 pub mod AddValueConfigOutput {
-    use crate::architecture::ParamId;
-
-    pub const OUTPUT: ParamId = "output";
+    pub const OUTPUT: &str = "output";
 }
 
 pub struct AddValue {
@@ -47,7 +43,7 @@ impl Transformer for AddValue {
     }
 
     fn link(&mut self, name: ParamId, val: GenericOutputProp) -> Result<(), &'static str> {
-        match name {
+        match name.as_str() {
             AddValueConfigInput::INPUT => self.input.change_value(val),
             AddValueConfigInput::INCREMENT => self.increment.change_value(val),
             _ => Err("no param"),
@@ -55,25 +51,28 @@ impl Transformer for AddValue {
     }
 
     fn output(&self, val: ParamId) -> Option<GenericOutputProp> {
-        match val {
+        match val.as_str() {
             AddValueConfigOutput::OUTPUT => Some(self.output.as_generic()),
             _ => None,
         }
     }
 
     fn input(&self, val: ParamId) -> Option<GenericInputProp> {
-        match val {
+        match val.as_str() {
             AddValueConfigInput::INPUT => Some(self.input.as_generic()),
             AddValueConfigInput::INCREMENT => Some(self.increment.as_generic()),
             _ => None,
         }
     }
 
-    fn input_names(&self) -> &[ParamId] {
-        &[AddValueConfigInput::INPUT, AddValueConfigInput::INCREMENT]
+    fn input_names(&self) -> Vec<ParamId> {
+        vec![
+            AddValueConfigInput::INPUT.to_owned(),
+            AddValueConfigInput::INCREMENT.to_owned(),
+        ]
     }
 
-    fn output_names(&self) -> &[ParamId] {
-        &[AddValueConfigOutput::OUTPUT]
+    fn output_names(&self) -> Vec<ParamId> {
+        vec![AddValueConfigOutput::OUTPUT.to_owned()]
     }
 }

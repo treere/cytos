@@ -1,0 +1,35 @@
+{
+  "nodes": [
+    {
+      "name": "SOURCE",
+      "type": "IncrementalGenerator"
+    },
+    {
+      "name": "DOUBLER0",
+      "type": "AddValue"
+    },
+    {
+      "name": "DOUBLER1",
+      "type": "AddValue"
+    },
+    {
+      "name": "DOUBLER2",
+      "type": "AddValue"
+    },
+    {
+      "name": "DOUBLER3",
+      "type": "AddValue"
+    },
+    {
+      "name": "DOUBLER4",
+      "type": "AddValue"
+    }
+  ],
+  "links": [
+    {"src": ["SOURCE", "output"], "dst": ["DOUBLER0", "input"]},
+    {"src": ["DOUBLER0", "output"], "dst": ["DOUBLER1", "input"]},
+    {"src": ["DOUBLER1", "output"], "dst": ["DOUBLER2", "input"]},
+    {"src": ["DOUBLER2", "output"], "dst": ["DOUBLER3", "input"]},
+    {"src": ["DOUBLER3", "output"], "dst": ["DOUBLER4", "input"]}
+    ]
+}

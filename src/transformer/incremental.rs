@@ -2,9 +2,7 @@ use crate::architecture::{GenericInputProp, GenericOutputProp, OutputProp, Param
 
 #[allow(non_snake_case)]
 pub mod IncrementalGeneratorConfigOutput {
-    use crate::architecture::ParamId;
-
-    pub const OUTPUT: ParamId = "output";
+    pub const OUTPUT: &str = "output";
 }
 
 pub struct IncrementalGenerator {
@@ -32,7 +30,7 @@ impl Transformer for IncrementalGenerator {
     }
 
     fn output(&self, val: ParamId) -> Option<GenericOutputProp> {
-        match val {
+        match val.as_str() {
             IncrementalGeneratorConfigOutput::OUTPUT => Some(self.output.as_generic()),
             _ => None,
         }
@@ -46,7 +44,7 @@ impl Transformer for IncrementalGenerator {
         None
     }
 
-    fn output_names(&self) -> &[ParamId] {
-        &[IncrementalGeneratorConfigOutput::OUTPUT]
+    fn output_names(&self) -> Vec<ParamId> {
+        vec![IncrementalGeneratorConfigOutput::OUTPUT.to_owned()]
     }
 }

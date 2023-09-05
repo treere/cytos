@@ -4,9 +4,8 @@ use crate::architecture::{GenericInputProp, GenericOutputProp, OutputProp, Param
 
 #[allow(non_snake_case)]
 pub mod ListDirConfigOutput {
-    use crate::architecture::ParamId;
 
-    pub const FILE: ParamId = "file";
+    pub const FILE: &str = "file";
 }
 
 pub struct ListDir {
@@ -34,7 +33,7 @@ impl Transformer for ListDir {
     }
 
     fn output(&self, val: ParamId) -> Option<GenericOutputProp> {
-        match val {
+        match val.as_str() {
             ListDirConfigOutput::FILE => Some(self.file.as_generic()),
             _ => None,
         }
@@ -48,7 +47,7 @@ impl Transformer for ListDir {
         Err("missing param")
     }
 
-    fn output_names(&self) -> &[ParamId] {
-        &[ListDirConfigOutput::FILE]
+    fn output_names(&self) -> Vec<ParamId> {
+        vec![ListDirConfigOutput::FILE.to_owned()]
     }
 }
