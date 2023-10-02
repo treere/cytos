@@ -34,3 +34,9 @@ impl Loader {
         Ok(Processor::load(name.to_owned(), factory()))
     }
 }
+
+impl Default for Loader {
+    fn default() -> Self {
+        Self::new()
+    }
+}
