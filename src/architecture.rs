@@ -196,7 +196,7 @@ impl<T: 'static> OutputProp<T> {
         unsafe { &*self.val.get() }
     }
 
-    pub fn set(&self) -> &mut T {
+    pub fn set(&mut self) -> &mut T {
         unsafe { &mut *self.val.get() }
     }
 
