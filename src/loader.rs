@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::architecture::Graph as G;
+use crate::{architecture::Graph as G, transformer::Loader};
 
 #[derive(Deserialize, Debug)]
 pub struct Graph {
@@ -10,15 +10,12 @@ pub struct Graph {
 }
 
 impl Graph {
-    pub fn load(file: &str) -> Result<G, &'static str> {
+    pub fn load(file: &str, loader: &Loader) -> Result<G, &'static str> {
         let l: Self = serde_json::from_str(file).map_err(|_| "cannot load file")?;
 
         let mut g = G::new();
         for node in l.nodes.iter() {
-            g = g.insert(crate::transformer::load(
-                node.name.as_str(),
-                node.typ.as_str(),
-            ))?;
+            g = g.insert(loader.load(node.name.as_str(), node.typ.as_str())?)?;
         }
 
         for link in l.links.into_iter() {

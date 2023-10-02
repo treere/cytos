@@ -24,6 +24,10 @@ impl Processor {
         }
     }
 
+    pub fn load(id: NodeId, fun: Box<dyn Transformer>) -> Self {
+        Self { id, fun }
+    }
+
     /// Process the data reading data from [`Params`] and write the output to [`Results`].
     fn process(&mut self) -> Result<(), &'static str> {
         self.fun.step()

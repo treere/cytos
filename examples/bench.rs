@@ -1,3 +1,4 @@
+use proph::transformer::{AddValue, IncrementalGenerator, Loader};
 use proph::{loader, utils::time_execution};
 use std::env;
 use std::fs::File;
@@ -15,7 +16,11 @@ fn main() -> Result<(), String> {
         configuration
     };
 
-    let mut orchestrator = loader::Graph::load(&configuration)?;
+    let loader = Loader::new()
+        .add("IncrementalGenerator", IncrementalGenerator::new)
+        .add("AddValue", AddValue::new);
+
+    let mut orchestrator = loader::Graph::load(&configuration, &loader)?;
 
     let steps = 1000000000;
     println!("running {} steps", steps);
