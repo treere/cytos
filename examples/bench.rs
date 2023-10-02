@@ -1,7 +1,21 @@
 use proph::{loader, transformer::AddValueConfigOutput, utils::time_execution};
+use std::env;
+use std::fs::File;
+use std::io::Read;
 
 fn main() -> Result<(), String> {
-    let mut orchestrator = loader::Graph::load(include_str!("bench.json"))?;
+    let configuration = {
+        let filename = env::args().nth(1).expect("missing file");
+
+        let mut configuration = String::new();
+        File::open(&filename)
+            .expect("cannot open file")
+            .read_to_string(&mut configuration)
+            .expect("cannot read");
+        configuration
+    };
+
+    let mut orchestrator = loader::Graph::load(&configuration)?;
 
     let steps = 1000000000;
     println!("running {} steps", steps);

@@ -26,10 +26,55 @@
     }
   ],
   "links": [
-    {"src": ["SOURCE", "output"], "dst": ["DOUBLER0", "input"]},
-    {"src": ["DOUBLER0", "output"], "dst": ["DOUBLER1", "input"]},
-    {"src": ["DOUBLER1", "output"], "dst": ["DOUBLER2", "input"]},
-    {"src": ["DOUBLER2", "output"], "dst": ["DOUBLER3", "input"]},
-    {"src": ["DOUBLER3", "output"], "dst": ["DOUBLER4", "input"]}
-    ]
+    {
+      "src": [
+        "SOURCE",
+        "output"
+      ],
+      "dst": [
+        "DOUBLER0",
+        "input"
+      ]
+    },
+    {
+      "src": [
+        "DOUBLER0",
+        "output"
+      ],
+      "dst": [
+        "DOUBLER1",
+        "input"
+      ]
+    },
+    {
+      "src": [
+        "DOUBLER1",
+        "output"
+      ],
+      "dst": [
+        "DOUBLER2",
+        "input"
+      ]
+    },
+    {
+      "src": [
+        "DOUBLER2",
+        "output"
+      ],
+      "dst": [
+        "DOUBLER3",
+        "input"
+      ]
+    },
+    {
+      "src": [
+        "DOUBLER3",
+        "output"
+      ],
+      "dst": [
+        "DOUBLER4",
+        "input"
+      ]
+    }
+  ]
 }
