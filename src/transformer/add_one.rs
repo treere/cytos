@@ -1,5 +1,5 @@
 use crate::architecture::{
-    GenericInputProp, GenericOutputProp, InputProp, OutputProp, ParamId, Transformer,
+    GenericInputProp, GenericOutputProp, InputProp, OutputProp, ParamId, Stepper, Transformer,
 };
 
 #[allow(non_snake_case)]
@@ -35,13 +35,15 @@ impl Default for AddValue {
     }
 }
 
-impl Transformer for AddValue {
+impl Stepper for AddValue {
     fn step(&mut self) -> Result<(), &'static str> {
         *self.output.set() = *self.input.get() + *self.increment.get();
 
         Ok(())
     }
+}
 
+impl Transformer for AddValue {
     fn link(&mut self, name: ParamId, val: GenericOutputProp) -> Result<(), &'static str> {
         match name.as_str() {
             AddValueConfigInput::INPUT => self.input.change_value(val),

@@ -246,11 +246,12 @@ impl GenericInputProp {
     }
 }
 
-/// Transformer trait
-pub trait Transformer {
-    /// Process an input
+pub trait Stepper {
     fn step(&mut self) -> Result<(), &'static str>;
+}
 
+/// Transformer trait
+pub trait Transformer: Stepper {
     /// Set input
     fn link(&mut self, name: ParamId, val: GenericOutputProp) -> Result<(), &'static str>;
 

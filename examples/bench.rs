@@ -22,7 +22,7 @@ fn main() -> Result<(), String> {
 
     let mut orchestrator = loader::Graph::load(&configuration, &loader)?;
 
-    let steps = 1000000000;
+    let steps = 2000000000;
     println!("running {} steps", steps);
     orchestrator.step().expect("step");
 
