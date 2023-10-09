@@ -1,7 +1,12 @@
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::quote;
-use syn::{parse_macro_input, Data, DataStruct, DeriveInput, Fields, LitStr, TypePath};
+use syn::{
+    parse_macro_input, Data, DataStruct, DeriveInput, Field, Fields, LitStr, Type, TypePath,
+};
+
+const INPUT_PROP_TYPE: &[&'static str] = &["InputProp"];
+const OUTPUT_PROP_TYPE: &[&'static str] = &["OutputProp"];
 
 #[proc_macro_derive(TransFn)]
 pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
@@ -23,41 +28,27 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
         impl proph::architecture::Transformer for #ident {
             #link
 
-            #output
-
             #input
-
             #input_names
 
+            #output
             #output_names
-        }
 
+
+        }
     }
     .into()
 }
 
 fn create_link(fields: &Fields) -> proc_macro2::TokenStream {
-    let inputs = fields
-        .iter()
-        .filter(|field| match &field.ty {
-            syn::Type::Path(TypePath { path, .. }) => {
-                let s = path
-                    .segments
-                    .iter()
-                    .map(|segment| segment.ident.to_string())
-                    .collect::<Vec<_>>()
-                    .join(":");
-                ["InputProp"].contains(&s.as_str())
-            }
-            _ => true,
-        })
+    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
         .map(|field| {
-            let i = &field.ident;
-            let f = LitStr::new(
-                &format!("{}", field.ident.clone().expect("missing ident")),
+            let ident = &field.ident;
+            let lit = LitStr::new(
+                &format!("{}", ident.clone().expect("missing ident")),
                 Span::call_site(),
             );
-            quote! {#f => self.#i.change_value(val),}
+            quote! {#lit => self.#ident.change_value(val),}
         })
         .collect::<Vec<_>>();
 
@@ -73,20 +64,7 @@ fn create_link(fields: &Fields) -> proc_macro2::TokenStream {
 }
 
 fn create_input(fields: &Fields) -> proc_macro2::TokenStream {
-    let inputs = fields
-        .iter()
-        .filter(|field| match &field.ty {
-            syn::Type::Path(TypePath { path, .. }) => {
-                let s = path
-                    .segments
-                    .iter()
-                    .map(|segment| segment.ident.to_string())
-                    .collect::<Vec<_>>()
-                    .join(":");
-                ["InputProp"].contains(&s.as_str())
-            }
-            _ => true,
-        })
+    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
         .map(|field| {
             let i = &field.ident;
             let f = LitStr::new(
@@ -109,20 +87,7 @@ fn create_input(fields: &Fields) -> proc_macro2::TokenStream {
 }
 
 fn create_input_names(fields: &Fields) -> proc_macro2::TokenStream {
-    let input_names = fields
-        .iter()
-        .filter(|field| match &field.ty {
-            syn::Type::Path(TypePath { path, .. }) => {
-                let s = path
-                    .segments
-                    .iter()
-                    .map(|segment| segment.ident.to_string())
-                    .collect::<Vec<_>>()
-                    .join(":");
-                ["InputProp"].contains(&s.as_str())
-            }
-            _ => true,
-        })
+    let input_names = filter_fields_by_type(fields, INPUT_PROP_TYPE)
         .map(|field| {
             let f = LitStr::new(
                 &format!("{}", field.ident.clone().expect("missing ident")),
@@ -142,20 +107,7 @@ fn create_input_names(fields: &Fields) -> proc_macro2::TokenStream {
 }
 
 fn create_output(fields: &Fields) -> proc_macro2::TokenStream {
-    let outputs = fields
-        .iter()
-        .filter(|field| match &field.ty {
-            syn::Type::Path(TypePath { path, .. }) => {
-                let s = path
-                    .segments
-                    .iter()
-                    .map(|segment| segment.ident.to_string())
-                    .collect::<Vec<_>>()
-                    .join(":");
-                ["OutputProp"].contains(&s.as_str())
-            }
-            _ => true,
-        })
+    let outputs = filter_fields_by_type(fields, OUTPUT_PROP_TYPE)
         .map(|field| {
             let i = &field.ident;
             let f = LitStr::new(
@@ -178,20 +130,7 @@ fn create_output(fields: &Fields) -> proc_macro2::TokenStream {
 }
 
 fn create_output_names(fields: &Fields) -> proc_macro2::TokenStream {
-    let output_names = fields
-        .iter()
-        .filter(|field| match &field.ty {
-            syn::Type::Path(TypePath { path, .. }) => {
-                let s = path
-                    .segments
-                    .iter()
-                    .map(|segment| segment.ident.to_string())
-                    .collect::<Vec<_>>()
-                    .join(":");
-                ["OutputProp"].contains(&s.as_str())
-            }
-            _ => true,
-        })
+    let output_names = filter_fields_by_type(fields, OUTPUT_PROP_TYPE)
         .map(|field| {
             let f = LitStr::new(
                 &format!("{}", field.ident.clone().expect("missing ident")),
@@ -207,5 +146,27 @@ fn create_output_names(fields: &Fields) -> proc_macro2::TokenStream {
                 #(#output_names),*
             ]
         }
+    }
+}
+
+fn filter_fields_by_type<'a>(
+    fields: &'a Fields,
+    types: &'a [&'_ str],
+) -> impl Iterator<Item = &'a Field> {
+    fields.iter().filter(|field| is_of_type(&field.ty, types))
+}
+
+fn is_of_type(ty: &Type, types: &[&str]) -> bool {
+    match ty {
+        syn::Type::Path(TypePath { path, .. }) => {
+            let s = path
+                .segments
+                .iter()
+                .map(|segment| segment.ident.to_string())
+                .collect::<Vec<_>>()
+                .join(":");
+            types.contains(&s.as_str())
+        }
+        _ => false,
     }
 }
