@@ -8,19 +8,13 @@ pub struct AddValue {
     output: OutputProp<u64>,
 }
 
-impl AddValue {
-    pub fn new() -> Self {
-        AddValue {
-            input: InputProp::new(0u64),
-            increment: InputProp::new(1u64),
-            output: OutputProp::new(0u64),
-        }
-    }
-}
-
 impl Default for AddValue {
     fn default() -> Self {
-        AddValue::new()
+        AddValue {
+            input: InputProp::default(),
+            increment: InputProp::new(1),
+            output: OutputProp::default(),
+        }
     }
 }
 
