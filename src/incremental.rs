@@ -1,12 +1,7 @@
-use proph::architecture::{
-    GenericInputProp, GenericOutputProp, OutputProp, ParamId, Stepper, Transformer,
-};
+use proph::architecture::{OutputProp, Stepper};
+use proph_derive::TransFn;
 
-#[allow(non_snake_case)]
-pub mod IncrementalGeneratorConfigOutput {
-    pub const OUTPUT: &str = "output";
-}
-
+#[derive(TransFn)]
 pub struct IncrementalGenerator {
     output: OutputProp<u64>,
 }
@@ -29,26 +24,5 @@ impl Stepper for IncrementalGenerator {
     fn step(&mut self) -> Result<(), &'static str> {
         *self.output.set() += 1;
         Ok(())
-    }
-}
-
-impl Transformer for IncrementalGenerator {
-    fn output(&self, val: ParamId) -> Option<GenericOutputProp> {
-        match val.as_str() {
-            IncrementalGeneratorConfigOutput::OUTPUT => Some(self.output.as_generic()),
-            _ => None,
-        }
-    }
-
-    fn link(&mut self, _name: ParamId, _val: GenericOutputProp) -> Result<(), &'static str> {
-        Err("missing param")
-    }
-
-    fn input(&self, _val: ParamId) -> Option<GenericInputProp> {
-        None
-    }
-
-    fn output_names(&self) -> Vec<ParamId> {
-        vec![IncrementalGeneratorConfigOutput::OUTPUT.to_owned()]
     }
 }
