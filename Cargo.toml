@@ -1,0 +1,9 @@
+[workspace]
+members = ["proph", "proph_derive", "proph_transformers", "proph_bench"]
+resolver = "2"
+
+[profile.release]
+debug = 1
+opt-level = 3
+panic = "abort"
+lto = "thin"
