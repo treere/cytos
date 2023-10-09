@@ -185,6 +185,12 @@ impl<T: 'static> InputProp<T> {
     }
 }
 
+impl<T: Default + 'static> Default for InputProp<T> {
+    fn default() -> Self {
+        Self::new(T::default())
+    }
+}
+
 pub struct OutputProp<T> {
     val: Rc<UnsafeCell<T>>,
 }
@@ -208,6 +214,12 @@ impl<T: 'static> OutputProp<T> {
         GenericOutputProp {
             prop: self.val.clone(),
         }
+    }
+}
+
+impl<T: Default + 'static> Default for OutputProp<T> {
+    fn default() -> Self {
+        Self::new(T::default())
     }
 }
 
