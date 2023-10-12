@@ -1,6 +1,6 @@
 use proph::loader::Registry;
 use proph::{loader, utils::execution_time};
-use proph_transformers::{AddValue, IncrementalGenerator};
+use proph_transformers::{AddValue, IncrementalGenerator, Rscam};
 use std::env;
 use std::fs::File;
 use std::io::Read;
@@ -20,9 +20,12 @@ fn main() -> Result<(), String> {
 
     let loader = Registry::default()
         .add("IncrementalGenerator", IncrementalGenerator::default)
-        .add("AddValue", AddValue::default);
+        .add("AddValue", AddValue::default)
+        .add("Rscam", Rscam::default);
 
     let mut orchestrator = loader::GraphRepr::load(&configuration, &loader)?;
+
+    orchestrator.initialize().expect("step");
 
     let steps = 2000000000;
     println!("running {} steps", steps);

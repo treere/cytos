@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 proph = { path = "../proph" }
 proph_derive = { path = "../proph_derive" }
+rscam = "0.5.5"
