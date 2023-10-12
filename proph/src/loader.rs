@@ -1,44 +1,44 @@
-use crate::architecture::Graph as G;
+use crate::architecture::Graph;
 use crate::architecture::{Processor, Transformer};
 
 use serde::Deserialize;
 use std::collections::HashMap;
 
 #[derive(Deserialize, Debug)]
-pub struct Graph {
-    pub nodes: Vec<Node>,
+pub struct GraphRepr {
+    nodes: Vec<Node>,
 
-    pub links: Vec<Link>,
+    links: Vec<Link>,
 }
 
-impl Graph {
-    pub fn load(file: &str, loader: &Loader) -> Result<G, &'static str> {
-        let l: Self = serde_json::from_str(file).map_err(|_| "cannot load file")?;
+impl GraphRepr {
+    pub fn load(file: &str, loader: &Loader) -> Result<Graph, &'static str> {
+        let repr: Self = serde_json::from_str(file).map_err(|_| "cannot load file")?;
 
-        let mut g = G::new();
-        for node in l.nodes.iter() {
-            g = g.insert(loader.load(node.name.as_str(), node.typ.as_str())?)?;
+        let mut graph = Graph::new();
+        for node in repr.nodes.iter() {
+            graph = graph.insert(loader.load(node.name.as_str(), node.typ.as_str())?)?;
         }
 
-        for link in l.links.into_iter() {
-            g = g.connect(link.src, link.dst)?;
+        for link in repr.links.into_iter() {
+            graph = graph.connect(link.src, link.dst)?;
         }
-        Ok(g)
+        Ok(graph)
     }
 }
 
 #[derive(Deserialize, Debug)]
-pub struct Node {
-    pub name: String,
+struct Node {
+    name: String,
 
     #[serde(rename = "type")]
-    pub typ: String,
+    typ: String,
 }
 
 #[derive(Deserialize, Debug)]
-pub struct Link {
-    pub src: (String, String),
-    pub dst: (String, String),
+struct Link {
+    src: (String, String),
+    dst: (String, String),
 }
 
 pub struct Loader {
@@ -46,11 +46,6 @@ pub struct Loader {
 }
 
 impl Loader {
-    pub fn new() -> Self {
-        Self {
-            transformers: HashMap::new(),
-        }
-    }
     pub fn add<K: Transformer + 'static>(
         mut self,
         name: impl AsRef<str>,
@@ -70,6 +65,8 @@ impl Loader {
 
 impl Default for Loader {
     fn default() -> Self {
-        Self::new()
+        Self {
+            transformers: HashMap::new(),
+        }
     }
 }

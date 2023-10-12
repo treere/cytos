@@ -18,11 +18,11 @@ fn main() -> Result<(), String> {
         configuration
     };
 
-    let loader = Loader::new()
+    let loader = Loader::default()
         .add("IncrementalGenerator", IncrementalGenerator::default)
         .add("AddValue", AddValue::default);
 
-    let mut orchestrator = loader::Graph::load(&configuration, &loader)?;
+    let mut orchestrator = loader::GraphRepr::load(&configuration, &loader)?;
 
     let steps = 2000000000;
     println!("running {} steps", steps);
