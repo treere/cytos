@@ -12,3 +12,16 @@ impl Stepper for IncrementalGenerator {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_name() {
+        let mut incremental = IncrementalGenerator::default();
+        incremental.step().expect("cannot fail");
+
+        assert_eq!(*incremental.output.get(), 1)
+    }
+}
