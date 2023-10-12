@@ -10,7 +10,8 @@ fn main() -> Result<(), String> {
         let filename = env::args().nth(1).expect("missing file");
 
         let mut configuration = String::new();
-        File::open(&filename)
+
+        File::open(filename)
             .expect("cannot open file")
             .read_to_string(&mut configuration)
             .expect("cannot read");

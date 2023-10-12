@@ -5,8 +5,8 @@ use syn::{
     parse_macro_input, Data, DataStruct, DeriveInput, Field, Fields, LitStr, Type, TypePath,
 };
 
-const INPUT_PROP_TYPE: &[&'static str] = &["InputProp"];
-const OUTPUT_PROP_TYPE: &[&'static str] = &["OutputProp"];
+const INPUT_PROP_TYPE: &[&str] = &["InputProp"];
+const OUTPUT_PROP_TYPE: &[&str] = &["OutputProp"];
 
 #[proc_macro_derive(TransFn)]
 pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
