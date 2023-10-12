@@ -1,5 +1,5 @@
 use proph::loader::Loader;
-use proph::{loader, utils::time_execution};
+use proph::{loader, utils::execution_time};
 use proph_transformers::{AddValue, IncrementalGenerator};
 use std::env;
 use std::fs::File;
@@ -28,7 +28,7 @@ fn main() -> Result<(), String> {
     println!("running {} steps", steps);
     orchestrator.step().expect("step");
 
-    let seconds = time_execution(|| {
+    let seconds = execution_time(|| {
         for _ in 0..steps {
             orchestrator.step().unwrap()
         }

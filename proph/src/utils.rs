@@ -3,7 +3,7 @@
 use std::time::Instant;
 
 /// Returns the seconds needed to execute the given function
-pub fn time_execution<T: FnMut()>(mut f: T) -> f64 {
+pub fn execution_time<T: FnMut()>(mut f: T) -> f64 {
     let now = Instant::now();
 
     f();
