@@ -11,6 +11,10 @@ impl Stepper for IncrementalGenerator {
         *self.output.set() += 1;
         Ok(())
     }
+
+    fn initialize(&mut self) -> Result<(), &'static str> {
+        Ok(())
+    }
 }
 
 #[cfg(test)]

@@ -1,12 +1,14 @@
 //! Struct to manage graph architecture.
 
 pub mod props;
+mod traits;
+
+pub use self::props::{InputProp, OutputProp};
+pub use self::traits::{Stepper, Transformer};
 
 use std::{cmp::Ordering, collections::HashMap, ops::Deref};
 
-use self::props::{are_linked, GenericInputProp, GenericOutputProp};
-
-pub use self::props::{InputProp, OutputProp};
+use self::props::are_linked;
 
 pub type NodeId = String;
 pub type ParamId = String;
@@ -33,9 +35,14 @@ impl Processor {
     pub fn load(id: NodeId, fun: Box<dyn Transformer>) -> Self {
         Self { id, fun }
     }
+}
 
-    /// Process the data reading data from [`Params`] and write the output to [`Results`].
-    fn process(&mut self) -> Result<(), &'static str> {
+impl Stepper for Processor {
+    fn initialize(&mut self) -> Result<(), &'static str> {
+        self.fun.initialize()
+    }
+
+    fn step(&mut self) -> Result<(), &'static str> {
         self.fun.step()
     }
 }
@@ -78,10 +85,17 @@ impl Graph {
         Ok(self)
     }
 
+    pub fn initialize(&mut self) -> Result<(), &'static str> {
+        for node in self.nodes.iter_mut() {
+            node.initialize()?;
+        }
+        Ok(())
+    }
+
     /// Comute one step of processing
     pub fn step(&mut self) -> Result<(), &'static str> {
         for node in self.nodes.iter_mut() {
-            node.process()?;
+            node.step()?;
         }
 
         Ok(())
@@ -146,28 +160,5 @@ impl Graph {
             }
         }
         v
-    }
-}
-
-pub trait Stepper {
-    fn step(&mut self) -> Result<(), &'static str>;
-}
-
-/// Transformer trait
-pub trait Transformer: Stepper {
-    /// Set input
-    fn link(&mut self, name: ParamId, val: GenericOutputProp) -> Result<(), &'static str>;
-
-    /// Get the default of a parameter
-    fn output(&self, val: ParamId) -> Option<GenericOutputProp>;
-
-    fn input(&self, val: ParamId) -> Option<GenericInputProp>;
-
-    fn input_names(&self) -> Vec<ParamId> {
-        vec![]
-    }
-
-    fn output_names(&self) -> Vec<ParamId> {
-        vec![]
     }
 }
