@@ -18,10 +18,26 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_name() {
-        let mut incremental = IncrementalGenerator::default();
-        incremental.step().expect("cannot fail");
+    fn test_create_at_zero() {
+        let incremental = IncrementalGenerator::default();
 
+        assert_eq!(*incremental.output.get(), 0)
+    }
+
+    #[test]
+    fn test_increment_once() {
+        let mut incremental = IncrementalGenerator::default();
+
+        incremental.step().expect("cannot fail");
         assert_eq!(*incremental.output.get(), 1)
+    }
+
+    #[test]
+    fn test_increment_twice() {
+        let mut incremental = IncrementalGenerator::default();
+
+        incremental.step().expect("cannot fail");
+        incremental.step().expect("cannot fail");
+        assert_eq!(*incremental.output.get(), 2)
     }
 }

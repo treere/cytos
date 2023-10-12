@@ -25,3 +25,24 @@ impl Stepper for AddValue {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_starts_at_zero() {
+        let add = AddValue::default();
+
+        assert_eq!(*add.output.get(), 0);
+    }
+
+    #[test]
+    fn test_first_add_is_one() {
+        let mut add = AddValue::default();
+
+        add.step().expect("canont fail");
+
+        assert_eq!(*add.output.get(), 1);
+    }
+}
