@@ -11,7 +11,14 @@
   ],
   "links": [
     {
-      "src": ["SOURCE", "frame"], "dst": ["DECODER", "frame"]
+      "src": [
+        "SOURCE",
+        "frame"
+      ],
+      "dst": [
+        "DECODER",
+        "frame"
+      ]
     }
   ]
 }

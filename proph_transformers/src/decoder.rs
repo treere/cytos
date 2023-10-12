@@ -1,10 +1,11 @@
 use image::DynamicImage;
 use proph::architecture::{InputProp, OutputProp, Stepper};
 use proph_derive::TransFn;
+use rscam::Frame;
 
 #[derive(TransFn, Default)]
 pub struct ImageDecoder {
-    frame: InputProp<(Vec<u8>, (u32, u32), [u8; 4])>,
+    frame: InputProp<Option<Frame>>,
 
     decoded: OutputProp<DynamicImage>,
 }
@@ -15,11 +16,15 @@ impl Stepper for ImageDecoder {
     }
 
     fn step(&mut self) -> Result<(), &'static str> {
-        if let Ok(image) = image::load_from_memory(&self.frame.get().0) {
-            *self.decoded.set() = image;
-            Ok(())
+        if let Some(image) = self.frame.get() {
+            if let Ok(image) = image::load_from_memory(image) {
+                *self.decoded.set() = image;
+                Ok(())
+            } else {
+                Err("cannot decode image")
+            }
         } else {
-            Err("cannot decode image")
+            Err("missing image")
         }
     }
 }

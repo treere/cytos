@@ -1,12 +1,12 @@
 use proph::architecture::{OutputProp, Stepper};
 use proph_derive::TransFn;
-use rscam::Camera;
+use rscam::{Camera, Frame};
 
 #[derive(TransFn, Default)]
 pub struct Rscam {
     camera: Option<Camera>,
 
-    frame: OutputProp<(Vec<u8>, (u32, u32), [u8; 4])>,
+    frame: OutputProp<Option<Frame>>,
 }
 
 impl Stepper for Rscam {
@@ -14,11 +14,7 @@ impl Stepper for Rscam {
         if let Some(camera) = self.camera.as_ref() {
             let frame = camera.capture().map_err(|_| "cannot capture")?;
 
-            *self.frame.set() = (
-                Vec::from(&frame[..]),
-                frame.resolution.clone(),
-                frame.format,
-            );
+            *self.frame.set() = Some(frame);
 
             Ok(())
         } else {
@@ -34,6 +30,7 @@ impl Stepper for Rscam {
                 interval: (1, 30), // 30 fps.
                 resolution: (1280, 720),
                 format: b"MJPG",
+                nbuffers: 4,
                 ..Default::default()
             })
             .unwrap();
