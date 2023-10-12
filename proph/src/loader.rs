@@ -15,7 +15,7 @@ impl GraphRepr {
     pub fn load(file: &str, loader: &Loader) -> Result<Graph, &'static str> {
         let repr: Self = serde_json::from_str(file).map_err(|_| "cannot load file")?;
 
-        let mut graph = Graph::new();
+        let mut graph = Graph::default();
         for node in repr.nodes.iter() {
             graph = graph.insert(loader.load(node.name.as_str(), node.typ.as_str())?)?;
         }
@@ -41,6 +41,7 @@ struct Link {
     dst: (String, String),
 }
 
+#[derive(Default)]
 pub struct Loader {
     transformers: HashMap<String, Box<dyn Fn() -> Box<dyn Transformer>>>,
 }
@@ -60,13 +61,5 @@ impl Loader {
     pub fn load(&self, name: &str, typ: &str) -> Result<Processor, &'static str> {
         let factory = self.transformers.get(typ).ok_or("missing type")?;
         Ok(Processor::load(name.to_owned(), factory()))
-    }
-}
-
-impl Default for Loader {
-    fn default() -> Self {
-        Self {
-            transformers: HashMap::new(),
-        }
     }
 }

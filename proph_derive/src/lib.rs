@@ -53,7 +53,7 @@ fn create_link(fields: &Fields) -> proc_macro2::TokenStream {
         .collect::<Vec<_>>();
 
     quote! {
-        fn link(&mut self, name: proph::architecture::ParamId, val: proph::architecture::GenericOutputProp)
+        fn link(&mut self, name: proph::architecture::ParamId, val: proph::architecture::props::GenericOutputProp)
                 -> Result<(), &'static str> {
             match name.as_str() {
                 #(#inputs)*
@@ -77,7 +77,7 @@ fn create_input(fields: &Fields) -> proc_macro2::TokenStream {
 
     quote! {
         fn input(&self, val: proph::architecture::ParamId)
-                 -> Option<proph::architecture::GenericInputProp> {
+                 -> Option<proph::architecture::props::GenericInputProp> {
             match val.as_str() {
                 #(#inputs)*
                 _ => None,
@@ -120,7 +120,7 @@ fn create_output(fields: &Fields) -> proc_macro2::TokenStream {
 
     quote! {
         fn output(&self, val: proph::architecture::ParamId)
-                  -> Option<proph::architecture::GenericOutputProp> {
+                  -> Option<proph::architecture::props::GenericOutputProp> {
             match val.as_str() {
                 #(#outputs)*
                 _ => None,

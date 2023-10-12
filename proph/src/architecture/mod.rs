@@ -1,6 +1,12 @@
 //! Struct to manage graph architecture.
 
-use std::{any::Any, cell::UnsafeCell, cmp::Ordering, collections::HashMap, ops::Deref, rc::Rc};
+pub mod props;
+
+use std::{cmp::Ordering, collections::HashMap, ops::Deref};
+
+use self::props::{are_linked, GenericInputProp, GenericOutputProp};
+
+pub use self::props::{InputProp, OutputProp};
 
 pub type NodeId = String;
 pub type ParamId = String;
@@ -34,17 +40,13 @@ impl Processor {
     }
 }
 
+#[derive(Default)]
 /// Graph.
 pub struct Graph {
     nodes: Vec<Processor>,
 }
 
 impl Graph {
-    /// Created a new instance.
-    pub fn new() -> Self {
-        Self { nodes: Vec::new() }
-    }
-
     /// Add a processor with a given id to the graph.
     pub fn insert(mut self, processor: Processor) -> Result<Self, &'static str> {
         if self.nodes.iter().all(|x| x.id != processor.id) {
@@ -138,123 +140,12 @@ impl Graph {
         let mut v = vec![];
         for i in inputs.iter() {
             for j in outputs.iter() {
-                if Rc::ptr_eq(&i.1.prop, &j.1.prop) {
+                if are_linked(&i.1, &j.1) {
                     v.push((j.0.clone(), i.0.clone()));
                 }
             }
         }
         v
-    }
-}
-
-impl Default for Graph {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// A property
-pub struct InputProp<T> {
-    val: Rc<UnsafeCell<T>>,
-}
-
-impl<T: 'static> InputProp<T> {
-    pub fn new(val: T) -> Self {
-        Self {
-            val: Rc::new(UnsafeCell::new(val)),
-        }
-    }
-
-    pub fn get(&self) -> &T {
-        unsafe { &*self.val.get() }
-    }
-
-    pub fn change_value(&mut self, val: GenericOutputProp) -> Result<(), &'static str> {
-        if let Ok(v) = val.prop.downcast::<UnsafeCell<T>>() {
-            self.val = v;
-            Ok(())
-        } else {
-            Err("invalid type")
-        }
-    }
-
-    pub fn as_generic(&self) -> GenericInputProp {
-        GenericInputProp {
-            prop: self.val.clone(),
-        }
-    }
-}
-
-impl<T: Default + 'static> Default for InputProp<T> {
-    fn default() -> Self {
-        Self::new(T::default())
-    }
-}
-
-pub struct OutputProp<T> {
-    val: Rc<UnsafeCell<T>>,
-}
-
-impl<T: 'static> OutputProp<T> {
-    pub fn new(val: T) -> Self {
-        Self {
-            val: Rc::new(UnsafeCell::new(val)),
-        }
-    }
-
-    pub fn get(&self) -> &T {
-        unsafe { &*self.val.get() }
-    }
-
-    pub fn set(&mut self) -> &mut T {
-        unsafe { &mut *self.val.get() }
-    }
-
-    pub fn as_generic(&self) -> GenericOutputProp {
-        GenericOutputProp {
-            prop: self.val.clone(),
-        }
-    }
-}
-
-impl<T: Default + 'static> Default for OutputProp<T> {
-    fn default() -> Self {
-        Self::new(T::default())
-    }
-}
-
-/// Generic Property to be casted back
-pub struct GenericOutputProp {
-    prop: Rc<dyn Any>,
-}
-
-impl GenericOutputProp {
-    pub fn try_read<T: 'static>(&self, f: impl Fn(&T)) -> Result<(), &'static str> {
-        if let Ok(v) = self.prop.clone().downcast::<UnsafeCell<T>>() {
-            f(unsafe { &*v.get() });
-            Ok(())
-        } else {
-            Err("wrong type")
-        }
-    }
-}
-
-pub struct GenericInputProp {
-    prop: Rc<dyn Any>,
-}
-
-impl GenericInputProp {
-    pub fn try_read<T: 'static>(&self, f: impl Fn(&T)) -> Result<(), &'static str> {
-        if let Ok(v) = self.prop.clone().downcast::<UnsafeCell<T>>() {
-            f(unsafe { &*v.get() });
-            Ok(())
-        } else {
-            Err("wrong type")
-        }
-    }
-
-    pub fn is_linked_to(&self, other: &GenericOutputProp) -> bool {
-        Rc::ptr_eq(&self.prop, &other.prop)
     }
 }
 
