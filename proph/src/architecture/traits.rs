@@ -3,9 +3,12 @@ use super::{
     ParamId,
 };
 
+/// Stepper trait
 pub trait Stepper {
+    /// Initialize data
     fn initialize(&mut self) -> Result<(), &'static str>;
 
+    /// Do one computation step
     fn step(&mut self) -> Result<(), &'static str>;
 }
 

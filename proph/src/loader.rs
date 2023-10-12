@@ -60,6 +60,6 @@ impl Loader {
 
     pub fn load(&self, name: &str, typ: &str) -> Result<Processor, &'static str> {
         let factory = self.transformers.get(typ).ok_or("missing type")?;
-        Ok(Processor::load(name.to_owned(), factory()))
+        Ok(Processor::new(name.to_owned(), factory()))
     }
 }

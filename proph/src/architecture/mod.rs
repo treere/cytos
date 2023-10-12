@@ -20,36 +20,30 @@ pub struct Processor {
     id: NodeId,
 
     /// Wrapped transformer.
-    fun: Box<dyn Transformer>,
+    transformer: Box<dyn Transformer>,
 }
 
 impl Processor {
     /// Create a new Processor.
-    pub fn new(id: NodeId, fun: impl Transformer + 'static) -> Self {
-        Self {
-            id,
-            fun: Box::new(fun),
-        }
-    }
-
-    pub fn load(id: NodeId, fun: Box<dyn Transformer>) -> Self {
-        Self { id, fun }
+    pub fn new(id: NodeId, transformer: Box<dyn Transformer>) -> Self {
+        Self { id, transformer }
     }
 }
 
 impl Stepper for Processor {
     fn initialize(&mut self) -> Result<(), &'static str> {
-        self.fun.initialize()
+        self.transformer.initialize()
     }
 
     fn step(&mut self) -> Result<(), &'static str> {
-        self.fun.step()
+        self.transformer.step()
     }
 }
 
 #[derive(Default)]
 /// Graph.
 pub struct Graph {
+    /// Processors
     nodes: Vec<Processor>,
 }
 
@@ -72,19 +66,20 @@ impl Graph {
             .iter()
             .find(|p| p.id == src.0)
             .ok_or("cannot find source")
-            .and_then(|s| s.fun.output(src.1).ok_or("cannot find param"))?;
+            .and_then(|s| s.transformer.output(src.1).ok_or("cannot find param"))?;
 
         self.nodes
             .iter_mut()
             .find(|p| p.id == dst.0)
             .ok_or("cannot find dest")
-            .and_then(|d| d.fun.link(dst.1, output))?;
+            .and_then(|d| d.transformer.link(dst.1, output))?;
 
         self.order_nodes();
 
         Ok(self)
     }
 
+    /// Initialize the nodes
     pub fn initialize(&mut self) -> Result<(), &'static str> {
         for node in self.nodes.iter_mut() {
             node.initialize()?;
@@ -92,7 +87,7 @@ impl Graph {
         Ok(())
     }
 
-    /// Comute one step of processing
+    /// Compute one step of processing
     pub fn step(&mut self) -> Result<(), &'static str> {
         for node in self.nodes.iter_mut() {
             node.step()?;
@@ -105,7 +100,7 @@ impl Graph {
         self.nodes
             .iter()
             .find(|x| x.id == node)
-            .map(|p| p.fun.deref())
+            .map(|p| p.transformer.deref())
     }
 
     /// Reorder nodes so there cannot a required node after.
@@ -126,15 +121,21 @@ impl Graph {
         self.nodes.reverse();
     }
 
+    /// Find links between nodes
     fn find_links(&self) -> Vec<(Path, Path)> {
         let inputs: Vec<_> = self
             .nodes
             .iter()
             .flat_map(|n| {
-                n.fun
+                n.transformer
                     .input_names()
                     .iter()
-                    .map(|p| ((n.id.clone(), p.clone()), n.fun.input(p.clone()).unwrap()))
+                    .map(|p| {
+                        (
+                            (n.id.clone(), p.clone()),
+                            n.transformer.input(p.clone()).unwrap(),
+                        )
+                    })
                     .collect::<Vec<_>>()
             })
             .collect();
@@ -143,10 +144,15 @@ impl Graph {
             .nodes
             .iter()
             .flat_map(|n| {
-                n.fun
+                n.transformer
                     .output_names()
                     .iter()
-                    .map(|p| ((n.id.clone(), p.clone()), n.fun.output(p.clone()).unwrap()))
+                    .map(|p| {
+                        (
+                            (n.id.clone(), p.clone()),
+                            n.transformer.output(p.clone()).unwrap(),
+                        )
+                    })
                     .collect::<Vec<_>>()
             })
             .collect();
