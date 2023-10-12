@@ -1,5 +1,7 @@
-use crate::architecture::Graph;
-use crate::architecture::{Processor, Transformer};
+use crate::architecture::{
+    graph::{Graph, Processor},
+    Transformer,
+};
 
 use serde::Deserialize;
 use std::collections::HashMap;
