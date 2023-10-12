@@ -1,12 +1,3 @@
-// let mut camera = rscam::new("/dev/video0").unwrap();
-
-// camera.start(&rscam::Config {
-//     interval: (1, 30),      // 30 fps.
-//     resolution: (1280, 720),
-//     format: b"MJPG",
-//     ..Default::default()
-// }).unwrap();
-
 use proph::architecture::{OutputProp, Stepper};
 use proph_derive::TransFn;
 use rscam::Camera;

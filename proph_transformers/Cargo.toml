@@ -7,3 +7,4 @@ edition = "2021"
 proph = { path = "../proph" }
 proph_derive = { path = "../proph_derive" }
 rscam = "0.5.5"
+image = "0.24.7"

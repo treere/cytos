@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 proph = { path = "../proph" }
 proph_transformers = { path = "../proph_transformers" }
+clap = "4.4.6"

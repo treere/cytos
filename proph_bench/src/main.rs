@@ -1,13 +1,44 @@
-use proph::loader::Registry;
-use proph::{loader, utils::execution_time};
-use proph_transformers::{AddValue, IncrementalGenerator, Rscam};
-use std::env;
+use clap::{value_parser, Arg, Command};
+use proph::loader::{GraphRepr, Registry};
+use proph::utils::execution_time;
+use proph_transformers::{AddValue, ImageDecoder, IncrementalGenerator, Rscam};
 use std::fs::File;
 use std::io::Read;
 
+fn load_registry() -> Registry {
+    Registry::default()
+        .add("IncrementalGenerator", IncrementalGenerator::default)
+        .add("AddValue", AddValue::default)
+        .add("Rscam", Rscam::default)
+        .add("ImageDecoder", ImageDecoder::default)
+}
+
 fn main() -> Result<(), String> {
+    let loader = load_registry();
+
+    let matches = Command::new("bench")
+        .about("benchmark a configuration")
+        .version("0.0.1")
+        .arg_required_else_help(true)
+        .author("Treere")
+        .arg(Arg::new("config_file"))
+        .arg(
+            Arg::new("steps")
+                .short('s')
+                .default_value("10")
+                .value_parser(value_parser!(u64)),
+        )
+        .get_matches();
+
+    let steps = matches
+        .get_one::<u64>("steps")
+        .expect("missing steps")
+        .clone();
+
     let configuration = {
-        let filename = env::args().nth(1).expect("missing file");
+        let filename = matches
+            .get_one::<String>("config_file")
+            .expect("missing file");
 
         let mut configuration = String::new();
 
@@ -18,16 +49,10 @@ fn main() -> Result<(), String> {
         configuration
     };
 
-    let loader = Registry::default()
-        .add("IncrementalGenerator", IncrementalGenerator::default)
-        .add("AddValue", AddValue::default)
-        .add("Rscam", Rscam::default);
+    let mut orchestrator = GraphRepr::load(&configuration, &loader)?;
 
-    let mut orchestrator = loader::GraphRepr::load(&configuration, &loader)?;
+    orchestrator.initialize().expect("cannot initialize");
 
-    orchestrator.initialize().expect("step");
-
-    let steps = 2000000000;
     println!("running {} steps", steps);
     orchestrator.step().expect("step");
 

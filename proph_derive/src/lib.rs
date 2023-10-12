@@ -57,7 +57,7 @@ fn create_link(fields: &Fields) -> proc_macro2::TokenStream {
                 -> Result<(), &'static str> {
             match name.as_str() {
                 #(#inputs)*
-                _ => Err("missing"),
+                _ => Err("missing link data"),
             }
         }
     }

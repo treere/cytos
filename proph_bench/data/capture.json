@@ -3,8 +3,15 @@
     {
       "name": "SOURCE",
       "type": "Rscam"
+    },
+    {
+      "name": "DECODER",
+      "type": "ImageDecoder"
     }
   ],
   "links": [
+    {
+      "src": ["SOURCE", "frame"], "dst": ["DECODER", "frame"]
+    }
   ]
 }
