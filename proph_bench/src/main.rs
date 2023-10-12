@@ -1,4 +1,4 @@
-use proph::loader::Loader;
+use proph::loader::Registry;
 use proph::{loader, utils::execution_time};
 use proph_transformers::{AddValue, IncrementalGenerator};
 use std::env;
@@ -18,7 +18,7 @@ fn main() -> Result<(), String> {
         configuration
     };
 
-    let loader = Loader::default()
+    let loader = Registry::default()
         .add("IncrementalGenerator", IncrementalGenerator::default)
         .add("AddValue", AddValue::default);
 

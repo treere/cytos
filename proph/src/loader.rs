@@ -6,15 +6,18 @@ use crate::architecture::{
 use serde::Deserialize;
 use std::collections::HashMap;
 
+/// Graph representatio to be loaded
 #[derive(Deserialize, Debug)]
 pub struct GraphRepr {
+    /// List of nodes
     nodes: Vec<Node>,
 
+    /// List of links between nodes
     links: Vec<Link>,
 }
 
 impl GraphRepr {
-    pub fn load(file: &str, loader: &Loader) -> Result<Graph, &'static str> {
+    pub fn load(file: &str, loader: &Registry) -> Result<Graph, &'static str> {
         let repr: Self = serde_json::from_str(file).map_err(|_| "cannot load file")?;
 
         let mut graph = Graph::default();
@@ -31,37 +34,47 @@ impl GraphRepr {
 
 #[derive(Deserialize, Debug)]
 struct Node {
+    /// Name of the node
     name: String,
 
+    /// Type of the node
     #[serde(rename = "type")]
     typ: String,
 }
 
+/// Link between nodes
 #[derive(Deserialize, Debug)]
 struct Link {
+    /// Source node param
     src: (String, String),
+
+    /// Destination node param
     dst: (String, String),
 }
 
+/// Registry of transformers
 #[derive(Default)]
-pub struct Loader {
-    transformers: HashMap<String, Box<dyn Fn() -> Box<dyn Transformer>>>,
+pub struct Registry {
+    /// Factories
+    factories: HashMap<String, Box<dyn Fn() -> Box<dyn Transformer>>>,
 }
 
-impl Loader {
+impl Registry {
+    /// Add a factory
     pub fn add<K: Transformer + 'static>(
         mut self,
         name: impl AsRef<str>,
-        f: impl (Fn() -> K) + 'static,
+        factory: impl (Fn() -> K) + 'static,
     ) -> Self {
-        self.transformers
+        self.factories
             .entry(name.as_ref().to_owned())
-            .or_insert(Box::new(move || Box::new(f())));
+            .or_insert(Box::new(move || Box::new(factory())));
         self
     }
 
+    /// Load a Processor
     pub fn load(&self, name: &str, typ: &str) -> Result<Processor, &'static str> {
-        let factory = self.transformers.get(typ).ok_or("missing type")?;
+        let factory = self.factories.get(typ).ok_or("missing type")?;
         Ok(Processor::new(name.to_owned(), factory()))
     }
 }
