@@ -17,16 +17,15 @@ pub trait Transformer: Stepper {
     /// Set input
     fn link(&mut self, name: ParamId, val: GenericOutputProp) -> Result<(), &'static str>;
 
-    /// Get the default of a parameter
+    /// Get ouput by name
     fn output(&self, val: ParamId) -> Option<GenericOutputProp>;
 
+    /// Get input by name
     fn input(&self, val: ParamId) -> Option<GenericInputProp>;
 
-    fn input_names(&self) -> Vec<ParamId> {
-        vec![]
-    }
+    /// Get input names
+    fn input_names(&self) -> Vec<ParamId>;
 
-    fn output_names(&self) -> Vec<ParamId> {
-        vec![]
-    }
+    /// Get output names
+    fn output_names(&self) -> Vec<ParamId>;
 }
