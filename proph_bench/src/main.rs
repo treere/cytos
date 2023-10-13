@@ -30,10 +30,7 @@ fn main() -> Result<(), String> {
         )
         .get_matches();
 
-    let steps = matches
-        .get_one::<u64>("steps")
-        .expect("missing steps")
-        .clone();
+    let steps = *matches.get_one::<u64>("steps").expect("missing steps");
 
     let configuration = {
         let filename = matches
