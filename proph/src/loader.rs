@@ -4,7 +4,10 @@ use crate::architecture::{
 };
 
 use serde::Deserialize;
+use serde_json::Map;
 use std::collections::HashMap;
+
+pub use serde_json::Value;
 
 /// Graph representatio to be loaded
 #[derive(Deserialize, Debug)]
@@ -40,6 +43,14 @@ struct Node {
     /// Type of the node
     #[serde(rename = "type")]
     typ: String,
+
+    /// Properties
+    #[serde(default = "props_default")]
+    props: Value,
+}
+
+fn props_default() -> Value {
+    Value::Object(Map::new())
 }
 
 /// Link between nodes

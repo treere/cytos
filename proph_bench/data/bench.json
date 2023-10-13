@@ -6,7 +6,10 @@
     },
     {
       "name": "DOUBLER0",
-      "type": "AddValue"
+      "type": "AddValue",
+      "props": {
+        "increment": 1
+      }
     },
     {
       "name": "DOUBLER1",
