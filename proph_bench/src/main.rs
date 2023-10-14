@@ -46,16 +46,16 @@ fn main() -> Result<(), String> {
         configuration
     };
 
-    let mut orchestrator = GraphRepr::load(&configuration, &loader)?;
+    let mut graph = GraphRepr::load(&configuration, &loader)?;
 
-    orchestrator.initialize().expect("cannot initialize");
+    graph.initialize().expect("cannot initialize");
 
     println!("running {} steps", steps);
-    orchestrator.step().expect("step");
+    graph.step().expect("step");
 
     let seconds = execution_time(|| {
         for _ in 0..steps {
-            orchestrator.step().unwrap()
+            graph.step().unwrap()
         }
     });
 
