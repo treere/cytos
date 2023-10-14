@@ -67,6 +67,63 @@ fn create_link(fields: &Fields) -> proc_macro2::TokenStream {
     }
 }
 
+fn create_load(fields: &Fields) -> proc_macro2::TokenStream {
+    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
+        .map(|field| {
+            let i = &field.ident;
+            let f = LitStr::new(
+                &format!("{}", field.ident.clone().expect("missing ident")),
+                Span::call_site(),
+            );
+            quote! {#f => self.#i.load(value),}
+        })
+        .collect::<Vec<_>>();
+
+    {
+        quote!(
+            fn load(
+                &mut self,
+                name: proph::architecture::ParamId,
+                value: &str,
+            ) -> proph::architecture::Done {
+                match name.as_str() {
+                    #(#inputs)*
+                    _ => Err("parameter not found"),
+                }
+
+            }
+        )
+    }
+}
+
+fn create_dump(fields: &Fields) -> proc_macro2::TokenStream {
+    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
+        .map(|field| {
+            let i = &field.ident;
+            let f = LitStr::new(
+                &format!("{}", field.ident.clone().expect("missing ident")),
+                Span::call_site(),
+            );
+            quote! {#f => self.#i.dump(),}
+        })
+        .collect::<Vec<_>>();
+
+    {
+        quote!(
+            fn dump(
+                & self,
+                name: proph::architecture::ParamId
+            ) -> Result<String, &'static str> {
+                match name.as_str() {
+                    #(#inputs)*
+                    _ => Err("parameter not found"),
+                }
+
+            }
+        )
+    }
+}
+
 fn create_input(fields: &Fields) -> proc_macro2::TokenStream {
     let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
         .map(|field| {
@@ -150,63 +207,6 @@ fn create_output_names(fields: &Fields) -> proc_macro2::TokenStream {
                 #(#output_names),*
             ]
         }
-    }
-}
-
-fn create_load(fields: &Fields) -> proc_macro2::TokenStream {
-    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
-        .map(|field| {
-            let i = &field.ident;
-            let f = LitStr::new(
-                &format!("{}", field.ident.clone().expect("missing ident")),
-                Span::call_site(),
-            );
-            quote! {#f => self.#i.load(value),}
-        })
-        .collect::<Vec<_>>();
-
-    {
-        quote!(
-            fn load(
-                &mut self,
-                name: proph::architecture::ParamId,
-                value: &str,
-            ) -> proph::architecture::Done {
-                match name.as_str() {
-                    #(#inputs)*
-                    _ => Err("parameter not found"),
-                }
-
-            }
-        )
-    }
-}
-
-fn create_dump(fields: &Fields) -> proc_macro2::TokenStream {
-    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
-        .map(|field| {
-            let i = &field.ident;
-            let f = LitStr::new(
-                &format!("{}", field.ident.clone().expect("missing ident")),
-                Span::call_site(),
-            );
-            quote! {#f => self.#i.dump(),}
-        })
-        .collect::<Vec<_>>();
-
-    {
-        quote!(
-            fn dump(
-                & self,
-                name: proph::architecture::ParamId
-            ) -> Result<String, &'static str> {
-                match name.as_str() {
-                    #(#inputs)*
-                    _ => Err("parameter not found"),
-                }
-
-            }
-        )
     }
 }
 
