@@ -21,12 +21,12 @@ impl GraphRepr {
         let repr: Self = serde_json::from_str(file).map_err(|_| "cannot load file")?;
 
         let mut graph = Graph::default();
-        for node in repr.nodes.iter() {
+        for node in repr.nodes.into_iter() {
             let processor = loader.load(node.name.as_str(), node.typ.as_str())?;
             graph = graph.insert(processor)?;
 
-            for (prop, value) in node.props.iter() {
-                graph = graph.load((node.name.clone(), prop.to_owned()), value)?;
+            for (prop, value) in node.props.into_iter() {
+                graph = graph.load((node.name.clone(), prop), &value)?;
             }
         }
 

@@ -69,7 +69,7 @@ impl Graph {
         self.nodes
             .iter_mut()
             .find(|p| p.id == src.0)
-            .ok_or("cannot find dest")
+            .ok_or("cannot find node")
             .and_then(|d| d.transformer.load(src.1, value))?;
 
         Ok(self)
