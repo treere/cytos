@@ -75,6 +75,14 @@ impl Graph {
         Ok(self)
     }
 
+    pub fn dump(&self, src: Path) -> Result<String, &'static str> {
+        self.nodes
+            .iter()
+            .find(|p| p.id == src.0)
+            .ok_or("cannot find node")
+            .and_then(|d| d.transformer.dump(src.1))
+    }
+
     /// Initialize the nodes
     pub fn initialize(&mut self) -> Done {
         for node in self.nodes.iter_mut() {

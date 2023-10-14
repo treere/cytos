@@ -20,6 +20,9 @@ pub trait Transformer: Stepper {
     /// Load
     fn load(&mut self, name: ParamId, val: &str) -> Done;
 
+    /// Dump
+    fn dump(&self, name: ParamId) -> Result<String, &'static str>;
+
     /// Get ouput by name
     fn output(&self, val: ParamId) -> Option<GenericOutputProp>;
 

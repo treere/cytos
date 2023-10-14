@@ -1,15 +1,15 @@
 //! Properties
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned, Serialize};
 use std::{any::Any, cell::UnsafeCell, rc::Rc};
 
 use super::Done;
 
 /// A property
-pub struct InputProp<T: DeserializeOwned> {
+pub struct InputProp<T> {
     val: Rc<UnsafeCell<T>>,
 }
 
-impl<T: 'static + DeserializeOwned> InputProp<T> {
+impl<T: 'static> InputProp<T> {
     pub fn new(val: T) -> Self {
         Self {
             val: Rc::new(UnsafeCell::new(val)),
@@ -29,11 +29,6 @@ impl<T: 'static + DeserializeOwned> InputProp<T> {
         }
     }
 
-    pub fn load(&mut self, val: &str) -> Done {
-        self.val = Rc::new(UnsafeCell::new(serde_json::from_str(val).unwrap()));
-        Ok(())
-    }
-
     pub fn as_generic(&self) -> GenericInputProp {
         GenericInputProp {
             prop: self.val.clone(),
@@ -41,7 +36,20 @@ impl<T: 'static + DeserializeOwned> InputProp<T> {
     }
 }
 
-impl<T: Default + DeserializeOwned + 'static> Default for InputProp<T> {
+impl<T: 'static + DeserializeOwned> InputProp<T> {
+    pub fn load(&mut self, val: &str) -> Done {
+        self.val = Rc::new(UnsafeCell::new(serde_json::from_str(val).unwrap()));
+        Ok(())
+    }
+}
+
+impl<T: 'static + Serialize> InputProp<T> {
+    pub fn dump(&self) -> Result<String, &'static str> {
+        serde_json::to_string(self.get()).or(Err("cannot dump value"))
+    }
+}
+
+impl<T: Default + 'static> Default for InputProp<T> {
     fn default() -> Self {
         Self::new(T::default())
     }
@@ -70,6 +78,12 @@ impl<T: 'static> OutputProp<T> {
         GenericOutputProp {
             prop: self.val.clone(),
         }
+    }
+}
+
+impl<T: 'static + Serialize> OutputProp<T> {
+    pub fn dump(&self) -> Result<String, &'static str> {
+        serde_json::to_string(self.get()).or(Err("cannot dump value"))
     }
 }
 
