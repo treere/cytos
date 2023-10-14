@@ -8,7 +8,7 @@
       "name": "DOUBLER0",
       "type": "AddValue",
       "props": {
-        "increment": 1
+        "increment": "1"
       }
     },
     {

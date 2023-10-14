@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, collections::HashMap, ops::Deref};
 
-use super::{props::are_linked, NodeId, Path, Stepper, Transformer};
+use super::{props::are_linked, Done, NodeId, Path, Stepper, Transformer};
 
 /// A wrapper around a [`Transformer`] keeping trace of the node id.
 pub struct Processor {
@@ -19,11 +19,11 @@ impl Processor {
 }
 
 impl Stepper for Processor {
-    fn initialize(&mut self) -> Result<(), &'static str> {
+    fn initialize(&mut self) -> Done {
         self.transformer.initialize()
     }
 
-    fn step(&mut self) -> Result<(), &'static str> {
+    fn step(&mut self) -> Done {
         self.transformer.step()
     }
 }
@@ -67,8 +67,18 @@ impl Graph {
         Ok(self)
     }
 
+    pub fn load(mut self, src: Path, value: &str) -> Result<Self, &'static str> {
+        self.nodes
+            .iter_mut()
+            .find(|p| p.id == src.0)
+            .ok_or("cannot find dest")
+            .and_then(|d| d.transformer.load(src.1, value))?;
+
+        Ok(self)
+    }
+
     /// Initialize the nodes
-    pub fn initialize(&mut self) -> Result<(), &'static str> {
+    pub fn initialize(&mut self) -> Done {
         for node in self.nodes.iter_mut() {
             node.initialize()?;
         }
@@ -76,7 +86,7 @@ impl Graph {
     }
 
     /// Compute one step of processing
-    pub fn step(&mut self) -> Result<(), &'static str> {
+    pub fn step(&mut self) -> Done {
         for node in self.nodes.iter_mut() {
             node.step()?;
         }

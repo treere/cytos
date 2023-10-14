@@ -23,18 +23,19 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
     let output = create_output(fields);
     let input = create_input(fields);
     let link = create_link(fields);
+    let load = create_load(fields);
 
     quote! {
         impl proph::architecture::Transformer for #ident {
             #link
+
+            #load
 
             #input
             #input_names
 
             #output
             #output_names
-
-
         }
     }
     .into()
@@ -54,7 +55,7 @@ fn create_link(fields: &Fields) -> proc_macro2::TokenStream {
 
     quote! {
         fn link(&mut self, name: proph::architecture::ParamId, val: proph::architecture::props::GenericOutputProp)
-                -> Result<(), &'static str> {
+                -> proph::architecture::Done {
             match name.as_str() {
                 #(#inputs)*
                 _ => Err("missing link data"),
@@ -146,6 +147,35 @@ fn create_output_names(fields: &Fields) -> proc_macro2::TokenStream {
                 #(#output_names),*
             ]
         }
+    }
+}
+
+fn create_load(fields: &Fields) -> proc_macro2::TokenStream {
+    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
+        .map(|field| {
+            let i = &field.ident;
+            let f = LitStr::new(
+                &format!("{}", field.ident.clone().expect("missing ident")),
+                Span::call_site(),
+            );
+            quote! {#f => self.#i.load(value),}
+        })
+        .collect::<Vec<_>>();
+
+    {
+        quote!(
+            fn load(
+                &mut self,
+                name: proph::architecture::ParamId,
+                value: &str,
+            ) -> proph::architecture::Done {
+                match name.as_str() {
+                    #(#inputs)*
+                    _ => Err("parameter not found"),
+                }
+
+            }
+        )
     }
 }
 

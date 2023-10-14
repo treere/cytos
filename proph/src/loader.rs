@@ -4,10 +4,7 @@ use crate::architecture::{
 };
 
 use serde::Deserialize;
-use serde_json::Map;
 use std::collections::HashMap;
-
-pub use serde_json::Value;
 
 /// Graph representatio to be loaded
 #[derive(Deserialize, Debug)]
@@ -25,7 +22,12 @@ impl GraphRepr {
 
         let mut graph = Graph::default();
         for node in repr.nodes.iter() {
-            graph = graph.insert(loader.load(node.name.as_str(), node.typ.as_str())?)?;
+            let processor = loader.load(node.name.as_str(), node.typ.as_str())?;
+            graph = graph.insert(processor)?;
+
+            for (prop, value) in node.props.iter() {
+                graph = graph.load((node.name.clone(), prop.to_owned()), value)?;
+            }
         }
 
         for link in repr.links.into_iter() {
@@ -45,12 +47,8 @@ struct Node {
     typ: String,
 
     /// Properties
-    #[serde(default = "props_default")]
-    props: Value,
-}
-
-fn props_default() -> Value {
-    Value::Object(Map::new())
+    #[serde(default)]
+    props: HashMap<String, String>,
 }
 
 /// Link between nodes
@@ -84,7 +82,7 @@ impl Registry {
     }
 
     /// Load a Processor
-    pub fn load(&self, name: &str, typ: &str) -> Result<Processor, &'static str> {
+    fn load(&self, name: &str, typ: &str) -> Result<Processor, &'static str> {
         let factory = self.factories.get(typ).ok_or("missing type")?;
         Ok(Processor::new(name.to_owned(), factory()))
     }

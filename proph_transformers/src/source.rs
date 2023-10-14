@@ -1,20 +1,20 @@
-use proph::architecture::{OutputProp, Stepper};
+use proph::architecture::{Done, OutputProp, Stepper};
 use proph_derive::TransFn;
-use rscam::{Camera, Frame};
+use rscam::Camera;
 
 #[derive(TransFn, Default)]
 pub struct Rscam {
     camera: Option<Camera>,
 
-    frame: OutputProp<Option<Frame>>,
+    frame: OutputProp<Vec<u8>>,
 }
 
 impl Stepper for Rscam {
-    fn step(&mut self) -> Result<(), &'static str> {
+    fn step(&mut self) -> Done {
         if let Some(camera) = self.camera.as_ref() {
             let frame = camera.capture().map_err(|_| "cannot capture")?;
 
-            *self.frame.set() = Some(frame);
+            *self.frame.set() = Vec::from_iter(frame.iter().cloned());
 
             Ok(())
         } else {
@@ -22,7 +22,7 @@ impl Stepper for Rscam {
         }
     }
 
-    fn initialize(&mut self) -> Result<(), &'static str> {
+    fn initialize(&mut self) -> Done {
         let mut camera = rscam::new("/dev/video0").unwrap();
 
         camera

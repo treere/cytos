@@ -10,3 +10,5 @@ pub use self::traits::{Stepper, Transformer};
 pub type NodeId = String;
 pub type ParamId = String;
 type Path = (NodeId, ParamId);
+
+pub type Done = Result<(), &'static str>;
