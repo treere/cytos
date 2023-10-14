@@ -1,12 +1,28 @@
-use proph::architecture::{Done, OutputProp, Stepper};
+use proph::architecture::{Done, InputProp, OutputProp, Stepper};
 use proph_derive::TransFn;
 use rscam::Camera;
 
-#[derive(TransFn, Default)]
+#[derive(TransFn)]
 pub struct Rscam {
-    camera: Option<Camera>,
+    filename: InputProp<String>,
+    interval: InputProp<(u32, u32)>,
+    resolution: InputProp<(u32, u32)>,
 
     frame: OutputProp<Vec<u8>>,
+
+    camera: Option<Camera>,
+}
+
+impl Default for Rscam {
+    fn default() -> Self {
+        Self {
+            filename: InputProp::new("/dev/video0".to_owned()),
+            interval: InputProp::new((1, 30)),
+            resolution: InputProp::new((1280, 720)),
+            frame: OutputProp::new(Vec::default()),
+            camera: None,
+        }
+    }
 }
 
 impl Stepper for Rscam {
@@ -23,12 +39,12 @@ impl Stepper for Rscam {
     }
 
     fn initialize(&mut self) -> Done {
-        let mut camera = rscam::new("/dev/video0").unwrap();
+        let mut camera = rscam::new(self.filename.get()).unwrap();
 
         camera
             .start(&rscam::Config {
-                interval: (1, 30), // 30 fps.
-                resolution: (1280, 720),
+                interval: *self.interval.get(),
+                resolution: *self.resolution.get(),
                 format: b"MJPG",
                 nbuffers: 4,
                 ..Default::default()
