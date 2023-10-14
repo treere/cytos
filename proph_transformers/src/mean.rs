@@ -4,19 +4,21 @@ use proph_derive::TransFn;
 use crate::decoder::Image;
 
 #[derive(TransFn, Default)]
-pub struct GrayScale {
+pub struct Mean {
     input: InputProp<Image>,
-    output: OutputProp<Image>,
+    output: OutputProp<f64>,
 }
 
-impl Stepper for GrayScale {
+impl Stepper for Mean {
     fn initialize(&mut self) -> Done {
         Ok(())
     }
 
     fn step(&mut self) -> Done {
-        let p = image::imageops::grayscale(&self.input.get().data).into();
-        *self.output.set() = Image { data: p };
+        let img = &self.input.get().data;
+        let sum = img.as_bytes().iter().fold(0u64, |a, b| (*b) as u64 + a) as f64;
+
+        *self.output.set() = sum / (img.width() * img.height()) as f64;
         Ok(())
     }
 }

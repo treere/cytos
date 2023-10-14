@@ -61,7 +61,7 @@ fn create_link(fields: &Fields) -> proc_macro2::TokenStream {
                 -> proph::architecture::Done {
             match name.as_str() {
                 #(#inputs)*
-                _ => Err("missing link data"),
+                _ => Err("missing input link data"),
             }
         }
     }

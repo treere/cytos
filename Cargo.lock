@@ -409,6 +409,7 @@ dependencies = [
  "proph",
  "proph_derive",
  "rscam",
+ "serde",
 ]
 
 [[package]]

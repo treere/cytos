@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+image = "0.24.7"
 proph = { path = "../proph" }
 proph_derive = { path = "../proph_derive" }
 rscam = "0.5.5"
-image = "0.24.7"
+serde = { version = "1.0", features = ["derive"] }

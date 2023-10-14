@@ -7,18 +7,36 @@
     {
       "name": "DECODER",
       "type": "ImageDecoder"
+    },
+    {
+      "name": "GRAY",
+      "type": "ImageGrayScale"
+    },
+    {
+      "name": "MEAN",
+      "type": "ImageMean"
+    },
+    {
+      "name": "PRINT",
+      "type": "PrintF64"
     }
   ],
   "links": [
     {
-      "src": [
-        "SOURCE",
-        "frame"
-      ],
-      "dst": [
-        "DECODER",
-        "frame"
-      ]
+      "src": ["SOURCE", "frame"],
+      "dst": ["DECODER", "frame"]
+    },
+    {
+      "src": ["DECODER", "decoded"],
+      "dst": ["GRAY", "input"]
+    },
+    {
+      "src": ["GRAY", "output"],
+      "dst": ["MEAN", "input"]
+    },
+    {
+      "src": ["MEAN", "output"],
+      "dst": ["PRINT", "input"]
     }
   ]
 }
