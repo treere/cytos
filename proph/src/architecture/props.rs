@@ -4,10 +4,6 @@ use std::{any::Any, cell::UnsafeCell, rc::Rc};
 
 use super::Done;
 
-pub fn are_linked(input: &GenericInputProp, output: &GenericOutputProp) -> bool {
-    Rc::ptr_eq(&input.prop, &output.prop)
-}
-
 /// A property
 pub struct InputProp<T: DeserializeOwned> {
     val: Rc<UnsafeCell<T>>,

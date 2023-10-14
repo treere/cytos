@@ -1,6 +1,6 @@
-use std::{cmp::Ordering, collections::HashMap, ops::Deref};
+use std::ops::Deref;
 
-use super::{props::are_linked, Done, NodeId, Path, Stepper, Transformer};
+use super::{Done, NodeId, Path, Stepper, Transformer};
 
 /// A wrapper around a [`Transformer`] keeping trace of the node id.
 pub struct Processor {
@@ -62,8 +62,6 @@ impl Graph {
             .ok_or("cannot find dest")
             .and_then(|d| d.transformer.link(dst.1, output))?;
 
-        self.order_nodes();
-
         Ok(self)
     }
 
@@ -99,70 +97,5 @@ impl Graph {
             .iter()
             .find(|x| x.id == node)
             .map(|p| p.transformer.deref())
-    }
-
-    /// Reorder nodes so there cannot a required node after.
-    fn order_nodes(&mut self) {
-        let links = self.find_links();
-
-        let mut p = HashMap::new();
-        for (s, d) in links.iter() {
-            p.entry(d.0.clone()).or_insert(Vec::new()).push(s.0.clone())
-        }
-        self.nodes.sort_unstable_by(|s, d| {
-            if p.get(&d.id).map(|v| v.contains(&s.id)).unwrap_or(false) {
-                Ordering::Greater
-            } else {
-                Ordering::Less
-            }
-        });
-        self.nodes.reverse();
-    }
-
-    /// Find links between nodes
-    fn find_links(&self) -> Vec<(Path, Path)> {
-        let inputs: Vec<_> = self
-            .nodes
-            .iter()
-            .flat_map(|n| {
-                n.transformer
-                    .input_names()
-                    .iter()
-                    .map(|p| {
-                        (
-                            (n.id.clone(), p.clone()),
-                            n.transformer.input(p.clone()).unwrap(),
-                        )
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .collect();
-
-        let outputs: Vec<_> = self
-            .nodes
-            .iter()
-            .flat_map(|n| {
-                n.transformer
-                    .output_names()
-                    .iter()
-                    .map(|p| {
-                        (
-                            (n.id.clone(), p.clone()),
-                            n.transformer.output(p.clone()).unwrap(),
-                        )
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .collect();
-
-        let mut v = vec![];
-        for i in inputs.iter() {
-            for j in outputs.iter() {
-                if are_linked(&i.1, &j.1) {
-                    v.push((j.0.clone(), i.0.clone()));
-                }
-            }
-        }
-        v
     }
 }
