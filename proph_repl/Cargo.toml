@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0.75"
+easy-repl = "0.2.1"
 proph = { path = "../proph" }
 proph_transformers = { path = "../proph_transformers" }
-clap = "4.4.6"
-easy-repl = "0.2.1"

@@ -588,7 +588,7 @@ dependencies = [
 name = "proph_repl"
 version = "0.1.0"
 dependencies = [
- "clap",
+ "anyhow",
  "easy-repl",
  "proph",
  "proph_transformers",

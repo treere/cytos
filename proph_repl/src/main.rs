@@ -1,5 +1,6 @@
-use clap::Command;
-use easy_repl::{command, CommandStatus, Repl};
+use anyhow::anyhow;
+
+use easy_repl::{command, Command, CommandStatus, Repl};
 use proph::architecture::graph::Graph;
 use proph::loader::{GraphRepr, Registry};
 
@@ -23,75 +24,75 @@ fn load_registry() -> Registry {
         .add("PrintF64", Print::<f64>::default)
 }
 
+#[derive(Default)]
 struct Status {
     graphs: HashMap<String, Graph>,
 }
 
-fn main() -> Result<(), String> {
-    let status = Arc::new(Mutex::new(Status {
-        graphs: HashMap::new(),
-    }));
-
-    let s = status.clone();
-    let load_command = command! {
-    "Load a configuration",
-    (name: String, filename: String) =>   |name, filename| {
-        let loader = load_registry();
-        let mut status = s.lock().expect("cannot lock");
-        let mut configuration = String::new();
-
-        File::open(filename)?.read_to_string(&mut configuration)?;
-
-        let mut graph = GraphRepr::load(&configuration, &loader).expect("a");
-
-        status.graphs.insert(name, graph);
-
-        Ok(CommandStatus::Done)
-    }};
-
-    let s = status.clone();
-    let list_command = command! {
+fn list_command(s: Arc<Mutex<Status>>) -> Command<'static> {
+    command! {
         "List graphs",
         () => ||{
-            let mut status = s.lock().expect("cannot lock");
+            let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
             for k in status.graphs.keys() {
                 println!("{}", k);
             }
             Ok(CommandStatus::Done)
         }
-    };
+    }
+}
 
-    let s = status.clone();
-    let initialize_command = command! {
+fn load_command(status: Arc<Mutex<Status>>) -> Command<'static> {
+    command! {
+    "Load a configuration",
+    (name: String, filename: String) =>   |name, filename| {
+        let mut configuration = String::new();
+
+        File::open(filename)?.read_to_string(&mut configuration)?;
+
+        let loader = load_registry();
+        let mut graph = GraphRepr::load(&configuration, &loader).map_err(|x| anyhow!(x))?;
+
+        let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
+        status.graphs.insert(name, graph);
+
+        Ok(CommandStatus::Done)
+    }}
+}
+
+fn initialize_command(s: Arc<Mutex<Status>>) -> Command<'static> {
+    command! {
         "Run a loaded graph",
         (name: String) => |name| {
-            let mut status = s.lock().expect("cannot lock");
+            let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
             if let Some(graph) = status.graphs.get_mut(&name) {
                 let _ = graph.initialize();
             }
 
             Ok(CommandStatus::Done)
         }
-    };
+    }
+}
 
-    let s = status.clone();
-    let step_command = command! {
+fn step_command(s: Arc<Mutex<Status>>) -> Command<'static> {
+    command! {
         "Step a loaded graph",
         (name: String) => |name| {
-            let mut status = s.lock().expect("cannot lock");
+            let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
             if let Some(graph) = status.graphs.get_mut(&name) {
                 let _ = graph.step();
             }
 
             Ok(CommandStatus::Done)
         }
-    };
+    }
+}
 
-    let s = status.clone();
-    let nodes_command = command! {
+fn nodes_command(s: Arc<Mutex<Status>>) -> Command<'static> {
+    command! {
         "List graph nodes",
         (name: String) => |name| {
-            let mut status = s.lock().expect("cannot lock");
+            let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
             if let Some(graph) = status.graphs.get_mut(&name) {
                 for n in  graph.list_nodes() {
                     println!("{}", n);
@@ -100,28 +101,30 @@ fn main() -> Result<(), String> {
 
             Ok(CommandStatus::Done)
         }
-    };
+    }
+}
 
-    let s = status.clone();
-    let node_inputs_command = command! {
-        "List input of a graph nodes",
-        (name: String, node: String) => |name, node| {
-            let mut status = s.lock().expect("cannot lock");
-            if let Some(graph) = status.graphs.get_mut(&name) {
-                for n in  graph.list_node_inputs(node) {
-                    println!("{}", n);
-                }
-            }
+fn node_inputs_command(s: Arc<Mutex<Status>>) -> Command<'static> {
+    command! {
+           "List input of a graph nodes",
+           (name: String, node: String) => |name, node| {
+               let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
+               if let Some(graph) = status.graphs.get_mut(&name) {
+                   for n in  graph.list_node_inputs(node) {
+                       println!("{}", n);
+                   }
+               }
 
-            Ok(CommandStatus::Done)
-        }
-    };
+               Ok(CommandStatus::Done)
+           }
+    }
+}
 
-    let s = status.clone();
-    let node_outputs_command = command! {
+fn node_outputs_command(s: Arc<Mutex<Status>>) -> Command<'static> {
+    command! {
         "List output of a graph nodes",
         (name: String, node: String) => |name, node| {
-            let mut status = s.lock().expect("cannot lock");
+            let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
             if let Some(graph) = status.graphs.get_mut(&name) {
                 for n in  graph.list_node_outputs(node) {
                     println!("{}", n);
@@ -130,40 +133,37 @@ fn main() -> Result<(), String> {
 
             Ok(CommandStatus::Done)
         }
-    };
+    }
+}
 
-    let s = status.clone();
-    let dump_command = command! {
+fn dump_command(s: Arc<Mutex<Status>>) -> Command<'static> {
+    command! {
         "Dump param value",
         (name: String, node: String, param: String) => |name, node, param| {
-            let mut status = s.lock().expect("cannot lock");
+            let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
             if let Some(graph) = status.graphs.get_mut(&name) {
-                println!("{}", graph.dump((node, param)).expect("cannot take"));
+                let dump = graph.dump((node, param)).map_err(|x| anyhow!(x))?;
+                println!("{}", dump);
             }
 
             Ok(CommandStatus::Done)
         }
-    };
+    }
+}
 
-    let _matches = Command::new("repl")
-        .about("proph repl")
-        .version("0.0.1")
-        .author("Treere")
-        .get_matches();
+fn main() -> Result<(), &'static str> {
+    let status = Arc::new(Mutex::new(Status::default()));
 
     Repl::builder()
-        .add("list", list_command)
-        .add("load", load_command)
-        .add("initialize", initialize_command)
-        .add("step", step_command)
-        .add("nodes", nodes_command)
-        .add("node_inputs", node_inputs_command)
-        .add("node_outputs", node_outputs_command)
-        .add("dump", dump_command)
+        .add("list", list_command(status.clone()))
+        .add("load", load_command(status.clone()))
+        .add("initialize", initialize_command(status.clone()))
+        .add("step", step_command(status.clone()))
+        .add("nodes", nodes_command(status.clone()))
+        .add("node_inputs", node_inputs_command(status.clone()))
+        .add("node_outputs", node_outputs_command(status.clone()))
+        .add("dump", dump_command(status.clone()))
         .build()
-        .expect("Failed to create repl")
-        .run()
-        .expect("Critical REPL error");
-
-    Ok(())
+        .or(Err("Failed to create repl"))
+        .and_then(|mut repl| repl.run().or(Err("Critical REPL error")))
 }
