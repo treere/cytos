@@ -1,5 +1,5 @@
 [workspace]
-members = ["proph", "proph_derive", "proph_transformers", "proph_bench"]
+members = ["proph","proph_bench","proph_derive","proph_repl","proph_transformers"]
 resolver = "2"
 
 [profile.release]
