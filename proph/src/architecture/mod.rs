@@ -11,4 +11,5 @@ pub type NodeId = String;
 pub type ParamId = String;
 type Path = (NodeId, ParamId);
 
-pub type Done = Result<(), &'static str>;
+pub type Result<T> = std::result::Result<T, &'static str>;
+pub type Done = Result<()>;

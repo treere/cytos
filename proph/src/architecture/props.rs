@@ -2,7 +2,7 @@
 use serde::{de::DeserializeOwned, Serialize};
 use std::{any::Any, cell::UnsafeCell, rc::Rc};
 
-use super::Done;
+use super::{Done, Result};
 
 /// A property
 pub struct InputProp<T> {
@@ -44,7 +44,7 @@ impl<T: 'static + DeserializeOwned> InputProp<T> {
 }
 
 impl<T: 'static + Serialize> InputProp<T> {
-    pub fn dump(&self) -> Result<String, &'static str> {
+    pub fn dump(&self) -> Result<String> {
         serde_json::to_string(self.get()).or(Err("cannot dump value"))
     }
 }
@@ -82,7 +82,7 @@ impl<T: 'static> OutputProp<T> {
 }
 
 impl<T: 'static + Serialize> OutputProp<T> {
-    pub fn dump(&self) -> Result<String, &'static str> {
+    pub fn dump(&self) -> Result<String> {
         serde_json::to_string(self.get()).or(Err("cannot dump value"))
     }
 }

@@ -120,7 +120,7 @@ fn create_dump(fields: &Fields) -> proc_macro2::TokenStream {
             fn dump(
                 & self,
                 name: proph::architecture::ParamId
-            ) -> Result<String, &'static str> {
+            ) -> proph::architecture::Result<String> {
                 match name.as_str() {
                     #(#inputs)*
                     _ => Err("parameter not found"),

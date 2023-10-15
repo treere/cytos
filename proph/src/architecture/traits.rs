@@ -1,6 +1,6 @@
 use super::{
     props::{GenericInputProp, GenericOutputProp},
-    Done, ParamId,
+    Done, ParamId, Result,
 };
 
 /// Stepper trait
@@ -21,7 +21,7 @@ pub trait Transformer: Stepper {
     fn load(&mut self, name: ParamId, val: &str) -> Done;
 
     /// Dump
-    fn dump(&self, name: ParamId) -> Result<String, &'static str>;
+    fn dump(&self, name: ParamId) -> Result<String>;
 
     /// Get ouput by name
     fn output(&self, val: ParamId) -> Option<GenericOutputProp>;

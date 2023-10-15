@@ -1,6 +1,6 @@
 use crate::architecture::{
     graph::{Graph, Processor},
-    Transformer,
+    Result, Transformer,
 };
 
 use serde::Deserialize;
@@ -17,7 +17,7 @@ pub struct GraphRepr {
 }
 
 impl GraphRepr {
-    pub fn load(file: &str, loader: &Registry) -> Result<Graph, &'static str> {
+    pub fn load(file: &str, loader: &Registry) -> Result<Graph> {
         let repr: Self = serde_json::from_str(file).map_err(|_| "cannot load file")?;
 
         let mut graph = Graph::default();
@@ -82,7 +82,7 @@ impl Registry {
     }
 
     /// Load a Processor
-    fn load(&self, name: &str, typ: &str) -> Result<Processor, &'static str> {
+    fn load(&self, name: &str, typ: &str) -> Result<Processor> {
         let factory = self.factories.get(typ).ok_or("missing type")?;
         Ok(Processor::new(name.to_owned(), factory()))
     }

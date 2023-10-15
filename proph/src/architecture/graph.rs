@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use super::{Done, NodeId, Path, Stepper, Transformer};
+use super::{Done, NodeId, Path, Result, Stepper, Transformer};
 
 /// A wrapper around a [`Transformer`] keeping trace of the node id.
 pub struct Processor {
@@ -37,7 +37,7 @@ pub struct Graph {
 
 impl Graph {
     /// Add a processor with a given id to the graph.
-    pub fn insert(mut self, processor: Processor) -> Result<Self, &'static str> {
+    pub fn insert(mut self, processor: Processor) -> Result<Self> {
         if self.nodes.iter().all(|x| x.id != processor.id) {
             self.nodes.push(processor);
 
@@ -48,7 +48,7 @@ impl Graph {
     }
 
     /// Connects a output data to an input one.
-    pub fn connect(mut self, src: Path, dst: Path) -> Result<Self, &'static str> {
+    pub fn connect(mut self, src: Path, dst: Path) -> Result<Self> {
         let output = self
             .nodes
             .iter()
@@ -65,7 +65,7 @@ impl Graph {
         Ok(self)
     }
 
-    pub fn load(mut self, src: Path, value: &str) -> Result<Self, &'static str> {
+    pub fn load(mut self, src: Path, value: &str) -> Result<Self> {
         self.nodes
             .iter_mut()
             .find(|p| p.id == src.0)
@@ -75,7 +75,7 @@ impl Graph {
         Ok(self)
     }
 
-    pub fn dump(&self, src: Path) -> Result<String, &'static str> {
+    pub fn dump(&self, src: Path) -> Result<String> {
         self.nodes
             .iter()
             .find(|p| p.id == src.0)
