@@ -1,10 +1,15 @@
 use clap::Command;
 use easy_repl::{command, CommandStatus, Repl};
-use proph::loader::Registry;
+use proph::architecture::graph::Graph;
+use proph::loader::{GraphRepr, Registry};
 
 use proph_transformers::{
     AddValue, GrayScale, ImageDecoder, IncrementalGenerator, Mean, Print, Rscam,
 };
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::Read;
+use std::sync::{Arc, Mutex};
 
 fn load_registry() -> Registry {
     Registry::default()
@@ -19,13 +24,56 @@ fn load_registry() -> Registry {
 }
 
 struct Status {
-    x: u8,
+    graphs: HashMap<String, Graph>,
 }
 
 fn main() -> Result<(), String> {
-    let _loader = load_registry();
+    let status = Arc::new(Mutex::new(Status {
+        graphs: HashMap::new(),
+    }));
 
-    let mut status = Status { x: 1 };
+    let s = status.clone();
+    let load_command = command! {
+    "Load a configuration",
+    (name: String, filename: String) =>   |name, filename| {
+        let loader = load_registry();
+        let mut status = s.lock().expect("cannot lock");
+        let mut configuration = String::new();
+
+        File::open(filename)?.read_to_string(&mut configuration)?;
+
+        let mut graph = GraphRepr::load(&configuration, &loader).expect("a");
+
+        status.graphs.insert(name, graph);
+
+        Ok(CommandStatus::Done)
+    }};
+
+    let s = status.clone();
+    let initialize_command = command! {
+        "Run a loaded graph",
+        (name: String) => |name| {
+            let mut status = s.lock().expect("cannot lock");
+            if let Some(graph) = status.graphs.get_mut(&name) {
+                let _ = graph.initialize();
+            }
+
+            Ok(CommandStatus::Done)
+        }
+    };
+
+    let s = status.clone();
+    let step_command = command! {
+        "Step a loaded graph",
+        (name: String) => |name| {
+            let mut status = s.lock().expect("cannot lock");
+            if let Some(graph) = status.graphs.get_mut(&name) {
+                let _ = graph.step();
+            }
+
+            Ok(CommandStatus::Done)
+        }
+    };
 
     let _matches = Command::new("repl")
         .about("proph repl")
@@ -34,28 +82,9 @@ fn main() -> Result<(), String> {
         .get_matches();
 
     Repl::builder()
-        .add(
-            "hello",
-            command! {
-                "Say hello",
-                (name: String) => |name| {
-                    status.x += 1;
-                    println!("Hello {}! -- {}", name, status.x);
-                    Ok(CommandStatus::Done)
-                }
-            },
-        )
-        .add(
-            "add",
-            command! {
-                "Add X to Y",
-                (X:i32, Y:i32) => |x, y| {
-                    status.x += 1;
-                    println!("{} + {} = {} -- {}", x, y, x + y, status.x);
-                    Ok(CommandStatus::Done)
-                }
-            },
-        )
+        .add("load_config", load_command)
+        .add("initialize_graph", initialize_command)
+        .add("step_graph", step_command)
         .build()
         .expect("Failed to create repl")
         .run()
