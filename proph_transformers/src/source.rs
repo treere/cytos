@@ -28,7 +28,7 @@ impl Default for Rscam {
 impl Stepper for Rscam {
     fn step(&mut self) -> Done {
         if let Some(camera) = self.camera.as_ref() {
-            let frame = camera.capture().map_err(|_| "cannot capture")?;
+            let frame = camera.capture().or(Err("cannot capture"))?;
 
             *self.frame.set() = Vec::from_iter(frame.iter().cloned());
 

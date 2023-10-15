@@ -18,7 +18,7 @@ pub struct GraphRepr {
 
 impl GraphRepr {
     pub fn load(file: &str, loader: &Registry) -> Result<Graph> {
-        let repr: Self = serde_json::from_str(file).map_err(|_| "cannot load file")?;
+        let repr: Self = serde_json::from_str(file).or(Err("cannot load file"))?;
 
         let mut graph = Graph::default();
         for node in repr.nodes.into_iter() {
