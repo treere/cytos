@@ -50,6 +50,18 @@ fn main() -> Result<(), String> {
     }};
 
     let s = status.clone();
+    let list_command = command! {
+        "List graphs",
+        () => ||{
+            let mut status = s.lock().expect("cannot lock");
+            for k in status.graphs.keys() {
+                println!("{}", k);
+            }
+            Ok(CommandStatus::Done)
+        }
+    };
+
+    let s = status.clone();
     let initialize_command = command! {
         "Run a loaded graph",
         (name: String) => |name| {
@@ -140,6 +152,7 @@ fn main() -> Result<(), String> {
         .get_matches();
 
     Repl::builder()
+        .add("list", list_command)
         .add("load", load_command)
         .add("initialize", initialize_command)
         .add("step", step_command)
