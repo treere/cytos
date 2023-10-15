@@ -120,6 +120,19 @@ fn main() -> Result<(), String> {
         }
     };
 
+    let s = status.clone();
+    let dump_command = command! {
+        "Dump param value",
+        (name: String, node: String, param: String) => |name, node, param| {
+            let mut status = s.lock().expect("cannot lock");
+            if let Some(graph) = status.graphs.get_mut(&name) {
+                println!("{}", graph.dump((node, param)).expect("cannot take"));
+            }
+
+            Ok(CommandStatus::Done)
+        }
+    };
+
     let _matches = Command::new("repl")
         .about("proph repl")
         .version("0.0.1")
@@ -127,12 +140,13 @@ fn main() -> Result<(), String> {
         .get_matches();
 
     Repl::builder()
-        .add("load_config", load_command)
-        .add("initialize_graph", initialize_command)
-        .add("step_graph", step_command)
-        .add("nodes_graph", nodes_command)
-        .add("node_inputs_graph", node_inputs_command)
-        .add("node_outputs_graph", node_outputs_command)
+        .add("load", load_command)
+        .add("initialize", initialize_command)
+        .add("step", step_command)
+        .add("nodes", nodes_command)
+        .add("node_inputs", node_inputs_command)
+        .add("node_outputs", node_outputs_command)
+        .add("dump", dump_command)
         .build()
         .expect("Failed to create repl")
         .run()
