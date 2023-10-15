@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use super::{Done, NodeId, Path, Result, Stepper, Transformer, Value};
 
 /// A wrapper around a [`Transformer`] keeping trace of the node id.
@@ -100,10 +98,26 @@ impl Graph {
         Ok(())
     }
 
-    pub fn param_value(&self, node: NodeId) -> Option<&dyn Transformer> {
-        self.nodes
-            .iter()
-            .find(|x| x.id == node)
-            .map(|p| p.transformer.deref())
+    /// List nodes
+    pub fn list_nodes(&self) -> Vec<String> {
+        self.nodes.iter().map(|x| x.id.clone()).collect()
+    }
+
+    /// List node inputs
+    pub fn list_node_inputs(&self, node: NodeId) -> Vec<String> {
+        if let Some(n) = self.nodes.iter().find(|n| n.id == node) {
+            n.transformer.input_names()
+        } else {
+            vec![]
+        }
+    }
+
+    /// List node outputs
+    pub fn list_node_outputs(&self, node: NodeId) -> Vec<String> {
+        if let Some(n) = self.nodes.iter().find(|n| n.id == node) {
+            n.transformer.output_names()
+        } else {
+            vec![]
+        }
     }
 }

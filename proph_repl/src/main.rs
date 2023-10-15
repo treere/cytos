@@ -75,6 +75,51 @@ fn main() -> Result<(), String> {
         }
     };
 
+    let s = status.clone();
+    let nodes_command = command! {
+        "List graph nodes",
+        (name: String) => |name| {
+            let mut status = s.lock().expect("cannot lock");
+            if let Some(graph) = status.graphs.get_mut(&name) {
+                for n in  graph.list_nodes() {
+                    println!("{}", n);
+                }
+            }
+
+            Ok(CommandStatus::Done)
+        }
+    };
+
+    let s = status.clone();
+    let node_inputs_command = command! {
+        "List input of a graph nodes",
+        (name: String, node: String) => |name, node| {
+            let mut status = s.lock().expect("cannot lock");
+            if let Some(graph) = status.graphs.get_mut(&name) {
+                for n in  graph.list_node_inputs(node) {
+                    println!("{}", n);
+                }
+            }
+
+            Ok(CommandStatus::Done)
+        }
+    };
+
+    let s = status.clone();
+    let node_outputs_command = command! {
+        "List output of a graph nodes",
+        (name: String, node: String) => |name, node| {
+            let mut status = s.lock().expect("cannot lock");
+            if let Some(graph) = status.graphs.get_mut(&name) {
+                for n in  graph.list_node_outputs(node) {
+                    println!("{}", n);
+                }
+            }
+
+            Ok(CommandStatus::Done)
+        }
+    };
+
     let _matches = Command::new("repl")
         .about("proph repl")
         .version("0.0.1")
@@ -85,6 +130,9 @@ fn main() -> Result<(), String> {
         .add("load_config", load_command)
         .add("initialize_graph", initialize_command)
         .add("step_graph", step_command)
+        .add("nodes_graph", nodes_command)
+        .add("node_inputs_graph", node_inputs_command)
+        .add("node_outputs_graph", node_outputs_command)
         .build()
         .expect("Failed to create repl")
         .run()
