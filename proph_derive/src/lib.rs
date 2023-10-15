@@ -10,7 +10,14 @@ const OUTPUT_PROP_TYPE: &[&str] = &["OutputProp"];
 
 #[proc_macro_derive(TransFn)]
 pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
-    let DeriveInput { ident, data, .. } = parse_macro_input!(input as DeriveInput);
+    let DeriveInput {
+        ident,
+        data,
+        generics,
+        ..
+    } = parse_macro_input!(input);
+
+    let gwhere = generics.where_clause.clone();
 
     let fields = if let Data::Struct(DataStruct { ref fields, .. }) = data {
         fields
@@ -29,7 +36,7 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
     let output_names = create_output_names(fields);
 
     quote! {
-        impl proph::architecture::Transformer for #ident {
+        impl  #generics proph::architecture::Transformer for #ident #generics  #gwhere  {
             #link
             #load
             #dump

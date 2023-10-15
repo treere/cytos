@@ -2,7 +2,7 @@ use clap::{value_parser, Arg, Command};
 use proph::loader::{GraphRepr, Registry};
 use proph::utils::execution_time;
 use proph_transformers::{
-    AddValue, GrayScale, ImageDecoder, IncrementalGenerator, Mean, PrintF64, PrintU64, Rscam,
+    AddValue, GrayScale, ImageDecoder, IncrementalGenerator, Mean, Print, Rscam,
 };
 use std::fs::File;
 use std::io::Read;
@@ -15,8 +15,8 @@ fn load_registry() -> Registry {
         .add("ImageDecoder", ImageDecoder::default)
         .add("ImageGrayScale", GrayScale::default)
         .add("ImageMean", Mean::default)
-        .add("PrintU64", PrintU64::default)
-        .add("PrintF64", PrintF64::default)
+        .add("PrintU64", Print::<u64>::default)
+        .add("PrintF64", Print::<f64>::default)
 }
 
 fn main() -> Result<(), String> {
