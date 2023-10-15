@@ -13,3 +13,4 @@ type Path = (NodeId, ParamId);
 
 pub type Result<T> = std::result::Result<T, &'static str>;
 pub type Done = Result<()>;
+pub type Value = serde_json::Value;

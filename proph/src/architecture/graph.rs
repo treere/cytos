@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use super::{Done, NodeId, Path, Result, Stepper, Transformer};
+use super::{Done, NodeId, Path, Result, Stepper, Transformer, Value};
 
 /// A wrapper around a [`Transformer`] keeping trace of the node id.
 pub struct Processor {
@@ -65,7 +65,7 @@ impl Graph {
         Ok(self)
     }
 
-    pub fn load(mut self, src: Path, value: &str) -> Result<Self> {
+    pub fn load(mut self, src: Path, value: Value) -> Result<Self> {
         self.nodes
             .iter_mut()
             .find(|p| p.id == src.0)

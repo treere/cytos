@@ -2,7 +2,7 @@
 use serde::{de::DeserializeOwned, Serialize};
 use std::{any::Any, cell::UnsafeCell, rc::Rc};
 
-use super::{Done, Result};
+use super::{Done, Result, Value};
 
 /// A property
 pub struct InputProp<T> {
@@ -37,8 +37,8 @@ impl<T: 'static> InputProp<T> {
 }
 
 impl<T: 'static + DeserializeOwned> InputProp<T> {
-    pub fn load(&mut self, val: &str) -> Done {
-        self.val = Rc::new(UnsafeCell::new(serde_json::from_str(val).unwrap()));
+    pub fn load(&mut self, val: Value) -> Done {
+        self.val = Rc::new(UnsafeCell::new(serde_json::from_value(val).unwrap()));
         Ok(())
     }
 }

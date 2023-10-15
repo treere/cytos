@@ -1,6 +1,6 @@
 use crate::architecture::{
     graph::{Graph, Processor},
-    Result, Transformer,
+    Result, Transformer, Value,
 };
 
 use serde::Deserialize;
@@ -26,7 +26,7 @@ impl GraphRepr {
             graph = graph.insert(processor)?;
 
             for (prop, value) in node.props.into_iter() {
-                graph = graph.load((node.name.clone(), prop), &value)?;
+                graph = graph.load((node.name.clone(), prop), value)?;
             }
         }
 
@@ -48,7 +48,7 @@ struct Node {
 
     /// Properties
     #[serde(default)]
-    props: HashMap<String, String>,
+    props: HashMap<String, Value>,
 }
 
 /// Link between nodes

@@ -20,7 +20,7 @@
       "name": "PRINT",
       "type": "PrintF64",
       "props":  {
-        "name": "\"mean\""
+        "name": "mean"
       }
     }
   ],

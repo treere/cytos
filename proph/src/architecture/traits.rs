@@ -1,6 +1,6 @@
 use super::{
     props::{GenericInputProp, GenericOutputProp},
-    Done, ParamId, Result,
+    Done, ParamId, Result, Value,
 };
 
 /// Stepper trait
@@ -18,7 +18,7 @@ pub trait Transformer: Stepper {
     fn link(&mut self, name: ParamId, val: GenericOutputProp) -> Done;
 
     /// Load
-    fn load(&mut self, name: ParamId, val: &str) -> Done;
+    fn load(&mut self, name: ParamId, val: Value) -> Done;
 
     /// Dump
     fn dump(&self, name: ParamId) -> Result<String>;

@@ -91,7 +91,7 @@ fn create_load(fields: &Fields) -> proc_macro2::TokenStream {
             fn load(
                 &mut self,
                 name: proph::architecture::ParamId,
-                value: &str,
+                value: proph::architecture::Value,
             ) -> proph::architecture::Done {
                 match name.as_str() {
                     #(#inputs)*
