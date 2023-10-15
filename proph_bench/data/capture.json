@@ -18,7 +18,10 @@
     },
     {
       "name": "PRINT",
-      "type": "PrintF64"
+      "type": "PrintF64",
+      "props":  {
+        "name": "\"mean\""
+      }
     }
   ],
   "links": [
