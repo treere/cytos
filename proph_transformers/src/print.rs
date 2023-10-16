@@ -13,10 +13,6 @@ where
 }
 
 impl<T: Display + Default + DeserializeOwned + Serialize + 'static> Stepper for Print<T> {
-    fn initialize(&mut self) -> Done {
-        Ok(())
-    }
-
     fn step(&mut self) -> Done {
         println!("{} = {}", self.name.get(), self.input.get());
         Ok(())

@@ -24,6 +24,10 @@ impl Stepper for Processor {
     fn step(&mut self) -> Done {
         self.transformer.step()
     }
+
+    fn terminate(&mut self) -> Done {
+        self.transformer.terminate()
+    }
 }
 
 #[derive(Default)]
@@ -85,6 +89,14 @@ impl Graph {
     pub fn initialize(&mut self) -> Done {
         for node in self.nodes.iter_mut() {
             node.initialize()?;
+        }
+        Ok(())
+    }
+
+    /// Terminate the nodes
+    pub fn terminate(&mut self) -> Done {
+        for node in self.nodes.iter_mut() {
+            node.terminate()?;
         }
         Ok(())
     }

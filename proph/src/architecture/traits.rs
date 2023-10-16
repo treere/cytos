@@ -6,10 +6,17 @@ use super::{
 /// Stepper trait
 pub trait Stepper {
     /// Initialize data
-    fn initialize(&mut self) -> Done;
+    fn initialize(&mut self) -> Done {
+        Ok(())
+    }
 
     /// Do one computation step
     fn step(&mut self) -> Done;
+
+    /// Terminate execution
+    fn terminate(&mut self) -> Done {
+        Ok(())
+    }
 }
 
 /// Transformer trait

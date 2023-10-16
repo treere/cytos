@@ -10,10 +10,6 @@ pub struct GrayScale {
 }
 
 impl Stepper for GrayScale {
-    fn initialize(&mut self) -> Done {
-        Ok(())
-    }
-
     fn step(&mut self) -> Done {
         let p = image::imageops::grayscale(&self.input.get().data).into();
         *self.output.set() = Image { data: p };

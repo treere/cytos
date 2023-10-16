@@ -24,10 +24,6 @@ impl Stepper for AddValue {
 
         Ok(())
     }
-
-    fn initialize(&mut self) -> Done {
-        Ok(())
-    }
 }
 
 #[cfg(test)]

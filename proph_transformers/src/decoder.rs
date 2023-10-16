@@ -18,10 +18,6 @@ pub struct ImageDecoder {
 }
 
 impl Stepper for ImageDecoder {
-    fn initialize(&mut self) -> Done {
-        Ok(())
-    }
-
     fn step(&mut self) -> Done {
         if let Ok(image) = image::load_from_memory(&self.frame.get()[..]) {
             *self.decoded.set() = Image { data: image };

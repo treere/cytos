@@ -105,6 +105,7 @@ fn create_load(fields: &Fields) -> proc_macro2::TokenStream {
 
 fn create_dump(fields: &Fields) -> proc_macro2::TokenStream {
     let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
+        .chain(filter_fields_by_type(fields, OUTPUT_PROP_TYPE))
         .map(|field| {
             let i = &field.ident;
             let f = LitStr::new(

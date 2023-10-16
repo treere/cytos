@@ -8,10 +8,6 @@ pub struct PrintF64 {
 }
 
 impl Stepper for PrintF64 {
-    fn initialize(&mut self) -> Done {
-        Ok(())
-    }
-
     fn step(&mut self) -> Done {
         println!("{} = {}", self.name.get(), self.input.get());
         Ok(())

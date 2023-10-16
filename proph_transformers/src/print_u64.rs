@@ -7,10 +7,6 @@ pub struct PrintU64 {
 }
 
 impl Stepper for PrintU64 {
-    fn initialize(&mut self) -> Done {
-        Ok(())
-    }
-
     fn step(&mut self) -> Done {
         println!("{}", self.input.get());
         Ok(())

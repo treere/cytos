@@ -62,7 +62,7 @@ fn load_command(status: Arc<Mutex<Status>>) -> Command<'static> {
 
 fn initialize_command(s: Arc<Mutex<Status>>) -> Command<'static> {
     command! {
-        "Run a loaded graph",
+        "Initialize a loaded graph",
         (name: String) => |name| {
             let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
             if let Some(graph) = status.graphs.get_mut(&name) {
@@ -81,6 +81,20 @@ fn step_command(s: Arc<Mutex<Status>>) -> Command<'static> {
             let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
             if let Some(graph) = status.graphs.get_mut(&name) {
                 let _ = graph.step();
+            }
+
+            Ok(CommandStatus::Done)
+        }
+    }
+}
+
+fn terminate_command(s: Arc<Mutex<Status>>) -> Command<'static> {
+    command! {
+        "Terminate a loaded graph",
+        (name: String) => |name| {
+            let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
+            if let Some(graph) = status.graphs.get_mut(&name) {
+                let _ = graph.terminate();
             }
 
             Ok(CommandStatus::Done)
@@ -159,6 +173,7 @@ fn main() -> Result<(), &'static str> {
         .add("load", load_command(status.clone()))
         .add("initialize", initialize_command(status.clone()))
         .add("step", step_command(status.clone()))
+        .add("terminate", terminate_command(status.clone()))
         .add("nodes", nodes_command(status.clone()))
         .add("node_inputs", node_inputs_command(status.clone()))
         .add("node_outputs", node_outputs_command(status.clone()))
