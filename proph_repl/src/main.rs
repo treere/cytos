@@ -124,7 +124,7 @@ fn node_inputs_command(s: Arc<Mutex<Status>>) -> Command<'static> {
            (name: String, node: String) => |name, node| {
                let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
                if let Some(graph) = status.graphs.get_mut(&name) {
-                   for n in  graph.list_node_inputs(node) {
+                   for n in  graph.list_node_inputs(node).map_err(|x| anyhow!(x))? {
                        println!("{}", n);
                    }
                }
@@ -140,7 +140,7 @@ fn node_outputs_command(s: Arc<Mutex<Status>>) -> Command<'static> {
         (name: String, node: String) => |name, node| {
             let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
             if let Some(graph) = status.graphs.get_mut(&name) {
-                for n in  graph.list_node_outputs(node) {
+                for n in  graph.list_node_outputs(node).map_err(|x| anyhow!(x))? {
                     println!("{}", n);
                 }
             }
