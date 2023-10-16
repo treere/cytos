@@ -55,14 +55,17 @@ impl Graph {
             .nodes
             .iter()
             .find(|p| p.id == src.0)
-            .ok_or("cannot find source")
-            .and_then(|s| s.transformer.output(src.1).ok_or("cannot find param"))?;
+            .ok_or("cannot find source")?
+            .transformer
+            .output(src.1)
+            .ok_or("cannot find param")?;
 
         self.nodes
             .iter_mut()
             .find(|p| p.id == dst.0)
-            .ok_or("cannot find dest")
-            .and_then(|d| d.transformer.link(dst.1, output))?;
+            .ok_or("cannot find dest")?
+            .transformer
+            .link(dst.1, output)?;
 
         Ok(self)
     }
@@ -71,8 +74,9 @@ impl Graph {
         self.nodes
             .iter_mut()
             .find(|p| p.id == src.0)
-            .ok_or("cannot find node")
-            .and_then(|d| d.transformer.load(src.1, value))?;
+            .ok_or("cannot find node")?
+            .transformer
+            .load(src.1, value)?;
 
         Ok(self)
     }
@@ -81,8 +85,9 @@ impl Graph {
         self.nodes
             .iter()
             .find(|p| p.id == src.0)
-            .ok_or("cannot find node")
-            .and_then(|d| d.transformer.dump(src.1))
+            .ok_or("cannot find node")?
+            .transformer
+            .dump(src.1)
     }
 
     /// Initialize the nodes

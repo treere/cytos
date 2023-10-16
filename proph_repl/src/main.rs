@@ -10,7 +10,8 @@ use proph_transformers::{
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
-use std::sync::{Arc, Mutex};
+use std::rc::Rc;
+use std::sync::Mutex;
 
 fn load_registry() -> Registry {
     Registry::default()
@@ -29,7 +30,7 @@ struct Status {
     graphs: HashMap<String, Graph>,
 }
 
-fn list_command(s: Arc<Mutex<Status>>) -> Command<'static> {
+fn list_command(s: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List graphs",
         () => ||{
@@ -42,7 +43,7 @@ fn list_command(s: Arc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn load_command(status: Arc<Mutex<Status>>) -> Command<'static> {
+fn load_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
     "Load a configuration",
     (name: String, filename: String) =>   |name, filename| {
@@ -60,7 +61,7 @@ fn load_command(status: Arc<Mutex<Status>>) -> Command<'static> {
     }}
 }
 
-fn initialize_command(s: Arc<Mutex<Status>>) -> Command<'static> {
+fn initialize_command(s: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Initialize a loaded graph",
         (name: String) => |name| {
@@ -74,7 +75,7 @@ fn initialize_command(s: Arc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn step_command(s: Arc<Mutex<Status>>) -> Command<'static> {
+fn step_command(s: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Step a loaded graph",
         (name: String) => |name| {
@@ -88,7 +89,7 @@ fn step_command(s: Arc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn terminate_command(s: Arc<Mutex<Status>>) -> Command<'static> {
+fn terminate_command(s: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Terminate a loaded graph",
         (name: String) => |name| {
@@ -102,7 +103,7 @@ fn terminate_command(s: Arc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn nodes_command(s: Arc<Mutex<Status>>) -> Command<'static> {
+fn nodes_command(s: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List graph nodes",
         (name: String) => |name| {
@@ -118,7 +119,7 @@ fn nodes_command(s: Arc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn node_inputs_command(s: Arc<Mutex<Status>>) -> Command<'static> {
+fn node_inputs_command(s: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
            "List input of a graph nodes",
            (name: String, node: String) => |name, node| {
@@ -134,7 +135,7 @@ fn node_inputs_command(s: Arc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn node_outputs_command(s: Arc<Mutex<Status>>) -> Command<'static> {
+fn node_outputs_command(s: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List output of a graph nodes",
         (name: String, node: String) => |name, node| {
@@ -150,7 +151,7 @@ fn node_outputs_command(s: Arc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn dump_command(s: Arc<Mutex<Status>>) -> Command<'static> {
+fn dump_command(s: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Dump param value",
         (name: String, node: String, param: String) => |name, node, param| {
@@ -166,7 +167,7 @@ fn dump_command(s: Arc<Mutex<Status>>) -> Command<'static> {
 }
 
 fn main() -> Result<(), &'static str> {
-    let status = Arc::new(Mutex::new(Status::default()));
+    let status = Rc::new(Mutex::new(Status::default()));
 
     Repl::builder()
         .add("list", list_command(status.clone()))
