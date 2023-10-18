@@ -3,7 +3,10 @@ use super::graph::Graph;
 use std::sync::mpsc::{channel, Sender};
 use std::thread::{self, JoinHandle};
 
-pub enum Command {}
+pub enum Command {
+    Start,
+    Stop,
+}
 
 pub enum Response {
     A,
@@ -14,24 +17,31 @@ struct Message {
     resp: Sender<Response>,
 }
 
-impl Command {
-    fn execute(self, _graph: &mut Graph) {}
-}
-
 pub struct Runner {
-    graph: JoinHandle<Graph>,
+    graph: JoinHandle<()>,
     sender: Sender<Message>,
 }
 
 impl Runner {
-    pub fn run(&mut self, mut graph: Graph) -> Self {
+    pub fn new(mut graph: Graph) -> Self {
         let (sender, receiver) = channel::<Message>();
         Self {
-            graph: thread::spawn(move || {
+            graph: thread::spawn(move || loop {
+                while let Ok(Message { command, .. }) = receiver.recv() {
+                    match command {
+                        Command::Start => break,
+                        Command::Stop => todo!(),
+                    }
+                }
+
                 graph.initialize().unwrap();
-                loop {
+                'outer: loop {
                     while let Ok(message) = receiver.try_recv() {
-                        message.command.execute(&mut graph);
+                        match message.command {
+                            Command::Start => (),
+                            Command::Stop => break 'outer,
+                        };
+
                         message.resp.send(Response::A).unwrap();
                     }
 
@@ -40,13 +50,12 @@ impl Runner {
                     }
                 }
                 graph.terminate().unwrap();
-                graph
             }),
             sender,
         }
     }
 
-    pub fn join(self) -> Graph {
+    pub fn join(self) -> () {
         self.graph.join().unwrap()
     }
 
