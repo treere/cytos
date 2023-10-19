@@ -74,42 +74,23 @@ impl Runner {
         Self {
             graph: thread::spawn(move || loop {
                 while let Ok((command, mut message)) = receiver.recv() {
-                    match command {
-                        Command::Start => {
-                            message.set_resp(Response::Ok);
-                            break;
-                        }
-                        Command::Stop => (),
-                        Command::ListNodes => message.set_resp(graph.list_nodes()),
-                        Command::ListInputs(node) => {
-                            message.set_resp(graph.list_node_inputs(&node))
-                        }
-                        Command::ListOutputs(node) => {
-                            message.set_resp(graph.list_node_outputs(&node))
-                        }
-                        Command::Dump(node, param) => message.set_resp(graph.dump((&node, &param))),
+                    if let Command::Start = command {
+                        message.set_resp(Response::Ok);
+                        break;
+                    } else {
+                        Self::dispatch_command(command, &mut message, &graph);
                     }
                 }
 
                 graph.initialize().unwrap();
                 'outer: loop {
                     while let Ok((command, mut message)) = receiver.try_recv() {
-                        match command {
-                            Command::Start => (),
-                            Command::Stop => {
-                                message.set_resp(Response::Ok);
-                                break 'outer;
-                            }
-                            Command::ListNodes => {
-                                message.set_resp(Response::List(graph.list_nodes()))
-                            }
-                            Command::ListInputs(node) => message
-                                .set_resp(Response::List(graph.list_node_inputs(&node).unwrap())),
-                            Command::ListOutputs(node) => message
-                                .set_resp(Response::List(graph.list_node_outputs(&node).unwrap())),
-                            Command::Dump(node, param) => message
-                                .set_resp(Response::Data(graph.dump((&node, &param)).unwrap())),
-                        };
+                        if let Command::Stop = command {
+                            message.set_resp(Response::Ok);
+                            break 'outer;
+                        } else {
+                            Self::dispatch_command(command, &mut message, &graph);
+                        }
                     }
 
                     if graph.step().is_err() {
@@ -123,7 +104,7 @@ impl Runner {
     }
 
     pub fn join(self) {
-        self.graph.join().unwrap()
+        self.graph.join().expect("Cannot join");
     }
 
     pub fn command(&mut self, command: Command) -> Result<Response, &'static str> {
@@ -131,5 +112,16 @@ impl Runner {
 
         let _ = self.sender.send((command, Message { sender, resp: None }));
         receiver.recv().map_err(|_| "Error unwrapping")
+    }
+
+    fn dispatch_command(command: Command, message: &mut Message, graph: &Graph) {
+        match command {
+            Command::Start => (),
+            Command::Stop => (),
+            Command::ListNodes => message.set_resp(graph.list_nodes()),
+            Command::ListInputs(node) => message.set_resp(graph.list_node_inputs(&node)),
+            Command::ListOutputs(node) => message.set_resp(graph.list_node_outputs(&node)),
+            Command::Dump(node, param) => message.set_resp(graph.dump((&node, &param))),
+        }
     }
 }
