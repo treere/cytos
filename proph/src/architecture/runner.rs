@@ -1,4 +1,5 @@
 use super::graph::Graph;
+use super::Value;
 
 use std::sync::mpsc::{channel, Sender};
 use std::thread::{self, JoinHandle};
@@ -11,6 +12,7 @@ pub enum Command {
     ListInputs(String),
     ListOutputs(String),
     Dump(String, String),
+    Load(String, String, Value),
 }
 
 #[derive(Debug)]
@@ -24,6 +26,12 @@ pub enum Response {
 impl From<&'static str> for Response {
     fn from(value: &'static str) -> Self {
         Response::Data(value.to_string())
+    }
+}
+
+impl From<()> for Response {
+    fn from(_value: ()) -> Self {
+        Response::Ok
     }
 }
 
@@ -84,7 +92,7 @@ impl Runner {
                         Command::Start => break,
                         Command::Status => message.set_resp("Idle"),
                         _ => {
-                            Self::dispatch_command(command, &mut message, &graph);
+                            Self::dispatch_command(command, &mut message, &mut graph);
                         }
                     }
                 }
@@ -96,7 +104,7 @@ impl Runner {
                             Command::Stop => break 'outer,
                             Command::Status => message.set_resp("Running"),
                             _ => {
-                                Self::dispatch_command(command, &mut message, &graph);
+                                Self::dispatch_command(command, &mut message, &mut graph);
                             }
                         }
                     }
@@ -122,7 +130,7 @@ impl Runner {
             .unwrap_or(Response::Error("Error unwrapping"))
     }
 
-    fn dispatch_command(command: Command, message: &mut Message, graph: &Graph) {
+    fn dispatch_command(command: Command, message: &mut Message, graph: &mut Graph) {
         match command {
             Command::Start => (),
             Command::Stop => (),
@@ -131,6 +139,9 @@ impl Runner {
             Command::ListInputs(node) => message.set_resp(graph.list_node_inputs(&node)),
             Command::ListOutputs(node) => message.set_resp(graph.list_node_outputs(&node)),
             Command::Dump(node, param) => message.set_resp(graph.dump((&node, &param))),
+            Command::Load(node, param, value) => {
+                message.set_resp(graph.load((&node, &param), value))
+            }
         }
     }
 }

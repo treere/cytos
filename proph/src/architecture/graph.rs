@@ -50,7 +50,7 @@ impl Graph {
     }
 
     /// Connects a output data to an input one.
-    pub fn connect(mut self, src: (&NodeId, &ParamId), dst: (&NodeId, &ParamId)) -> Result<Self> {
+    pub fn connect(&mut self, src: (&NodeId, &ParamId), dst: (&NodeId, &ParamId)) -> Done {
         let output = self
             .nodes
             .iter()
@@ -67,10 +67,10 @@ impl Graph {
             .transformer
             .link(dst.1, output)?;
 
-        Ok(self)
+        Ok(())
     }
 
-    pub fn load(mut self, src: (&NodeId, &ParamId), value: Value) -> Result<Self> {
+    pub fn load(&mut self, src: (&NodeId, &ParamId), value: Value) -> Done {
         self.nodes
             .iter_mut()
             .find(|p| p.id == *src.0)
@@ -78,7 +78,7 @@ impl Graph {
             .transformer
             .load(src.1, value)?;
 
-        Ok(self)
+        Ok(())
     }
 
     pub fn dump(&self, src: (&NodeId, &ParamId)) -> Result<String> {

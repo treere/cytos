@@ -15,13 +15,6 @@
     {
       "name": "MEAN",
       "type": "ImageMean"
-    },
-    {
-      "name": "PRINT",
-      "type": "PrintF64",
-      "props":  {
-        "name": "mean"
-      }
     }
   ],
   "links": [
@@ -36,10 +29,6 @@
     {
       "src": ["GRAY", "output"],
       "dst": ["MEAN", "input"]
-    },
-    {
-      "src": ["MEAN", "output"],
-      "dst": ["PRINT", "input"]
     }
   ]
 }

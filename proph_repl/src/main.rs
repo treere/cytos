@@ -2,6 +2,7 @@ use anyhow::anyhow;
 
 use easy_repl::{command, Command, CommandStatus, Repl};
 
+use proph::architecture::load_value_from_string;
 use proph::architecture::runner::{Command as RCommand, Response, Runner};
 use proph::loader::{GraphRepr, Registry};
 
@@ -98,7 +99,7 @@ fn stop_command(s: Rc<Mutex<Status>>) -> Command<'static> {
         (graph: String) => |graph| {
             let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
             if let Some(runner) = status.graphs.get_mut(&graph) {
-                 runner.command(RCommand::Stop).print();
+                runner.command(RCommand::Stop).print();
             }
 
             Ok(CommandStatus::Done)
@@ -126,7 +127,7 @@ fn list_nodes_command(s: Rc<Mutex<Status>>) -> Command<'static> {
         (graph: String) => |graph| {
             let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
             if let Some(runner) = status.graphs.get_mut(&graph) {
-               runner.command(RCommand::ListNodes).print();
+                runner.command(RCommand::ListNodes).print();
             }
 
             Ok(CommandStatus::Done)
@@ -168,9 +169,27 @@ fn dump_node_command(s: Rc<Mutex<Status>>) -> Command<'static> {
         (graph: String, node: String, param: String) => |graph, node, param| {
             let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
             if let Some(runner) = status.graphs.get_mut(&graph) {
-                 runner.command(RCommand::Dump(node,param)).print();
+                runner.command(RCommand::Dump(node,param)).print();
             }
 
+            Ok(CommandStatus::Done)
+        }
+    }
+}
+
+fn load_node_command(s: Rc<Mutex<Status>>) -> Command<'static> {
+    command! {
+        "Load to an input/output of a graph node",
+        (graph: String, node: String, param: String, value: String) => |graph, node, param, value| {
+            let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
+            if let Ok( value) = load_value_from_string(value) {
+                if let Some(runner) = status.graphs.get_mut(&graph) {
+                    runner.command(RCommand::Load(node,param, value)).print();
+                }
+            }
+            else {
+                println!("Invalid value")
+            }
             Ok(CommandStatus::Done)
         }
     }
@@ -189,6 +208,7 @@ fn main() -> Result<(), &'static str> {
         .add("list_node_inputs", list_inputs_command(status.clone()))
         .add("list_node_outputs", list_outputs_command(status.clone()))
         .add("dump_node_param", dump_node_command(status.clone()))
+        .add("load_node_param", load_node_command(status.clone()))
         .build()
         .or(Err("Failed to create repl"))
         .and_then(|mut repl| repl.run().or(Err("Critical REPL error")))

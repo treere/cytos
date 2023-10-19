@@ -26,7 +26,7 @@ impl GraphRepr {
             graph = graph.insert(processor)?;
 
             for (prop, value) in node.props.into_iter() {
-                graph = graph.load((&node.name, &prop), value)?;
+                graph.load((&node.name, &prop), value)?;
             }
         }
 
@@ -35,7 +35,7 @@ impl GraphRepr {
             dst: (d0, d1),
         } in repr.links.into_iter()
         {
-            graph = graph.connect((&s0, &s1), (&d0, &d1))?;
+            graph.connect((&s0, &s1), (&d0, &d1))?;
         }
         Ok(graph)
     }
