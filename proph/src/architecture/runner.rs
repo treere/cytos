@@ -6,6 +6,7 @@ use std::thread::{self, JoinHandle};
 pub enum Command {
     Start,
     Stop,
+    Status,
     ListNodes,
     ListInputs(String),
     ListOutputs(String),
@@ -64,7 +65,7 @@ impl Drop for Message {
 }
 
 pub struct Runner {
-    graph: JoinHandle<()>,
+    thread: JoinHandle<()>,
     sender: Sender<(Command, Message)>,
 }
 
@@ -72,39 +73,45 @@ impl Runner {
     pub fn new(mut graph: Graph) -> Self {
         let (sender, receiver) = channel::<(Command, Message)>();
         Self {
-            graph: thread::spawn(move || loop {
+            thread: thread::spawn(move || loop {
                 while let Ok((command, mut message)) = receiver.recv() {
-                    if let Command::Start = command {
-                        message.set_resp(Response::Ok);
-                        break;
-                    } else {
-                        Self::dispatch_command(command, &mut message, &graph);
-                    }
-                }
-
-                graph.initialize().unwrap();
-                'outer: loop {
-                    while let Ok((command, mut message)) = receiver.try_recv() {
-                        if let Command::Stop = command {
+                    match command {
+                        Command::Start => {
                             message.set_resp(Response::Ok);
-                            break 'outer;
-                        } else {
+                            break;
+                        }
+                        Command::Status => message.set_resp("Idle".to_string()),
+                        _ => {
                             Self::dispatch_command(command, &mut message, &graph);
                         }
                     }
-
-                    if graph.step().is_err() {
-                        break;
-                    }
                 }
-                graph.terminate().unwrap();
+
+                graph.initialize().expect("cannot initialize");
+                'outer: loop {
+                    while let Ok((command, mut message)) = receiver.try_recv() {
+                        match command {
+                            Command::Stop => {
+                                message.set_resp(Response::Ok);
+                                break 'outer;
+                            }
+                            Command::Status => message.set_resp("Running".to_string()),
+                            _ => {
+                                Self::dispatch_command(command, &mut message, &graph);
+                            }
+                        }
+                    }
+
+                    graph.step().expect("cannot step")
+                }
+                graph.terminate().expect("cannot terminate");
             }),
             sender,
         }
     }
 
     pub fn join(self) {
-        self.graph.join().expect("Cannot join");
+        self.thread.join().expect("Cannot join");
     }
 
     pub fn command(&mut self, command: Command) -> Result<Response, &'static str> {
@@ -118,6 +125,7 @@ impl Runner {
         match command {
             Command::Start => (),
             Command::Stop => (),
+            Command::Status => (),
             Command::ListNodes => message.set_resp(graph.list_nodes()),
             Command::ListInputs(node) => message.set_resp(graph.list_node_inputs(&node)),
             Command::ListOutputs(node) => message.set_resp(graph.list_node_outputs(&node)),

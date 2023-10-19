@@ -91,6 +91,20 @@ fn stop_command(s: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
+fn status_command(s: Rc<Mutex<Status>>) -> Command<'static> {
+    command! {
+        "Step a graph",
+        (graph: String) => |graph| {
+            let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
+            if let Some(runner) = status.graphs.get_mut(&graph) {
+                println!("{:?}", runner.command(RCommand::Status));
+            }
+
+            Ok(CommandStatus::Done)
+        }
+    }
+}
+
 fn list_nodes_command(s: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List graph nodes",
@@ -155,6 +169,7 @@ fn main() -> Result<(), &'static str> {
         .add("load", load_command(status.clone()))
         .add("start", start_command(status.clone()))
         .add("stop", stop_command(status.clone()))
+        .add("status", status_command(status.clone()))
         .add("list_nodes", list_nodes_command(status.clone()))
         .add("list_node_inputs", list_inputs_command(status.clone()))
         .add("list_node_outputs", list_outputs_command(status.clone()))
