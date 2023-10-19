@@ -121,19 +121,19 @@ impl Graph {
     }
 
     /// List node inputs
-    pub fn list_node_inputs(&self, node: NodeId) -> Result<Vec<String>> {
+    pub fn list_node_inputs(&self, node: &NodeId) -> Result<Vec<String>> {
         self.nodes
             .iter()
-            .find(|n| n.id == node)
+            .find(|n| n.id == *node)
             .map(|n| n.transformer.input_names())
             .ok_or("missing node")
     }
 
     /// List node outputs
-    pub fn list_node_outputs(&self, node: NodeId) -> Result<Vec<String>> {
+    pub fn list_node_outputs(&self, node: &NodeId) -> Result<Vec<String>> {
         self.nodes
             .iter()
-            .find(|n| n.id == node)
+            .find(|n| n.id == *node)
             .map(|n| n.transformer.output_names())
             .ok_or("missing node")
     }

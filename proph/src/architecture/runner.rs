@@ -61,12 +61,12 @@ impl Runner {
                         }
                         Command::Stop => (),
                         Command::ListNodes => message.set_resp(Response::List(graph.list_nodes())),
-                        Command::ListInputs(node) => message.set_resp(Response::List(
-                            graph.list_node_inputs(node.to_string()).unwrap(),
-                        )),
-                        Command::ListOutputs(node) => message.set_resp(Response::List(
-                            graph.list_node_outputs(node.to_string()).unwrap(),
-                        )),
+                        Command::ListInputs(node) => {
+                            message.set_resp(Response::List(graph.list_node_inputs(node).unwrap()))
+                        }
+                        Command::ListOutputs(node) => {
+                            message.set_resp(Response::List(graph.list_node_outputs(node).unwrap()))
+                        }
                         Command::Dump(node, param) => message.set_resp(Response::Data(
                             graph.dump((node.to_string(), param.to_string())).unwrap(),
                         )),
@@ -85,12 +85,10 @@ impl Runner {
                             Command::ListNodes => {
                                 message.set_resp(Response::List(graph.list_nodes()))
                             }
-                            Command::ListInputs(node) => message.set_resp(Response::List(
-                                graph.list_node_inputs(node.to_string()).unwrap(),
-                            )),
-                            Command::ListOutputs(node) => message.set_resp(Response::List(
-                                graph.list_node_outputs(node.to_string()).unwrap(),
-                            )),
+                            Command::ListInputs(node) => message
+                                .set_resp(Response::List(graph.list_node_inputs(node).unwrap())),
+                            Command::ListOutputs(node) => message
+                                .set_resp(Response::List(graph.list_node_outputs(node).unwrap())),
                             Command::Dump(node, param) => message.set_resp(Response::Data(
                                 graph.dump((node.to_string(), param.to_string())).unwrap(),
                             )),
