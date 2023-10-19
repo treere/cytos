@@ -18,21 +18,41 @@ pub enum Response {
     None,
     List(Vec<String>),
     Data(String),
+    Error(&'static str),
+}
+
+impl From<String> for Response {
+    fn from(value: String) -> Self {
+        Response::Data(value)
+    }
+}
+
+impl From<Vec<String>> for Response {
+    fn from(value: Vec<String>) -> Self {
+        Response::List(value)
+    }
+}
+
+impl<T> From<Result<T, &'static str>> for Response
+where
+    T: Into<Response> + 'static,
+{
+    fn from(value: Result<T, &'static str>) -> Self {
+        match value {
+            Ok(x) => x.into(),
+            Err(x) => Response::Error(x),
+        }
+    }
 }
 
 struct Message {
-    command: Command,
     sender: Sender<Response>,
     resp: Option<Response>,
 }
 
 impl Message {
-    fn command(&self) -> &Command {
-        &self.command
-    }
-
-    fn set_resp(&mut self, resp: Response) {
-        self.resp = Some(resp);
+    fn set_resp(&mut self, resp: impl Into<Response>) {
+        self.resp = Some(resp.into());
     }
 }
 
@@ -45,38 +65,36 @@ impl Drop for Message {
 
 pub struct Runner {
     graph: JoinHandle<()>,
-    sender: Sender<Message>,
+    sender: Sender<(Command, Message)>,
 }
 
 impl Runner {
     pub fn new(mut graph: Graph) -> Self {
-        let (sender, receiver) = channel::<Message>();
+        let (sender, receiver) = channel::<(Command, Message)>();
         Self {
             graph: thread::spawn(move || loop {
-                while let Ok(mut message) = receiver.recv() {
-                    match message.command() {
+                while let Ok((command, mut message)) = receiver.recv() {
+                    match command {
                         Command::Start => {
                             message.set_resp(Response::Ok);
                             break;
                         }
                         Command::Stop => (),
-                        Command::ListNodes => message.set_resp(Response::List(graph.list_nodes())),
+                        Command::ListNodes => message.set_resp(graph.list_nodes()),
                         Command::ListInputs(node) => {
-                            message.set_resp(Response::List(graph.list_node_inputs(node).unwrap()))
+                            message.set_resp(graph.list_node_inputs(&node))
                         }
                         Command::ListOutputs(node) => {
-                            message.set_resp(Response::List(graph.list_node_outputs(node).unwrap()))
+                            message.set_resp(graph.list_node_outputs(&node))
                         }
-                        Command::Dump(node, param) => message.set_resp(Response::Data(
-                            graph.dump((node.to_string(), param.to_string())).unwrap(),
-                        )),
+                        Command::Dump(node, param) => message.set_resp(graph.dump((&node, &param))),
                     }
                 }
 
                 graph.initialize().unwrap();
                 'outer: loop {
-                    while let Ok(mut message) = receiver.try_recv() {
-                        match message.command() {
+                    while let Ok((command, mut message)) = receiver.try_recv() {
+                        match command {
                             Command::Start => (),
                             Command::Stop => {
                                 message.set_resp(Response::Ok);
@@ -86,12 +104,11 @@ impl Runner {
                                 message.set_resp(Response::List(graph.list_nodes()))
                             }
                             Command::ListInputs(node) => message
-                                .set_resp(Response::List(graph.list_node_inputs(node).unwrap())),
+                                .set_resp(Response::List(graph.list_node_inputs(&node).unwrap())),
                             Command::ListOutputs(node) => message
-                                .set_resp(Response::List(graph.list_node_outputs(node).unwrap())),
-                            Command::Dump(node, param) => message.set_resp(Response::Data(
-                                graph.dump((node.to_string(), param.to_string())).unwrap(),
-                            )),
+                                .set_resp(Response::List(graph.list_node_outputs(&node).unwrap())),
+                            Command::Dump(node, param) => message
+                                .set_resp(Response::Data(graph.dump((&node, &param)).unwrap())),
                         };
                     }
 
@@ -112,11 +129,7 @@ impl Runner {
     pub fn command(&mut self, command: Command) -> Result<Response, &'static str> {
         let (sender, receiver) = channel::<Response>();
 
-        let _ = self.sender.send(Message {
-            command,
-            sender,
-            resp: None,
-        });
+        let _ = self.sender.send((command, Message { sender, resp: None }));
         receiver.recv().map_err(|_| "Error unwrapping")
     }
 }

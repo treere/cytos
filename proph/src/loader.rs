@@ -26,12 +26,16 @@ impl GraphRepr {
             graph = graph.insert(processor)?;
 
             for (prop, value) in node.props.into_iter() {
-                graph = graph.load((node.name.clone(), prop), value)?;
+                graph = graph.load((&node.name, &prop), value)?;
             }
         }
 
-        for link in repr.links.into_iter() {
-            graph = graph.connect(link.src, link.dst)?;
+        for Link {
+            src: (s0, s1),
+            dst: (d0, d1),
+        } in repr.links.into_iter()
+        {
+            graph = graph.connect((&s0, &s1), (&d0, &d1))?;
         }
         Ok(graph)
     }

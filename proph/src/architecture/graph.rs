@@ -1,4 +1,4 @@
-use super::{Done, NodeId, Path, Result, Stepper, Transformer, Value};
+use super::{Done, NodeId, ParamId, Result, Stepper, Transformer, Value};
 
 /// A wrapper around a [`Transformer`] keeping trace of the node id.
 pub struct Processor {
@@ -50,11 +50,11 @@ impl Graph {
     }
 
     /// Connects a output data to an input one.
-    pub fn connect(mut self, src: Path, dst: Path) -> Result<Self> {
+    pub fn connect(mut self, src: (&NodeId, &ParamId), dst: (&NodeId, &ParamId)) -> Result<Self> {
         let output = self
             .nodes
             .iter()
-            .find(|p| p.id == src.0)
+            .find(|p| p.id == *src.0)
             .ok_or("cannot find source")?
             .transformer
             .output(src.1)
@@ -62,7 +62,7 @@ impl Graph {
 
         self.nodes
             .iter_mut()
-            .find(|p| p.id == dst.0)
+            .find(|p| p.id == *dst.0)
             .ok_or("cannot find dest")?
             .transformer
             .link(dst.1, output)?;
@@ -70,10 +70,10 @@ impl Graph {
         Ok(self)
     }
 
-    pub fn load(mut self, src: Path, value: Value) -> Result<Self> {
+    pub fn load(mut self, src: (&NodeId, &ParamId), value: Value) -> Result<Self> {
         self.nodes
             .iter_mut()
-            .find(|p| p.id == src.0)
+            .find(|p| p.id == *src.0)
             .ok_or("cannot find node")?
             .transformer
             .load(src.1, value)?;
@@ -81,10 +81,10 @@ impl Graph {
         Ok(self)
     }
 
-    pub fn dump(&self, src: Path) -> Result<String> {
+    pub fn dump(&self, src: (&NodeId, &ParamId)) -> Result<String> {
         self.nodes
             .iter()
-            .find(|p| p.id == src.0)
+            .find(|p| p.id == *src.0)
             .ok_or("cannot find node")?
             .transformer
             .dump(src.1)
