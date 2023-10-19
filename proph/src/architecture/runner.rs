@@ -16,10 +16,15 @@ pub enum Command {
 #[derive(Debug)]
 pub enum Response {
     Ok,
-    None,
     List(Vec<String>),
     Data(String),
     Error(&'static str),
+}
+
+impl From<&'static str> for Response {
+    fn from(value: &'static str) -> Self {
+        Response::Data(value.to_string())
+    }
 }
 
 impl From<String> for Response {
@@ -59,7 +64,7 @@ impl Message {
 
 impl Drop for Message {
     fn drop(&mut self) {
-        let resp = self.resp.take().unwrap_or(Response::None);
+        let resp = self.resp.take().unwrap_or(Response::Ok);
         self.sender.send(resp).expect("cannot send");
     }
 }
@@ -76,11 +81,8 @@ impl Runner {
             thread: thread::spawn(move || loop {
                 while let Ok((command, mut message)) = receiver.recv() {
                     match command {
-                        Command::Start => {
-                            message.set_resp(Response::Ok);
-                            break;
-                        }
-                        Command::Status => message.set_resp("Idle".to_string()),
+                        Command::Start => break,
+                        Command::Status => message.set_resp("Idle"),
                         _ => {
                             Self::dispatch_command(command, &mut message, &graph);
                         }
@@ -91,11 +93,8 @@ impl Runner {
                 'outer: loop {
                     while let Ok((command, mut message)) = receiver.try_recv() {
                         match command {
-                            Command::Stop => {
-                                message.set_resp(Response::Ok);
-                                break 'outer;
-                            }
-                            Command::Status => message.set_resp("Running".to_string()),
+                            Command::Stop => break 'outer,
+                            Command::Status => message.set_resp("Running"),
                             _ => {
                                 Self::dispatch_command(command, &mut message, &graph);
                             }
@@ -114,11 +113,13 @@ impl Runner {
         self.thread.join().expect("Cannot join");
     }
 
-    pub fn command(&mut self, command: Command) -> Result<Response, &'static str> {
+    pub fn command(&mut self, command: Command) -> Response {
         let (sender, receiver) = channel::<Response>();
 
         let _ = self.sender.send((command, Message { sender, resp: None }));
-        receiver.recv().map_err(|_| "Error unwrapping")
+        receiver
+            .recv()
+            .unwrap_or(Response::Error("Error unwrapping"))
     }
 
     fn dispatch_command(command: Command, message: &mut Message, graph: &Graph) {
