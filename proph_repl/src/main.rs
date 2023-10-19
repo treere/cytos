@@ -39,7 +39,7 @@ trait Printer {
 impl Printer for Response {
     fn print(self: Response) {
         match self {
-            Response::Ok => println!("ok"),
+            Response::Ok => (),
             Response::List(list) => list.iter().for_each(|el| println!("{}", el)),
             Response::Data(data) => println!("{}", data),
             Response::Error(error) => println!("error: {}", error),
