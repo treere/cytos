@@ -576,6 +576,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "proph_core"
+version = "0.1.0"
+
+[[package]]
 name = "proph_derive"
 version = "0.1.0"
 dependencies = [
