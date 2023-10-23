@@ -1,4 +1,4 @@
-use image::DynamicImage;
+use image::{DynamicImage, ImageBuffer};
 use proph::architecture::{Done, InputProp, OutputProp, Stepper};
 use proph_derive::TransFn;
 use serde::{Deserialize, Serialize};
@@ -25,5 +25,33 @@ impl Stepper for ImageDecoder {
         } else {
             Err("cannot decode image")
         }
+    }
+}
+
+#[derive(TransFn, Default)]
+pub struct ZuneImageDecoder {
+    frame: InputProp<Vec<u8>>,
+
+    decoded: OutputProp<Image>,
+}
+
+impl Stepper for ZuneImageDecoder {
+    fn step(&mut self) -> Done {
+        let mut decoder = zune_jpeg::JpegDecoder::new(&&self.frame.get()[..]);
+
+        decoder.decode_headers().unwrap();
+        let image_info = decoder.info().unwrap();
+        let image: ImageBuffer<image::Rgb<u8>, Vec<u8>> = ImageBuffer::from_vec(
+            image_info.width.into(),
+            image_info.height.into(),
+            decoder.decode().or(Err("cannot decode"))?,
+        )
+        .unwrap();
+
+        *self.decoded.set() = Image {
+            data: DynamicImage::ImageRgb8(image),
+        };
+
+        Ok(())
     }
 }

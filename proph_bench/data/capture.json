@@ -6,7 +6,7 @@
     },
     {
       "name": "DECODER",
-      "type": "ImageDecoder"
+      "type": "ZuneImageDecoder"
     },
     {
       "name": "GRAY",
