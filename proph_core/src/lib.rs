@@ -74,6 +74,29 @@ fn marker_name(marker: u16) -> &'static str {
         _ => unreachable!(),
     }
 }
+
+#[derive(Debug, PartialEq)]
+enum Node {
+    Value(u32),
+    Split(u32, u32),
+    None,
+}
+
+fn a(count: &[u8; 16], symbol: &[u8; 16]) {
+    let mut root = vec![Node::Split(1, 2), Node::None, Node::None];
+    let left_most = 0;
+    for c in count.iter() {
+        if *c == 0 {
+            let current = left_most;
+            while root[current] != Node::None {
+                let x = root.len();
+                root.push(Node::None);
+                root.push(Node::None);
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

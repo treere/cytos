@@ -55,3 +55,21 @@ impl Stepper for ZuneImageDecoder {
         Ok(())
     }
 }
+
+#[derive(TransFn, Default)]
+pub struct TurboImageDecoder {
+    frame: InputProp<Vec<u8>>,
+
+    decoded: OutputProp<Image>,
+}
+
+impl Stepper for TurboImageDecoder {
+    fn step(&mut self) -> Done {
+        let image: image::RgbImage =
+            turbojpeg::decompress_image(&&self.frame.get()[..]).or(Err("cannot deocde"))?;
+
+        *self.decoded.set() = Image { data: image.into() };
+
+        Ok(())
+    }
+}

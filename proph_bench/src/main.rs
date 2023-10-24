@@ -2,7 +2,8 @@ use clap::{value_parser, Arg, Command};
 use proph::loader::{GraphRepr, Registry};
 use proph::utils::execution_time;
 use proph_transformers::{
-    AddValue, GrayScale, ImageDecoder, IncrementalGenerator, Mean, Print, Rscam, ZuneImageDecoder,
+    AddValue, GrayScale, ImageDecoder, IncrementalGenerator, Mean, Print, Rscam, TurboImageDecoder,
+    ZuneImageDecoder,
 };
 use std::fs::File;
 use std::io::Read;
@@ -13,6 +14,7 @@ fn load_registry() -> Registry {
         .add("AddValue", AddValue::default)
         .add("Rscam", Rscam::default)
         .add("ImageDecoder", ImageDecoder::default)
+        .add("TurboImageDecoder", TurboImageDecoder::default)
         .add("ZuneImageDecoder", ZuneImageDecoder::default)
         .add("ImageGrayScale", GrayScale::default)
         .add("ImageMean", Mean::default)
