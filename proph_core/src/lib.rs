@@ -94,13 +94,12 @@ pub struct HuffmanTree {
 impl HuffmanTree {
     pub fn new(counting: &[u8], symbol: &[u8]) -> Self {
         // Create a tree with only the root and 2 empty nodes
-        let mut root = vec![Node::Split(1), Node::None, Node::None];
+        let mut tree = vec![Node::None];
         // Left most index
-        let mut left_most = 1;
+        let mut left_most = 0;
         // Offset in symbol table
         let mut symbol_offset = 0;
-        // Last written value
-        let mut last_value = 0;
+
         // Last not zero value in counting array
         let last_index = counting
             .iter()
@@ -112,34 +111,35 @@ impl HuffmanTree {
 
         for count in counting.iter().take(last_index) {
             // Where the level ends
-            let end = root.len();
+            let end = tree.len();
 
-            // Setting values to the leaf nodes
-            for index in 0..*count {
-                root[left_most] = Node::Value(symbol[(index + symbol_offset) as usize]);
-                last_value = left_most;
-                left_most += 1;
-            }
-
-            // Saving offset
-            symbol_offset += *count;
-
-            let to_add = end - left_most;
             // Add split nodes that points to the new level
-            for i in 0..to_add {
-                root[left_most + i] = Node::Split(end + 2 * i);
-            }
+            tree[left_most..]
+                .iter_mut()
+                .enumerate()
+                .for_each(|(i, r)| *r = Node::Split(end + 2 * i));
 
             // Add level nodes
-            root.extend([Node::None].iter().cycle().take(2 * to_add));
+            tree.extend([Node::None].iter().cycle().take(2 * (end - left_most)));
 
             // Leftmost node is the 1st of the new layer
             left_most = end;
+
+            // Setting values to the leaf nodes
+            tree[left_most..(left_most + (*count) as usize)]
+                .iter_mut()
+                .enumerate()
+                .for_each(|(index, r)| *r = Node::Value(symbol[(index + symbol_offset) as usize]));
+
+            left_most += *count as usize;
+
+            // Saving offset
+            symbol_offset += *count as usize;
         }
 
-        Self {
-            tree: root.into_iter().take(last_value + 1).collect(),
-        }
+        tree.truncate(left_most);
+
+        Self { tree }
     }
 }
 
