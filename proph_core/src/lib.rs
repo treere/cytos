@@ -62,7 +62,9 @@ fn decode_huffman(f: &[u8]) {
 
     println!("Header: {}", header);
     println!("lengths: {:?}", lengths);
-    println!("Elements: {}", elements.len())
+    println!("Elements: {}", elements.len());
+    let huffman = HuffmanTree::new(&lengths[..], &elements[..]);
+    println!("Huffman tree {:?}", huffman.tree);
 }
 
 fn marker_name(marker: u16) -> &'static str {
@@ -80,24 +82,9 @@ fn marker_name(marker: u16) -> &'static str {
 
 #[derive(Debug, PartialEq)]
 pub enum Node {
-    Value(u32),
-    Split(u32, u32),
+    Value(u8),
+    Split(usize),
     None,
-}
-
-struct Point {
-    level: usize,
-    value: Node,
-}
-
-impl std::fmt::Debug for Point {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.value {
-            Node::Value(x) => write!(f, "<{}, {}>", self.level, x),
-            Node::Split(x, y) => write!(f, "<{}, {} {}>", self.level, x, y),
-            Node::None => write!(f, "<{}, -->", self.level),
-        }
-    }
 }
 
 pub struct HuffmanTree {
@@ -105,108 +92,55 @@ pub struct HuffmanTree {
 }
 
 impl HuffmanTree {
-    pub fn new(count: &[u8], symbol: &[u32]) -> Self {
-        let mut last_value = 0;
-        let mut root = vec![
-            Point {
-                level: 0,
-                value: Node::Split(1, 2),
-            },
-            Point {
-                level: 1,
-                value: Node::None,
-            },
-            Point {
-                level: 1,
-                value: Node::None,
-            },
-        ];
+    pub fn new(counting: &[u8], symbol: &[u8]) -> Self {
+        // Create a tree with only the root and 2 empty nodes
+        let mut root = vec![Node::Split(1), Node::None, Node::None];
+        // Left most index
         let mut left_most = 1;
+        // Offset in symbol table
         let mut symbol_offset = 0;
+        // Last written value
+        let mut last_value = 0;
+        // Last not zero value in counting array
+        let last_index = counting
+            .iter()
+            .enumerate()
+            .rfind(|(_index, val)| **val != 0)
+            .map(|(index, _val)| index)
+            .unwrap_or(counting.len() - 1)
+            + 1;
 
-        for (l, c) in count.iter().enumerate() {
-            let level = l + 1;
+        for count in counting.iter().take(last_index) {
+            // Where the level ends
+            let end = root.len();
 
-            if *c == 0 {
-                let mut current = left_most;
-                let end = root.len();
-                while current < end {
-                    if root[current].level != level {
-                        current += 1;
-                        continue;
-                    }
-                    let pos = root.len();
-                    root[current].value = Node::Split(pos as u32, (pos + 1) as u32);
-                    root.push(Point {
-                        level: level + 1,
-                        value: Node::None,
-                    });
-                    root.push(Point {
-                        level: level + 1,
-                        value: Node::None,
-                    });
-                    current += 1;
-                }
-                left_most = end;
-            } else {
-                let end = root.len();
-                for i in 0..*c {
-                    root[left_most].value = Node::Value(symbol[(i + symbol_offset) as usize]);
-                    last_value = left_most;
-                    left_most += 1;
-                    while left_most < end {
-                        if root[left_most].level == level {
-                            break;
-                        }
-                        left_most += 1;
-                    }
-                }
-
-                symbol_offset += *c;
-                if left_most >= end {
-                    unreachable!()
-                }
-                let pos = root.len();
-
-                root[left_most].value = Node::Split(pos as u32, (pos + 1) as u32);
-                root.push(Point {
-                    level: level + 1,
-                    value: Node::None,
-                });
-                root.push(Point {
-                    level: level + 1,
-                    value: Node::None,
-                });
-
-                let mut current = left_most + 1;
-                left_most = pos;
-
-                while current < end {
-                    if root[current].level != level {
-                        current += 1;
-                        continue;
-                    }
-                    let pos = root.len();
-                    root[current].value = Node::Split(pos as u32, (pos + 1) as u32);
-                    root.push(Point {
-                        level: level + 1,
-                        value: Node::None,
-                    });
-                    root.push(Point {
-                        level: level + 1,
-                        value: Node::None,
-                    });
-                    current += 1;
-                }
+            // Setting values to the leaf nodes
+            for index in 0..*count {
+                root[left_most] = Node::Value(symbol[(index + symbol_offset) as usize]);
+                last_value = left_most;
+                left_most += 1;
             }
+
+            // Saving offset
+            symbol_offset += *count;
+
+            let to_add = end - left_most;
+            // Add split nodes that points to the new level
+            for i in 0..to_add {
+                root[left_most + i] = Node::Split(end + 2 * i);
+            }
+
+            // Add level nodes
+            for _ in 0..to_add * 2 {
+                root.push(Node::None);
+            }
+
+            // Leftmost node is the 1st of the new layer
+            left_most = end;
         }
 
         Self {
-            tree: root
-                .into_iter()
-                .take(last_value + 1)
-                .map(|x| x.value)
-                .collect(),
+            tree: root.into_iter().take(last_value + 1).collect(),
         }
     }
 }
@@ -225,7 +159,7 @@ mod tests {
     fn test_huffman_0() {
         let tree = HuffmanTree::new(&[0, 1], &[1]);
         use Node::*;
-        let expected = vec![Split(1, 2), Split(3, 4), Split(5, 6), Value(1)];
+        let expected = vec![Split(1), Split(3), Split(5), Value(1)];
         assert_eq!(expected, tree.tree);
     }
 
@@ -233,7 +167,7 @@ mod tests {
     fn test_huffman_1() {
         let tree = HuffmanTree::new(&[1], &[1]);
         use Node::*;
-        let expected = vec![Split(1, 2), Value(1)];
+        let expected = vec![Split(1), Value(1)];
         assert_eq!(expected, tree.tree);
     }
 
@@ -244,25 +178,25 @@ mod tests {
         let tree = HuffmanTree::new(counts, elements);
         use Node::*;
         let expected: Vec<Node> = vec![
-            Split(1, 2),
-            Split(3, 4),
-            Split(5, 6),
+            Split(1),
+            Split(3),
+            Split(5),
             Value(5),
             Value(6),
-            Split(7, 8),
-            Split(9, 10),
+            Split(7),
+            Split(9),
             Value(3),
             Value(4),
-            Split(11, 12),
-            Split(13, 14),
+            Split(11),
+            Split(13),
             Value(2),
             Value(7),
             Value(8),
-            Split(15, 16),
+            Split(15),
             Value(1),
-            Split(17, 18),
+            Split(17),
             Value(0),
-            Split(19, 20),
+            Split(19),
             Value(9),
         ];
         assert_eq!(expected, tree.tree);
