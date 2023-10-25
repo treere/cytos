@@ -80,7 +80,7 @@ fn marker_name(marker: u16) -> &'static str {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Node {
     Value(u8),
     Split(usize),
@@ -131,9 +131,7 @@ impl HuffmanTree {
             }
 
             // Add level nodes
-            for _ in 0..to_add * 2 {
-                root.push(Node::None);
-            }
+            root.extend([Node::None].iter().cycle().take(2 * to_add));
 
             // Leftmost node is the 1st of the new layer
             left_most = end;
