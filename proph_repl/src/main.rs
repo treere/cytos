@@ -34,7 +34,7 @@ struct Status {
 }
 
 trait Printer {
-    fn print(self: Self);
+    fn print(self);
 }
 
 impl Printer for Response {

@@ -17,7 +17,7 @@ pub fn decode(f: &[u8]) {
         index += 2;
         print!("marker {:#04x}", marker);
         print!(" {}", marker_name(marker));
-        println!("");
+        println!();
         match marker {
             START_OF_IMAGE => (),
             END_OF_IMAGE => break,
@@ -129,7 +129,7 @@ impl HuffmanTree {
             tree[left_most..(left_most + (*count) as usize)]
                 .iter_mut()
                 .enumerate()
-                .for_each(|(index, r)| *r = Node::Value(symbol[(index + symbol_offset) as usize]));
+                .for_each(|(index, r)| *r = Node::Value(symbol[index + symbol_offset]));
 
             left_most += *count as usize;
 

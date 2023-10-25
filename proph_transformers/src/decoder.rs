@@ -37,7 +37,7 @@ pub struct ZuneImageDecoder {
 
 impl Stepper for ZuneImageDecoder {
     fn step(&mut self) -> Done {
-        let mut decoder = zune_jpeg::JpegDecoder::new(&&self.frame.get()[..]);
+        let mut decoder = zune_jpeg::JpegDecoder::new(&self.frame.get()[..]);
 
         decoder.decode_headers().unwrap();
         let image_info = decoder.info().unwrap();
@@ -66,7 +66,7 @@ pub struct TurboImageDecoder {
 impl Stepper for TurboImageDecoder {
     fn step(&mut self) -> Done {
         let image: image::RgbImage =
-            turbojpeg::decompress_image(&&self.frame.get()[..]).or(Err("cannot deocde"))?;
+            turbojpeg::decompress_image(&self.frame.get()[..]).or(Err("cannot deocde"))?;
 
         *self.decoded.set() = Image { data: image.into() };
 
