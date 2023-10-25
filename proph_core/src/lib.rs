@@ -103,9 +103,7 @@ impl HuffmanTree {
         // Last not zero value in counting array
         let last_index = counting
             .iter()
-            .enumerate()
-            .rfind(|(_index, val)| **val != 0)
-            .map(|(index, _val)| index)
+            .rposition(|val| *val != 0)
             .unwrap_or(counting.len() - 1)
             + 1;
 
