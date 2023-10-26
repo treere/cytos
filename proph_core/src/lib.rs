@@ -107,27 +107,25 @@ impl HuffmanTree {
         self.tree.push(Node::Split(1));
 
         let mut used = 0;
-        let mut s = 0;
-        let mut n = 3;
+        let mut symbol = symbol.iter().cloned().map(|x| Node::Value(x));
+        let mut link = 1;
 
-        for index in 0..last_index {
-            let c = counting[index];
-
-            for _ in 0..c {
-                self.tree.push(Node::Value(symbol[s]));
-                s += 1;
-            }
-            if index == last_index - 1 {
-                break;
+        for (index, count) in counting[..last_index - 1].iter().cloned().enumerate() {
+            for _ in 0..count {
+                self.tree.push(symbol.next().unwrap());
             }
 
-            used = 2 * used + c as u32;
-            let link = 2u32.pow(index as u32 + 1) - used;
+            used = 2 * used + count as u32;
+            let links = 2u32.pow(index as u32 + 1) - used;
 
-            for _ in 0..link {
-                self.tree.push(Node::Split(n));
-                n += 2;
+            for _ in 0..links {
+                link += 2;
+                self.tree.push(Node::Split(link));
             }
+        }
+
+        for _ in 0..counting[last_index - 1] {
+            self.tree.push(symbol.next().unwrap());
         }
     }
 }
