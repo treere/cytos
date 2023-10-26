@@ -63,7 +63,8 @@ fn decode_huffman(f: &[u8]) {
     println!("Header: {}", header);
     println!("lengths: {:?}", lengths);
     println!("Elements: {}", elements.len());
-    let huffman = HuffmanTree::new(&lengths[..], &elements[..]);
+    let mut huffman = HuffmanTree::new();
+    huffman.compose(&lengths[..], &elements[..]);
     println!("Huffman tree {:?}", huffman.tree);
 }
 
@@ -92,22 +93,28 @@ pub struct HuffmanTree {
 }
 
 impl HuffmanTree {
-    pub fn new(counting: &[u8], symbol: &[u8]) -> Self {
+    pub fn new() -> Self {
+        Self { tree: Vec::new() }
+    }
+    pub fn compose(&mut self, counting: &[u8], symbol: &[u8]) {
         let last_index = counting
             .iter()
             .rposition(|val| *val != 0)
             .unwrap_or(counting.len() - 1)
             + 1;
 
-        let mut tree = vec![Node::Split(1)];
+        self.tree.clear();
+        self.tree.push(Node::Split(1));
+
         let mut used = 0;
         let mut s = 0;
         let mut n = 3;
 
         for index in 0..last_index {
             let c = counting[index];
+
             for _ in 0..c {
-                tree.push(Node::Value(symbol[s]));
+                self.tree.push(Node::Value(symbol[s]));
                 s += 1;
             }
             if index == last_index - 1 {
@@ -118,12 +125,10 @@ impl HuffmanTree {
             let link = 2u32.pow(index as u32 + 1) - used;
 
             for _ in 0..link {
-                tree.push(Node::Split(n));
+                self.tree.push(Node::Split(n));
                 n += 2;
             }
         }
-
-        Self { tree }
     }
 }
 
@@ -139,7 +144,8 @@ mod tests {
 
     #[test]
     fn test_huffman_0() {
-        let tree = HuffmanTree::new(&[0, 1], &[1]);
+        let mut tree = HuffmanTree::new();
+        tree.compose(&[0, 1], &[1]);
         use Node::*;
         let expected = vec![Split(1), Split(3), Split(5), Value(1)];
         assert_eq!(expected, tree.tree);
@@ -147,7 +153,8 @@ mod tests {
 
     #[test]
     fn test_huffman_1() {
-        let tree = HuffmanTree::new(&[1], &[1]);
+        let mut tree = HuffmanTree::new();
+        tree.compose(&[1], &[1]);
         use Node::*;
         let expected = vec![Split(1), Value(1)];
         assert_eq!(expected, tree.tree);
@@ -157,7 +164,8 @@ mod tests {
     fn test_huffman_2() {
         let counts = &[0, 2, 2, 3, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0];
         let elements = &[5, 6, 3, 4, 2, 7, 8, 1, 0, 9];
-        let tree = HuffmanTree::new(counts, elements);
+        let mut tree = HuffmanTree::new();
+        tree.compose(counts, elements);
         use Node::*;
         let expected: Vec<Node> = vec![
             Split(1),
@@ -190,11 +198,11 @@ mod tests {
     fn bench_huffman_one(b: &mut Bencher) {
         let counts = &[0, 2, 2, 3, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0];
         let elements = &[5, 6, 3, 4, 2, 7, 8, 1, 0, 9];
-
+        let mut tree = HuffmanTree::new();
         b.iter(|| {
             // Inner closure, the actual test
             for _ in 1..1000 {
-                black_box(HuffmanTree::new(counts, elements));
+                black_box(tree.compose(counts, elements));
             }
         });
     }
@@ -207,11 +215,11 @@ mod tests {
             21, 35, 66, 161, 82, 177, 193, 51, 98, 209, 225, 9, 22, 23, 36, 114, 146, 240, 241, 37,
             52, 67, 130, 178, 24, 39, 68, 83, 162, 115,
         ];
-
+        let mut tree = HuffmanTree::new();
         b.iter(|| {
             // Inner closure, the actual test
             for _ in 1..1000 {
-                black_box(HuffmanTree::new(counts, elements));
+                black_box(tree.compose(counts, elements));
             }
         });
     }
@@ -220,11 +228,11 @@ mod tests {
     fn bench_huffman_three(b: &mut Bencher) {
         let counts = &[0, 2, 3, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
         let elements = &[1, 2, 0, 3, 4, 5, 6, 7];
-
+        let mut tree = HuffmanTree::new();
         b.iter(|| {
             // Inner closure, the actual test
             for _ in 1..1000 {
-                black_box(HuffmanTree::new(counts, elements));
+                black_box(tree.compose(counts, elements));
             }
         });
     }
@@ -236,11 +244,11 @@ mod tests {
             0, 1, 2, 17, 3, 33, 18, 49, 4, 65, 81, 19, 34, 97, 5, 50, 113, 145, 20, 35, 66, 129,
             161, 177, 209, 6, 21, 193, 240, 36, 241, 51, 82, 162,
         ];
-
+        let mut tree = HuffmanTree::new();
         b.iter(|| {
             // Inner closure, the actual test
             for _ in 1..1000 {
-                black_box(HuffmanTree::new(counts, elements));
+                black_box(tree.compose(counts, elements));
             }
         });
     }
