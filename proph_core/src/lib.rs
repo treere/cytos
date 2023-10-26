@@ -81,7 +81,7 @@ fn marker_name(marker: u16) -> &'static str {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq)]
 pub enum Node {
     Value(u8),
     Split(u32),
@@ -106,20 +106,17 @@ impl HuffmanTree {
         let mut symbol = symbol.iter().cloned().map(Node::Value);
 
         counting[..last_index - 1].iter().cloned().enumerate().fold(
-            (0, 1),
+            (0, 3),
             |(used, link), (index, count)| {
-                (0..count)
-                    .map(|_| symbol.next().unwrap())
-                    .for_each(|x| self.tree.push(x));
+                self.tree.extend((0..count).map(|_| symbol.next().unwrap()));
 
                 let used = 2 * used + count as u32;
                 let links = 2u32.pow(index as u32 + 1) - used;
 
-                (0..links)
-                    .map(|x| x * 2 + link)
-                    .for_each(|link| self.tree.push(Node::Split(link)));
+                self.tree
+                    .extend((0..links).map(|x| Node::Split(x * 2 + link)));
 
-                (used, links * 2)
+                (used, link + links * 2)
             },
         );
 
