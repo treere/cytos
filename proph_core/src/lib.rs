@@ -1,3 +1,6 @@
+#![feature(test)]
+extern crate test;
+
 const START_OF_IMAGE: u16 = 0xffd8;
 const APPLICATION_DEFAULT_HEADER: u16 = 0xffe0;
 const QUANTIZATION_TABLE: u16 = 0xffdb;
@@ -263,5 +266,66 @@ mod tests {
             Value(9),
         ];
         assert_eq!(expected, tree.tree);
+    }
+
+    use test::{black_box, Bencher};
+
+    #[bench]
+    fn bench_huffman_one(b: &mut Bencher) {
+        let counts = &[0, 2, 2, 3, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let elements = &[5, 6, 3, 4, 2, 7, 8, 1, 0, 9];
+
+        b.iter(|| {
+            // Inner closure, the actual test
+            for _ in 1..1000 {
+                black_box(HuffmanTree::new(counts, elements));
+            }
+        });
+    }
+
+    #[bench]
+    fn bench_huffman_two(b: &mut Bencher) {
+        let counts = &[0, 2, 1, 3, 2, 4, 5, 2, 4, 4, 3, 4, 8, 5, 5, 1];
+        let elements = &[
+            1, 2, 3, 0, 4, 17, 5, 33, 6, 18, 49, 65, 7, 19, 34, 81, 97, 20, 113, 8, 50, 129, 145,
+            21, 35, 66, 161, 82, 177, 193, 51, 98, 209, 225, 9, 22, 23, 36, 114, 146, 240, 241, 37,
+            52, 67, 130, 178, 24, 39, 68, 83, 162, 115,
+        ];
+
+        b.iter(|| {
+            // Inner closure, the actual test
+            for _ in 1..1000 {
+                black_box(HuffmanTree::new(counts, elements));
+            }
+        });
+    }
+
+    #[bench]
+    fn bench_huffman_three(b: &mut Bencher) {
+        let counts = &[0, 2, 3, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let elements = &[1, 2, 0, 3, 4, 5, 6, 7];
+
+        b.iter(|| {
+            // Inner closure, the actual test
+            for _ in 1..1000 {
+                black_box(HuffmanTree::new(counts, elements));
+            }
+        });
+    }
+
+    #[bench]
+    fn bench_huffman_four(b: &mut Bencher) {
+        let counts = &[0, 2, 2, 2, 2, 2, 1, 3, 3, 1, 7, 4, 2, 3, 0, 0];
+        let elements = &[
+            0, 1, 2, 17, 3, 33, 18, 49, 4, 65, 81, 19, 34, 97, 5, 50, 113, 145, 20, 35, 66, 129,
+            161, 177, 209, 6, 21, 193, 240, 36, 241, 51, 82, 162,
+        ];
+
+        b.iter(|| {
+            // Inner closure, the actual test
+            for _ in 1..1000 {
+                black_box(HuffmanTree::new(counts, elements));
+            }
+        });
     }
 }
