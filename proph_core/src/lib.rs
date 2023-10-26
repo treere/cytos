@@ -93,49 +93,38 @@ pub struct HuffmanTree {
 
 impl HuffmanTree {
     pub fn new(counting: &[u8], symbol: &[u8]) -> Self {
-        // Create a tree with only the root and 2 empty nodes
-        let mut tree = vec![Node::None];
-        // Left most index
-        let mut left_most = 0;
-        // Offset in symbol table
-        let mut symbol_offset = 0;
-
-        // Last not zero value in counting array
         let last_index = counting
             .iter()
             .rposition(|val| *val != 0)
             .unwrap_or(counting.len() - 1)
             + 1;
 
-        for count in counting.iter().take(last_index) {
-            // Where the level ends
-            let end = tree.len();
+        let mut link = vec![0; last_index];
 
-            // Add split nodes that points to the new level
-            tree[left_most..]
-                .iter_mut()
-                .enumerate()
-                .for_each(|(i, r)| *r = Node::Split(end + 2 * i));
-
-            // Add level nodes
-            tree.extend([Node::None].iter().cycle().take(2 * (end - left_most)));
-
-            // Leftmost node is the 1st of the new layer
-            left_most = end;
-
-            // Setting values to the leaf nodes
-            tree[left_most..(left_most + (*count) as usize)]
-                .iter_mut()
-                .enumerate()
-                .for_each(|(index, r)| *r = Node::Value(symbol[index + symbol_offset]));
-
-            left_most += *count as usize;
-
-            // Saving offset
-            symbol_offset += *count as usize;
+        let mut used = 0;
+        for index in 0..last_index {
+            link[index] = 2u32.pow(index as u32 + 1) - 2 * used - counting[index] as u32;
+            used = 2 * used + counting[index] as u32;
         }
 
-        tree.truncate(left_most);
+        let mut tree = vec![Node::Split(1)];
+        let mut s = 0;
+        let mut n = 3;
+
+        for index in 0..last_index - 1 {
+            for _ in 0..counting[index] {
+                tree.push(Node::Value(symbol[s]));
+                s += 1;
+            }
+            for _ in 0..link[index] {
+                tree.push(Node::Split(n));
+                n += 2;
+            }
+        }
+        for _ in 0..counting[last_index - 1] {
+            tree.push(Node::Value(symbol[s]));
+            s += 1;
+        }
 
         Self { tree }
     }
