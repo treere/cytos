@@ -99,31 +99,28 @@ impl HuffmanTree {
             .unwrap_or(counting.len() - 1)
             + 1;
 
-        let mut link = vec![0; last_index];
-
-        let mut used = 0;
-        for index in 0..last_index {
-            link[index] = 2u32.pow(index as u32 + 1) - 2 * used - counting[index] as u32;
-            used = 2 * used + counting[index] as u32;
-        }
-
         let mut tree = vec![Node::Split(1)];
+        let mut used = 0;
         let mut s = 0;
         let mut n = 3;
 
-        for index in 0..last_index - 1 {
-            for _ in 0..counting[index] {
+        for index in 0..last_index {
+            let c = counting[index];
+            for _ in 0..c {
                 tree.push(Node::Value(symbol[s]));
                 s += 1;
             }
-            for _ in 0..link[index] {
+            if index == last_index - 1 {
+                break;
+            }
+
+            used = 2 * used + c as u32;
+            let link = 2u32.pow(index as u32 + 1) - used;
+
+            for _ in 0..link {
                 tree.push(Node::Split(n));
                 n += 2;
             }
-        }
-        for _ in 0..counting[last_index - 1] {
-            tree.push(Node::Value(symbol[s]));
-            s += 1;
         }
 
         Self { tree }
