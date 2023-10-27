@@ -196,6 +196,7 @@ mod benches {
         let counts = &[0, 2, 2, 3, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0];
         let elements = &[5, 6, 3, 4, 2, 7, 8, 1, 0, 9];
         let mut tree = HuffmanTree::default();
+        tree.compose(counts, elements);
         b.iter(|| {
             // Inner closure, the actual test
             for _ in 1..1000 {
@@ -213,6 +214,7 @@ mod benches {
             52, 67, 130, 178, 24, 39, 68, 83, 162, 115,
         ];
         let mut tree = HuffmanTree::default();
+        tree.compose(counts, elements);
         b.iter(|| {
             // Inner closure, the actual test
             for _ in 1..1000 {
@@ -226,6 +228,7 @@ mod benches {
         let counts = &[0, 2, 3, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
         let elements = &[1, 2, 0, 3, 4, 5, 6, 7];
         let mut tree = HuffmanTree::default();
+        tree.compose(counts, elements);
         b.iter(|| {
             // Inner closure, the actual test
             for _ in 1..1000 {
@@ -242,6 +245,7 @@ mod benches {
             161, 177, 209, 6, 21, 193, 240, 36, 241, 51, 82, 162,
         ];
         let mut tree = HuffmanTree::default();
+        tree.compose(counts, elements);
         b.iter(|| {
             // Inner closure, the actual test
             for _ in 1..1000 {
