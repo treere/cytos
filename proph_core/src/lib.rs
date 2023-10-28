@@ -42,11 +42,15 @@ impl Decoder {
                     let lenchunk = u16::from_be_bytes([f[index], f[index + 1]]);
 
                     let final_index = index + lenchunk as usize;
+                    let chunk = &f[index + 2..final_index];
                     if marker == DEFINE_HUFFMAN_TABLE {
-                        self.decode_huffman(&f[index + 2..final_index]);
+                        self.decode_huffman(chunk);
                     }
                     if marker == QUANTIZATION_TABLE {
-                        self.decode_quantization(&f[index + 2..final_index]);
+                        self.decode_quantization(chunk);
+                    }
+                    if marker == START_OF_FRAME {
+                        self.decode_start_of_frame(chunk);
                     }
                     index = final_index;
                 }
@@ -98,6 +102,27 @@ impl Decoder {
 
         self.quant.insert(header, quant);
     }
+
+    fn decode_start_of_frame(&mut self, f: &[u8]) {
+        let header = f[0];
+        let height = u16::from_be_bytes([f[1], f[2]]);
+        let width = u16::from_be_bytes([f[3], f[4]]);
+        let components = f[5] as usize;
+
+        println!("header {}, components {}", header, components);
+        println!("width {}, height {}", width, height);
+
+        for i in 0..components {
+            let id = f[6 + i * 3];
+            let samp = f[7 + i * 3];
+            let qtbid = f[8 + i * 3];
+
+            println!("component {}, id {}, samp {}, qtbid {}", i, id, samp, qtbid);
+        }
+
+        // id, samp, QtbId = unpack("BBB",data[6+i*3:9+i*3])
+        // self.quantMapping.append(QtbId)
+    }
 }
 
 fn marker_name(marker: u16) -> &'static str {
@@ -120,8 +145,8 @@ mod tests {
     #[test]
     fn it_works() {
         let mut decoder = Decoder::default();
-        // let f = include_bytes!("image.jpeg");
-        let f = include_bytes!("profile.jpg");
+        let f = include_bytes!("image.jpeg");
+        // let f = include_bytes!("profile.jpg");
         decoder.load(f);
     }
 }
