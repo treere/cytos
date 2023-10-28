@@ -39,11 +39,40 @@ impl HuffmanTree {
 
         (0..counting[last_index - 1]).for_each(|_| self.tree.push(symbol.next().unwrap()));
     }
+
+    pub fn decode(&self, encoded: &[u8], dst: &mut Vec<u8>) {
+        let mut s = 0;
+        for byte in encoded.iter().cloned() {
+            for i in (0..8).rev() {
+                let b = ((1u8 << i & byte) != 0) as usize;
+
+                match self.tree.get(s) {
+                    Some(Node::Value(v)) => {
+                        dst.push(*v);
+                        s = 0
+                    }
+                    Some(Node::Split(x)) => s = b as usize + *x as usize,
+                    None => return,
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn decode_0() {
+        use Node::*;
+        let huffman = HuffmanTree {
+            tree: vec![Split(1), Split(3), Split(5), Value(1)],
+        };
+        let mut v = Vec::new();
+        huffman.decode(&[0b0011_1111], &mut v);
+        assert_eq!(vec![1], v);
+    }
 
     #[test]
     fn compose_0() {
