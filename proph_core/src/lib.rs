@@ -119,9 +119,6 @@ impl Decoder {
 
             println!("component {}, id {}, samp {}, qtbid {}", i, id, samp, qtbid);
         }
-
-        // id, samp, QtbId = unpack("BBB",data[6+i*3:9+i*3])
-        // self.quantMapping.append(QtbId)
     }
 }
 
@@ -145,8 +142,27 @@ mod tests {
     #[test]
     fn it_works() {
         let mut decoder = Decoder::default();
-        let f = include_bytes!("image.jpeg");
-        // let f = include_bytes!("profile.jpg");
+        // let f = include_bytes!("image.jpeg");
+        let f = include_bytes!("profile.jpg");
         decoder.load(f);
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+
+    use test::{black_box, Bencher};
+
+    #[bench]
+    fn load(b: &mut Bencher) {
+        let mut decoder = Decoder::default();
+        // let f = include_bytes!("image.jpeg");
+        let f = include_bytes!("profile.jpg");
+        b.iter(|| {
+            for _ in 1..1000 {
+                black_box(decoder.load(f));
+            }
+        })
     }
 }
