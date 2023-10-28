@@ -1,6 +1,12 @@
 #![feature(test)]
 extern crate test;
 
+mod huffman;
+mod huffman_old;
+
+pub use huffman::HuffmanTree;
+pub use huffman_old::HuffmanTree as HuffmanTreeOld;
+
 const START_OF_IMAGE: u16 = 0xffd8;
 const APPLICATION_DEFAULT_HEADER: u16 = 0xffe0;
 const QUANTIZATION_TABLE: u16 = 0xffdb;
@@ -65,7 +71,8 @@ fn decode_huffman(f: &[u8]) {
     println!("Elements: {}", elements.len());
     let mut huffman = HuffmanTree::default();
     huffman.compose(&lengths[..], &elements[..]);
-    println!("Huffman tree {:?}", huffman.tree);
+
+    println!("Huffman tree {:?}", huffman);
 }
 
 fn marker_name(marker: u16) -> &'static str {
@@ -81,117 +88,6 @@ fn marker_name(marker: u16) -> &'static str {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum Node {
-    Value(u8),
-    Split(u32),
-}
-
-#[derive(Default)]
-pub struct HuffmanTree {
-    tree: Vec<Node>,
-}
-
-impl HuffmanTree {
-    pub fn compose(&mut self, counting: &[u8], symbol: &[u8]) {
-        let last_index = counting
-            .iter()
-            .rposition(|val| *val != 0)
-            .unwrap_or(counting.len() - 1)
-            + 1;
-
-        self.tree.clear();
-        self.tree.push(Node::Split(1));
-
-        let mut symbol = symbol.iter().cloned().map(Node::Value);
-
-        counting[..last_index - 1].iter().cloned().enumerate().fold(
-            (0, 3),
-            |(used, link), (index, count)| {
-                self.tree.extend((0..count).map(|_| symbol.next().unwrap()));
-
-                let used = 2 * used + count as u32;
-                let links = 2u32.pow(index as u32 + 1) - used;
-
-                self.tree
-                    .extend((0..links).map(|x| Node::Split(x * 2 + link)));
-
-                (used, link + links * 2)
-            },
-        );
-
-        (0..counting[last_index - 1]).for_each(|_| self.tree.push(symbol.next().unwrap()));
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum NodeOld {
-    Value(u8),
-    Split(usize),
-    None,
-}
-
-#[derive(Default)]
-pub struct HuffmanTreeOld {
-    tree: Vec<NodeOld>,
-}
-
-impl HuffmanTreeOld {
-    pub fn compose(&mut self, counting: &[u8], symbol: &[u8]) {
-        // Create a tree with only the root and 2 empty nodes
-        self.tree.clear();
-        self.tree.push(NodeOld::Split(1));
-        self.tree.push(NodeOld::None);
-        self.tree.push(NodeOld::None);
-
-        // Left most index
-        let mut left_most = 1;
-        // Offset in symbol table
-        let mut symbol_offset = 0;
-        // Last written value
-        let mut last_value = 0;
-        // Last not zero value in counting array
-        let last_index = counting
-            .iter()
-            .enumerate()
-            .rfind(|(_index, val)| **val != 0)
-            .map(|(index, _val)| index)
-            .unwrap_or(counting.len() - 1)
-            + 1;
-
-        for count in counting.iter().take(last_index) {
-            // Where the level ends
-            let end = self.tree.len();
-
-            // Setting values to the leaf nodes
-            for index in 0..*count {
-                self.tree[left_most] = NodeOld::Value(symbol[(index + symbol_offset) as usize]);
-                last_value = left_most;
-                left_most += 1;
-            }
-
-            // Saving offset
-            symbol_offset += *count;
-
-            let to_add = end - left_most;
-            // Add split nodes that points to the new level
-            for i in 0..to_add {
-                self.tree[left_most + i] = NodeOld::Split(end + 2 * i);
-            }
-
-            // Add level nodes
-            for _ in 0..to_add * 2 {
-                self.tree.push(NodeOld::None);
-            }
-
-            // Leftmost node is the 1st of the new layer
-            left_most = end;
-        }
-
-        self.tree.truncate(last_value + 1);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -200,188 +96,5 @@ mod tests {
     fn it_works() {
         let f = include_bytes!("profile.jpg");
         decode(f);
-    }
-
-    #[test]
-    fn test_huffman_0() {
-        let mut tree = HuffmanTree::default();
-        tree.compose(&[0, 1], &[1]);
-        use Node::*;
-        let expected = vec![Split(1), Split(3), Split(5), Value(1)];
-        assert_eq!(expected, tree.tree);
-    }
-
-    #[test]
-    fn test_huffman_1() {
-        let mut tree = HuffmanTree::default();
-        tree.compose(&[1], &[1]);
-        use Node::*;
-        let expected = vec![Split(1), Value(1)];
-        assert_eq!(expected, tree.tree);
-    }
-
-    #[test]
-    fn test_huffman_2() {
-        let counts = &[0, 2, 2, 3, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        let elements = &[5, 6, 3, 4, 2, 7, 8, 1, 0, 9];
-        let mut tree = HuffmanTree::default();
-        tree.compose(counts, elements);
-        use Node::*;
-        let expected: Vec<Node> = vec![
-            Split(1),
-            Split(3),
-            Split(5),
-            Value(5),
-            Value(6),
-            Split(7),
-            Split(9),
-            Value(3),
-            Value(4),
-            Split(11),
-            Split(13),
-            Value(2),
-            Value(7),
-            Value(8),
-            Split(15),
-            Value(1),
-            Split(17),
-            Value(0),
-            Split(19),
-            Value(9),
-        ];
-        assert_eq!(expected, tree.tree);
-    }
-}
-
-#[cfg(test)]
-mod benches {
-    use super::*;
-
-    use test::{black_box, Bencher};
-
-    #[bench]
-    fn bench_huffman_one(b: &mut Bencher) {
-        let counts = &[0, 2, 2, 3, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        let elements = &[5, 6, 3, 4, 2, 7, 8, 1, 0, 9];
-        let mut tree = HuffmanTree::default();
-        tree.compose(counts, elements);
-        b.iter(|| {
-            // Inner closure, the actual test
-            for _ in 1..1000 {
-                black_box(tree.compose(counts, elements));
-            }
-        });
-    }
-
-    #[bench]
-    fn bench_huffman_two(b: &mut Bencher) {
-        let counts = &[0, 2, 1, 3, 2, 4, 5, 2, 4, 4, 3, 4, 8, 5, 5, 1];
-        let elements = &[
-            1, 2, 3, 0, 4, 17, 5, 33, 6, 18, 49, 65, 7, 19, 34, 81, 97, 20, 113, 8, 50, 129, 145,
-            21, 35, 66, 161, 82, 177, 193, 51, 98, 209, 225, 9, 22, 23, 36, 114, 146, 240, 241, 37,
-            52, 67, 130, 178, 24, 39, 68, 83, 162, 115,
-        ];
-        let mut tree = HuffmanTree::default();
-        tree.compose(counts, elements);
-        b.iter(|| {
-            // Inner closure, the actual test
-            for _ in 1..1000 {
-                black_box(tree.compose(counts, elements));
-            }
-        });
-    }
-
-    #[bench]
-    fn bench_huffman_three(b: &mut Bencher) {
-        let counts = &[0, 2, 3, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        let elements = &[1, 2, 0, 3, 4, 5, 6, 7];
-        let mut tree = HuffmanTree::default();
-        tree.compose(counts, elements);
-        b.iter(|| {
-            // Inner closure, the actual test
-            for _ in 1..1000 {
-                black_box(tree.compose(counts, elements));
-            }
-        });
-    }
-
-    #[bench]
-    fn bench_huffman_four(b: &mut Bencher) {
-        let counts = &[0, 2, 2, 2, 2, 2, 1, 3, 3, 1, 7, 4, 2, 3, 0, 0];
-        let elements = &[
-            0, 1, 2, 17, 3, 33, 18, 49, 4, 65, 81, 19, 34, 97, 5, 50, 113, 145, 20, 35, 66, 129,
-            161, 177, 209, 6, 21, 193, 240, 36, 241, 51, 82, 162,
-        ];
-        let mut tree = HuffmanTree::default();
-        tree.compose(counts, elements);
-        b.iter(|| {
-            // Inner closure, the actual test
-            for _ in 1..1000 {
-                black_box(tree.compose(counts, elements));
-            }
-        });
-    }
-
-    #[bench]
-    fn bench_huffman_one_old(b: &mut Bencher) {
-        let counts = &[0, 2, 2, 3, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        let elements = &[5, 6, 3, 4, 2, 7, 8, 1, 0, 9];
-        let mut tree = HuffmanTreeOld::default();
-        tree.compose(counts, elements);
-        b.iter(|| {
-            // Inner closure, the actual test
-            for _ in 1..1000 {
-                black_box(tree.compose(counts, elements));
-            }
-        });
-    }
-
-    #[bench]
-    fn bench_huffman_two_old(b: &mut Bencher) {
-        let counts = &[0, 2, 1, 3, 2, 4, 5, 2, 4, 4, 3, 4, 8, 5, 5, 1];
-        let elements = &[
-            1, 2, 3, 0, 4, 17, 5, 33, 6, 18, 49, 65, 7, 19, 34, 81, 97, 20, 113, 8, 50, 129, 145,
-            21, 35, 66, 161, 82, 177, 193, 51, 98, 209, 225, 9, 22, 23, 36, 114, 146, 240, 241, 37,
-            52, 67, 130, 178, 24, 39, 68, 83, 162, 115,
-        ];
-        let mut tree = HuffmanTreeOld::default();
-        tree.compose(counts, elements);
-        b.iter(|| {
-            // Inner closure, the actual test
-            for _ in 1..1000 {
-                black_box(tree.compose(counts, elements));
-            }
-        });
-    }
-
-    #[bench]
-    fn bench_huffman_three_old(b: &mut Bencher) {
-        let counts = &[0, 2, 3, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        let elements = &[1, 2, 0, 3, 4, 5, 6, 7];
-        let mut tree = HuffmanTreeOld::default();
-        tree.compose(counts, elements);
-        b.iter(|| {
-            // Inner closure, the actual test
-            for _ in 1..1000 {
-                black_box(tree.compose(counts, elements));
-            }
-        });
-    }
-
-    #[bench]
-    fn bench_huffman_four_old(b: &mut Bencher) {
-        let counts = &[0, 2, 2, 2, 2, 2, 1, 3, 3, 1, 7, 4, 2, 3, 0, 0];
-        let elements = &[
-            0, 1, 2, 17, 3, 33, 18, 49, 4, 65, 81, 19, 34, 97, 5, 50, 113, 145, 20, 35, 66, 129,
-            161, 177, 209, 6, 21, 193, 240, 36, 241, 51, 82, 162,
-        ];
-        let mut tree = HuffmanTreeOld::default();
-        tree.compose(counts, elements);
-        b.iter(|| {
-            // Inner closure, the actual test
-            for _ in 1..1000 {
-                black_box(tree.compose(counts, elements));
-            }
-        });
     }
 }
