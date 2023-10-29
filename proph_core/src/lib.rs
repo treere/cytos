@@ -20,8 +20,10 @@ const END_OF_IMAGE: u16 = 0xffd9;
 #[derive(Default)]
 pub struct Decoder {
     huffman: HashMap<u8, HuffmanTree>,
-
     quant: HashMap<u8, Vec<u8>>,
+    precision: u8,
+    size: (u16, u16),
+    components: Vec<(u8, u8, u8, u8)>,
 }
 
 impl Decoder {
@@ -31,27 +33,56 @@ impl Decoder {
         loop {
             let marker = u16::from_be_bytes([f[index], f[index + 1]]);
             index += 2;
-            print!("marker {:#04x}", marker);
-            print!(" {}", marker_name(marker));
-            println!();
+            println!(
+                "******************** {:#04x} - {} ********************",
+                marker,
+                marker_name(marker)
+            );
             match marker {
                 START_OF_IMAGE => (),
                 END_OF_IMAGE => break,
-                START_OF_SCAN => index = f.len() - 2,
-                _ => {
+                START_OF_SCAN => {
+                    let chunk = &f[index + 2..];
+                    let len = self.decode_start_of_scan(chunk);
+                    index += len + 2;
+                }
+                DEFINE_HUFFMAN_TABLE => {
                     let lenchunk = u16::from_be_bytes([f[index], f[index + 1]]);
+                    println!("Length: {}", lenchunk);
 
                     let final_index = index + lenchunk as usize;
                     let chunk = &f[index + 2..final_index];
-                    if marker == DEFINE_HUFFMAN_TABLE {
-                        self.decode_huffman(chunk);
-                    }
-                    if marker == QUANTIZATION_TABLE {
-                        self.decode_quantization(chunk);
-                    }
-                    if marker == START_OF_FRAME {
-                        self.decode_start_of_frame(chunk);
-                    }
+
+                    self.decode_huffman(chunk);
+                    index = final_index;
+                }
+                QUANTIZATION_TABLE => {
+                    let lenchunk = u16::from_be_bytes([f[index], f[index + 1]]);
+                    println!("Length: {}", lenchunk);
+
+                    let final_index = index + lenchunk as usize;
+                    let chunk = &f[index + 2..final_index];
+
+                    self.decode_quantization(chunk);
+                    index = final_index;
+                }
+                START_OF_FRAME => {
+                    let lenchunk = u16::from_be_bytes([f[index], f[index + 1]]);
+                    println!("Length: {}", lenchunk);
+
+                    let final_index = index + lenchunk as usize;
+                    let chunk = &f[index + 2..final_index];
+
+                    self.decode_start_of_frame(chunk);
+
+                    index = final_index;
+                }
+                _ => {
+                    let lenchunk = u16::from_be_bytes([f[index], f[index + 1]]);
+                    println!("Length: {}", lenchunk);
+
+                    let final_index = index + lenchunk as usize;
+
                     index = final_index;
                 }
             };
@@ -95,29 +126,77 @@ impl Decoder {
     fn decode_quantization(&mut self, f: &[u8]) {
         let mut f = f.iter();
         let header = *f.next().unwrap();
-        println!("hdr {:#04x}", header);
+        println!("Header: {:#04x}", header);
 
         let quant = f.take(64).cloned().collect::<Vec<_>>();
-        println!("quantization {:?}", quant);
+        println!("QuantizationMatrix: {:?}", quant);
 
         self.quant.insert(header, quant);
     }
 
     fn decode_start_of_frame(&mut self, f: &[u8]) {
-        let header = f[0];
+        self.precision = f[0];
         let height = u16::from_be_bytes([f[1], f[2]]);
         let width = u16::from_be_bytes([f[3], f[4]]);
+        self.size = (height, width);
         let components = f[5] as usize;
 
-        println!("header {}, components {}", header, components);
-        println!("width {}, height {}", width, height);
+        println!("DataPrecision: {}", self.precision);
+        println!("Components: {}", components);
+        println!("Size: {} X {} (WxH)", width, height);
 
+        self.components.clear();
         for i in 0..components {
             let id = f[6 + i * 3];
             let samp = f[7 + i * 3];
+            let samp_vert = 0b0000_1111 & samp;
+            let samp_hori = (0b1111_0000 & samp) >> 4;
             let qtbid = f[8 + i * 3];
 
-            println!("component {}, id {}, samp {}, qtbid {}", i, id, samp, qtbid);
+            println!(
+                "Component: {}, Id: {}, SampVert: {}, SampHori: {}, Qtbid: {}",
+                i, id, samp_vert, samp_hori, qtbid
+            );
+            self.components.push((id, samp_vert, samp_hori, qtbid));
+        }
+    }
+
+    fn decode_start_of_scan(&mut self, f: &[u8]) -> usize {
+        let mut iterator = RemoveFF00::new(f);
+        while let Some(_) = iterator.next() {}
+        iterator.len()
+    }
+}
+
+struct RemoveFF00<'a> {
+    f: &'a [u8],
+    index: usize,
+}
+
+impl<'a> RemoveFF00<'a> {
+    fn new(f: &'a [u8]) -> Self {
+        RemoveFF00 { f, index: 0 }
+    }
+
+    fn len(&self) -> usize {
+        self.index
+    }
+}
+
+impl Iterator for RemoveFF00<'_> {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match (self.f[self.index], self.f[self.index + 1]) {
+            (0xff, 0x00) => {
+                self.index += 2;
+                return Some(0xff);
+            }
+            (0xff, _) => return None,
+            (rest, _) => {
+                self.index += 1;
+                return Some(rest);
+            }
         }
     }
 }
@@ -131,7 +210,7 @@ fn marker_name(marker: u16) -> &'static str {
         DEFINE_HUFFMAN_TABLE => "Define Huffman Table",
         START_OF_SCAN => "Start of Scan",
         END_OF_IMAGE => "End of Image",
-        _ => unreachable!(),
+        _ => unreachable!("{:#04x}", marker),
     }
 }
 
