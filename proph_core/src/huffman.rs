@@ -51,7 +51,7 @@ impl HuffmanTree {
                         dst.push(*v);
                         s = 0
                     }
-                    Some(Node::Split(x)) => s = b as usize + *x as usize,
+                    Some(Node::Split(x)) => s = b + *x as usize,
                     None => return,
                 }
             }

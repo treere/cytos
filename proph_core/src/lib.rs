@@ -3,11 +3,13 @@ extern crate test;
 
 mod huffman;
 mod huffman_old;
+mod utils;
 
 use std::collections::HashMap;
 
 pub use huffman::HuffmanTree;
 pub use huffman_old::HuffmanTree as HuffmanTreeOld;
+use utils::RemoveFF00;
 
 const START_OF_IMAGE: u16 = 0xffd8;
 const APPLICATION_DEFAULT_HEADER: u16 = 0xffe0;
@@ -119,7 +121,7 @@ impl Decoder {
         println!("Elements: {}", elements.len());
         self.huffman
             .entry(header)
-            .or_insert(HuffmanTree::default())
+            .or_default()
             .compose(&lengths[..], &elements[..]);
     }
 
@@ -163,41 +165,8 @@ impl Decoder {
 
     fn decode_start_of_scan(&mut self, f: &[u8]) -> usize {
         let mut iterator = RemoveFF00::new(f);
-        while let Some(_) = iterator.next() {}
+        for _ in iterator.by_ref() {}
         iterator.len()
-    }
-}
-
-struct RemoveFF00<'a> {
-    f: &'a [u8],
-    index: usize,
-}
-
-impl<'a> RemoveFF00<'a> {
-    fn new(f: &'a [u8]) -> Self {
-        RemoveFF00 { f, index: 0 }
-    }
-
-    fn len(&self) -> usize {
-        self.index
-    }
-}
-
-impl Iterator for RemoveFF00<'_> {
-    type Item = u8;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match (self.f[self.index], self.f[self.index + 1]) {
-            (0xff, 0x00) => {
-                self.index += 2;
-                return Some(0xff);
-            }
-            (0xff, _) => return None,
-            (rest, _) => {
-                self.index += 1;
-                return Some(rest);
-            }
-        }
     }
 }
 
@@ -236,8 +205,8 @@ mod benches {
     #[bench]
     fn load(b: &mut Bencher) {
         let mut decoder = Decoder::default();
-        // let f = include_bytes!("image.jpeg");
-        let f = include_bytes!("profile.jpg");
+        let f = include_bytes!("image.jpeg");
+        // let f = include_bytes!("profile.jpg");
         b.iter(|| {
             for _ in 1..1000 {
                 black_box(decoder.load(f));
