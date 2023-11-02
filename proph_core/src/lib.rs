@@ -63,9 +63,9 @@ impl Decoder {
                 }
 
                 START_OF_SCAN => {
-                    let chunk = &f[index..];
-                    let len = self.decode_start_of_scan(chunk);
-                    index += len + 2;
+                    let lenchunk = u16::from_be_bytes([f[index], f[index + 1]]) as usize;
+                    let len = self.decode_start_of_scan(&f[index + lenchunk..]);
+                    index = lenchunk + len + 2;
                 }
                 DEFINE_HUFFMAN_TABLE => {
                     let (chunk, final_index) = Self::take_chunk(f, index);
@@ -132,14 +132,14 @@ impl Decoder {
     }
 
     fn decode_start_of_frame(&mut self, f: &[u8]) {
-        self.precision = dbg!(f[0]);
+        self.precision = f[0];
         let height = u16::from_be_bytes([f[1], f[2]]);
         let width = u16::from_be_bytes([f[3], f[4]]);
-        self.size = dbg!((height, width));
-        let components = 3; //dbg!(f[5]) as usize;
+        self.size = (height, width);
+        let components = f[5] as usize;
 
         self.components.clear();
-        for i in 0..dbg!(components) {
+        for i in 0..components {
             let id = f[6 + i * 3];
             let samp = f[7 + i * 3];
             let samp_vert = 0b0000_1111 & samp;
@@ -151,15 +151,15 @@ impl Decoder {
     }
 
     fn decode_start_of_scan(&mut self, f: &[u8]) -> usize {
-        let mut iterator = RemoveFF00::new(f);
-        // let mut res = Vec::new();
-        // self.huffman[&0].decode(&mut iterator, &mut res);
+        let iterator = RemoveFF00::new(f);
+
+        let h = &self.huffman[&0];
+        let mut it = h.decode(iterator);
+        dbg!(it.next());
 
         // dbg!(res[0]);
-        for x in iterator.by_ref() {
-            println!("{:#04x} {}", x, x);
-        }
-        // dbg!(res);
+        let mut iterator = RemoveFF00::new(f);
+        for _ in iterator.by_ref() {}
 
         iterator.len()
     }
@@ -193,8 +193,8 @@ mod tests {
     #[test]
     fn it_works() {
         let mut decoder = Decoder::default();
-        let f = include_bytes!("image.jpg");
-        // let f = include_bytes!("profile.jpg");
+        // let f = include_bytes!("image.jpg");
+        let f = include_bytes!("profile.jpg");
         decoder.load(f);
         decoder.print();
     }
@@ -213,7 +213,7 @@ mod benches {
         // let f = include_bytes!("profile.jpg");
         b.iter(|| {
             for _ in 1..1000 {
-                black_box(decoder.load(f));
+                // black_box(decoder.load(f));
             }
         })
     }

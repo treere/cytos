@@ -40,21 +40,58 @@ impl HuffmanTree {
         (0..counting[last_index - 1]).for_each(|_| self.tree.push(symbol.next().unwrap()));
     }
 
-    pub fn decode(&self, encoded: &mut impl Iterator<Item = u8>, dst: &mut Vec<u8>) {
-        let mut s = 0;
-        for byte in encoded {
-            for i in (0..8).rev() {
-                let b = ((1u8 << i & byte) != 0) as usize;
+    pub fn decode<'a>(
+        &'a self,
+        encoded: impl Iterator<Item = u8> + 'a,
+    ) -> impl Iterator<Item = u8> + 'a {
+        HuffmanDecoder {
+            s: 0,
+            encoded,
+            i: 7,
+            current: None,
+            huffman: &self,
+        }
+    }
+}
 
-                match self.tree.get(s) {
-                    Some(Node::Value(v)) => {
-                        dst.push(*v);
-                        s = 0
-                    }
-                    Some(Node::Split(x)) => s = b + *x as usize,
-                    None => return,
-                }
+struct HuffmanDecoder<'a, T: Iterator<Item = u8>> {
+    s: usize,
+    encoded: T,
+    i: u8,
+    current: Option<u8>,
+    huffman: &'a HuffmanTree,
+}
+
+impl<'a, T: Iterator<Item = u8>> Iterator for HuffmanDecoder<'a, T> {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current.is_none() {
+            self.current = dbg!(self.encoded.next());
+        }
+        if let Some(byte) = self.current {
+            let b = ((1u8 << self.i & byte) != 0) as usize;
+            dbg!(b.clone());
+            if self.i == 0 {
+                self.current = None;
+                self.i = 7;
+            } else {
+                self.i -= 1;
             }
+
+            match self.huffman.tree.get(self.s) {
+                Some(Node::Value(v)) => {
+                    self.s = 0;
+                    Some(*v)
+                }
+                Some(Node::Split(x)) => {
+                    self.s = b + *x as usize;
+                    self.next()
+                }
+                None => None,
+            }
+        } else {
+            None
         }
     }
 }
@@ -63,7 +100,7 @@ impl HuffmanTree {
 mod tests {
     use super::*;
 
-    #[test]
+    // #[test]
     // fn decode_0() {
     //     use Node::*;
     //     let huffman = HuffmanTree {
@@ -73,6 +110,7 @@ mod tests {
     //     huffman.decode(&mut [0b0011_1111u8].iter(), &mut v);
     //     assert_eq!(vec![1], v);
     // }
+
     #[test]
     fn compose_0() {
         let mut tree = HuffmanTree::default();
@@ -89,6 +127,34 @@ mod tests {
         use Node::*;
         let expected = vec![Split(1), Value(1)];
         assert_eq!(expected, tree.tree);
+    }
+
+    #[test]
+    fn compose_5() {
+        let mut tree = HuffmanTree::default();
+        let counting = [0, 2, 2, 3, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let symbol = [5, 6, 3, 4, 2, 7, 8, 1, 0, 9];
+
+        tree.compose(&counting, &symbol);
+
+        let encoding = vec![
+            (0b0011_1111, 5),
+            (0b0111_1111, 6),
+            (0b1001_1111, 3),
+            (0b1011_1111, 4),
+            (0b1100_1111, 2),
+            (0b1101_1111, 7),
+            (0b1110_1111, 8),
+            (0b1111_0111, 1),
+            (0b1111_1011, 0),
+            (0b1111_1101, 9),
+        ];
+
+        for (value, expected) in encoding.into_iter() {
+            let v: Vec<u8> = vec![value];
+            let res: Vec<_> = tree.decode(v.into_iter()).collect();
+            assert_eq!(res, vec![expected]);
+        }
     }
 
     #[test]
