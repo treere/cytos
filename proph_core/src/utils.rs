@@ -87,3 +87,57 @@ mod tests_remove_ff00 {
         assert_eq!(vec![0xa0, 0xff, 0xa3], v);
     }
 }
+
+pub struct BitIterator<T> {
+    current: Option<u8>,
+    encoded: T,
+    i: u8,
+}
+
+impl<T> BitIterator<T> {
+    pub fn new(encoded: T) -> Self {
+        Self {
+            encoded,
+            i: 7,
+            current: None,
+        }
+    }
+}
+
+impl<T: Iterator<Item = u8>> Iterator for BitIterator<T> {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current.is_none() {
+            self.current = self.encoded.next();
+        }
+
+        if let Some(byte) = self.current {
+            let b = (1u8 << self.i & byte) >> self.i;
+
+            if self.i == 0 {
+                self.current = None;
+                self.i = 7;
+            } else {
+                self.i -= 1;
+            }
+            Some(b)
+        } else {
+            None
+        }
+    }
+}
+
+#[cfg(test)]
+mod test_bit_iterator {
+    use super::*;
+    #[test]
+    fn test_name() {
+        let v = vec![0b0000_1111];
+
+        assert_eq!(
+            BitIterator::new(v.into_iter()).collect::<Vec<_>>(),
+            vec![0, 0, 0, 0, 1, 1, 1, 1]
+        );
+    }
+}

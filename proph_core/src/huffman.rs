@@ -1,3 +1,5 @@
+use crate::utils::BitIterator;
+
 #[derive(Debug, PartialEq)]
 pub enum Node {
     Value(u8),
@@ -46,9 +48,7 @@ impl HuffmanTree {
     ) -> impl Iterator<Item = u8> + 'a {
         HuffmanDecoder {
             s: 0,
-            encoded,
-            i: 7,
-            current: None,
+            encoded: BitIterator::new(encoded),
             huffman: &self,
         }
     }
@@ -56,9 +56,7 @@ impl HuffmanTree {
 
 struct HuffmanDecoder<'a, T: Iterator<Item = u8>> {
     s: usize,
-    encoded: T,
-    i: u8,
-    current: Option<u8>,
+    encoded: BitIterator<T>,
     huffman: &'a HuffmanTree,
 }
 
@@ -66,26 +64,14 @@ impl<'a, T: Iterator<Item = u8>> Iterator for HuffmanDecoder<'a, T> {
     type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.current.is_none() {
-            self.current = self.encoded.next();
-        }
-        if let Some(byte) = self.current {
-            let b = ((1u8 << self.i & byte) != 0) as usize;
-
-            if self.i == 0 {
-                self.current = None;
-                self.i = 7;
-            } else {
-                self.i -= 1;
-            }
-
+        if let Some(b) = self.encoded.next() {
             match self.huffman.tree.get(self.s) {
                 Some(Node::Value(v)) => {
                     self.s = 0;
                     Some(*v)
                 }
                 Some(Node::Split(x)) => {
-                    self.s = b + *x as usize;
+                    self.s = b as usize + *x as usize;
                     self.next()
                 }
                 None => None,
