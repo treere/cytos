@@ -131,13 +131,37 @@ impl<T: Iterator<Item = u8>> Iterator for BitIterator<T> {
 #[cfg(test)]
 mod test_bit_iterator {
     use super::*;
+
     #[test]
-    fn test_name() {
+    fn test_using_vec_iter() {
         let v = vec![0b0000_1111];
 
         assert_eq!(
             BitIterator::new(v.into_iter()).collect::<Vec<_>>(),
             vec![0, 0, 0, 0, 1, 1, 1, 1]
         );
+    }
+
+    #[test]
+    fn test_using_vec_iter2() {
+        let v = vec![0b0000_1111, 0b1111_0000];
+
+        assert_eq!(
+            BitIterator::new(v.into_iter()).collect::<Vec<_>>(),
+            vec![0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0]
+        );
+    }
+
+    #[test]
+    fn test_using_iter() {
+        let v = vec![0b0000_1111];
+        let mut v = v.into_iter();
+
+        assert_eq!(
+            BitIterator::new(&mut v).collect::<Vec<_>>(),
+            vec![0, 0, 0, 0, 1, 1, 1, 1]
+        );
+
+        assert_eq!(None, v.next());
     }
 }
