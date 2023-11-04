@@ -86,16 +86,16 @@ impl<'a, T: Iterator<Item = u8>> Iterator for HuffmanDecoder<'a, T> {
 mod tests {
     use super::*;
 
-    // #[test]
-    // fn decode_0() {
-    //     use Node::*;
-    //     let huffman = HuffmanTree {
-    //         tree: vec![Split(1), Split(3), Split(5), Value(1)],
-    //     };
-    //     let mut v = Vec::new();
-    //     huffman.decode(&mut [0b0011_1111u8].iter(), &mut v);
-    //     assert_eq!(vec![1], v);
-    // }
+    #[test]
+    fn decode_0() {
+        use Node::*;
+        let huffman = HuffmanTree {
+            tree: vec![Split(1), Split(3), Split(5), Value(1)],
+        };
+
+        let p: Vec<_> = huffman.decode([0b0011_1111u8].into_iter()).collect();
+        assert_eq!(vec![1], p);
+    }
 
     #[test]
     fn compose_0() {
