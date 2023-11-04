@@ -67,11 +67,11 @@ impl<'a, T: Iterator<Item = u8>> Iterator for HuffmanDecoder<'a, T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.current.is_none() {
-            self.current = dbg!(self.encoded.next());
+            self.current = self.encoded.next();
         }
         if let Some(byte) = self.current {
             let b = ((1u8 << self.i & byte) != 0) as usize;
-            dbg!(b.clone());
+
             if self.i == 0 {
                 self.current = None;
                 self.i = 7;

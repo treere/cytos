@@ -65,7 +65,8 @@ impl Decoder {
                 START_OF_SCAN => {
                     let lenchunk = u16::from_be_bytes([f[index], f[index + 1]]) as usize;
                     let len = self.decode_start_of_scan(&f[index + lenchunk..]);
-                    index = lenchunk + len + 2;
+                    return;
+                    // index = lenchunk + len + 2;-
                 }
                 DEFINE_HUFFMAN_TABLE => {
                     let (chunk, final_index) = Self::take_chunk(f, index);
@@ -92,34 +93,20 @@ impl Decoder {
     }
 
     fn decode_huffman(&mut self, f: &[u8]) {
-        let mut off = 0;
-        let header = f[off];
-        off += 1;
+        let header = f[0];
+        let index = header & 0b0000_1111;
+        let _htype = (header & 0b0001_0000) >> 4;
 
         // # Extract the 16 bytes containing length data
-        let lengths = f.iter().skip(off).take(16).cloned().collect::<Vec<_>>();
-        off += 16;
+        let lengths = &f[1..1 + 16];
 
-        // # Extract the elements after the initial 16 bytes
-        let mut elements: Vec<u8> = Vec::new();
-
-        for i in lengths.iter().cloned() {
-            elements.append(
-                &mut f
-                    .iter()
-                    .skip(off)
-                    .take(i as usize)
-                    .cloned()
-                    .collect::<Vec<_>>(),
-            );
-
-            off += i as usize;
-        }
+        let total = lengths.iter().fold(0, |a, b| a + *b as u32) as usize;
+        let elements = &f[1 + 16..1 + 16 + total];
 
         self.huffman
-            .entry(header)
+            .entry(index)
             .or_default()
-            .compose(&lengths[..], &elements[..]);
+            .compose(lengths, elements);
     }
 
     fn decode_quantization(&mut self, f: &[u8]) {
@@ -153,6 +140,7 @@ impl Decoder {
     fn decode_start_of_scan(&mut self, f: &[u8]) -> usize {
         let iterator = RemoveFF00::new(f);
 
+        // Using 0 but I should read from f
         let h = &self.huffman[&0];
         let mut it = h.decode(iterator);
         dbg!(it.next());
@@ -173,7 +161,7 @@ impl Decoder {
     }
 }
 
-fn marker_name(marker: u16) -> &'static str {
+pub fn marker_name(marker: u16) -> &'static str {
     match marker {
         START_OF_IMAGE => "Start of Image",
         APPLICATION_DEFAULT_HEADER => "Application Default Header",
@@ -191,6 +179,7 @@ mod tests {
     use super::*;
 
     #[test]
+    // #[ignore]
     fn it_works() {
         let mut decoder = Decoder::default();
         // let f = include_bytes!("image.jpg");
@@ -207,13 +196,14 @@ mod benches {
     use test::{black_box, Bencher};
 
     #[bench]
+    #[ignore]
     fn load(b: &mut Bencher) {
         let mut decoder = Decoder::default();
         let f = include_bytes!("image.jpg");
         // let f = include_bytes!("profile.jpg");
         b.iter(|| {
             for _ in 1..1000 {
-                // black_box(decoder.load(f));
+                black_box(decoder.load(f));
             }
         })
     }
