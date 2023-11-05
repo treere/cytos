@@ -121,7 +121,6 @@ impl<T: Iterator<Item = u8>> Iterator for BitIterator<T> {
             } else {
                 self.i -= 1;
             }
-
             Some(b)
         } else {
             None

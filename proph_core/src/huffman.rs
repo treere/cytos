@@ -64,20 +64,20 @@ impl<'a, T: Iterator<Item = u8>> Iterator for HuffmanDecoder<'a, T> {
     type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(b) = self.encoded.next() {
-            match self.huffman.tree.get(self.s) {
-                Some(Node::Value(v)) => {
-                    self.s = 0;
-                    Some(*v)
-                }
-                Some(Node::Split(x)) => {
+        match self.huffman.tree.get(self.s) {
+            Some(Node::Value(v)) => {
+                self.s = 0;
+                Some(*v)
+            }
+            Some(Node::Split(x)) => {
+                if let Some(b) = self.encoded.next() {
                     self.s = b as usize + *x as usize;
                     self.next()
+                } else {
+                    None
                 }
-                None => None,
             }
-        } else {
-            None
+            None => None,
         }
     }
 }

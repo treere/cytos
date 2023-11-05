@@ -150,9 +150,9 @@ impl Decoder {
             h.decode(&mut iterator).next()
         }
         .unwrap();
-        dbg!(code);
+        println!("---");
         for _ in 0..code {
-            dbg!(iterator.next());
+            iterator.next().unwrap();
         }
 
         // dbg!(res[0]);
