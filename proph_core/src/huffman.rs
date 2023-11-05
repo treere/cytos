@@ -42,13 +42,13 @@ impl HuffmanTree {
         (0..counting[last_index - 1]).for_each(|_| self.tree.push(symbol.next().unwrap()));
     }
 
-    pub fn decode<'a>(
+    pub fn decode<'a, T: Iterator<Item = u8> + 'a>(
         &'a self,
-        encoded: impl Iterator<Item = u8> + 'a,
+        encoded: &'a mut BitIterator<T>,
     ) -> impl Iterator<Item = u8> + 'a {
         HuffmanDecoder {
             s: 0,
-            encoded: BitIterator::new(encoded),
+            encoded,
             huffman: &self,
         }
     }
@@ -56,7 +56,7 @@ impl HuffmanTree {
 
 struct HuffmanDecoder<'a, T: Iterator<Item = u8>> {
     s: usize,
-    encoded: BitIterator<T>,
+    encoded: &'a mut BitIterator<T>,
     huffman: &'a HuffmanTree,
 }
 
@@ -92,8 +92,8 @@ mod tests {
         let huffman = HuffmanTree {
             tree: vec![Split(1), Split(3), Split(5), Value(1)],
         };
-
-        let p: Vec<_> = huffman.decode([0b0011_1111u8].into_iter()).collect();
+        let mut b = BitIterator::new([0b0011_1111u8].into_iter());
+        let p: Vec<_> = huffman.decode(&mut b).collect();
         assert_eq!(vec![1], p);
     }
 
@@ -138,7 +138,7 @@ mod tests {
 
         for (value, expected) in encoding.into_iter() {
             let v: Vec<u8> = vec![value];
-            let res: Vec<_> = tree.decode(v.into_iter()).collect();
+            let res: Vec<_> = tree.decode(&mut BitIterator::new(v.into_iter())).collect();
             assert_eq!(res, vec![expected]);
         }
     }

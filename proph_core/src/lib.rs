@@ -11,6 +11,8 @@ pub use huffman::HuffmanTree;
 pub use huffman_old::HuffmanTree as HuffmanTreeOld;
 use utils::RemoveFF00;
 
+use crate::utils::BitIterator;
+
 const START_OF_IMAGE: u16 = 0xffd8;
 const APPLICATION_DEFAULT_HEADER: u16 = 0xffe0;
 const QUANTIZATION_TABLE: u16 = 0xffdb;
@@ -139,11 +141,19 @@ impl Decoder {
 
     fn decode_start_of_scan(&mut self, f: &[u8]) -> usize {
         let iterator = RemoveFF00::new(f);
+        let mut iterator = BitIterator::new(iterator);
 
         // Using 0 but I should read from f
-        let h = &self.huffman[&0];
-        let mut it = h.decode(iterator);
-        dbg!(it.next());
+        let code = {
+            let h = &self.huffman[&0];
+
+            h.decode(&mut iterator).next()
+        }
+        .unwrap();
+        dbg!(code);
+        for _ in 0..code {
+            dbg!(iterator.next());
+        }
 
         // dbg!(res[0]);
         let mut iterator = RemoveFF00::new(f);
