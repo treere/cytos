@@ -150,10 +150,21 @@ impl Decoder {
             h.decode(&mut iterator).next()
         }
         .unwrap();
-        println!("---");
+        println!("CODE {}", code);
+
+        let mut bits = 0i32;
         for _ in 0..code {
-            iterator.next().unwrap();
+            bits = bits * 2 + iterator.next().unwrap() as i32;
         }
+        println!("BITS {}", bits);
+
+        let l = 2_i32.pow(code as u32 - 1);
+        let decoded = if bits as i32 >= l {
+            bits
+        } else {
+            bits - (2 * l - 1)
+        };
+        println!("decoded {}", decoded);
 
         // dbg!(res[0]);
         let mut iterator = RemoveFF00::new(f);
