@@ -96,7 +96,7 @@ impl Decoder {
 
     fn decode_huffman(&mut self, f: &[u8]) {
         let header = f[0];
-        let index = header & 0b0000_1111;
+        let _index = header & 0b0000_1111;
         let _htype = (header & 0b0001_0000) >> 4;
 
         // # Extract the 16 bytes containing length data
@@ -106,7 +106,7 @@ impl Decoder {
         let elements = &f[1 + 16..1 + 16 + total];
 
         self.huffman
-            .entry(index)
+            .entry(header)
             .or_default()
             .compose(lengths, elements);
     }
