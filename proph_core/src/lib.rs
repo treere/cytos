@@ -226,10 +226,11 @@ impl Decoder {
     }
 
     fn decode_start_of_scan(&mut self, f: &[u8]) -> usize {
-        let mut encoded = [0; 64];
         let mut iterator = RemoveFF00::new(f);
 
-        self.decode_matrix(&mut encoded, &mut iterator, 0);
+        let mut encoded = [0; 64];
+        self.decode_encoding(&mut encoded, &mut iterator, 0);
+        self.fix_quantization(&mut encoded, 0);
 
         let mut iterator = RemoveFF00::new(f);
         for _ in iterator.by_ref() {}
@@ -237,7 +238,7 @@ impl Decoder {
         iterator.len()
     }
 
-    fn decode_matrix(
+    fn decode_encoding(
         &mut self,
         encoded: &mut [i32; 64],
         iterator: &mut impl Iterator<Item = u8>,
@@ -265,9 +266,11 @@ impl Decoder {
             encoded[l as usize] = value;
             l += 1;
         }
+    }
 
+    fn fix_quantization(&self, encoded: &mut [i32; 64], index: u8) {
         for i in 0..64 {
-            encoded[i] *= self.quant[index][i] as i32;
+            encoded[i] *= self.quant[&index][i] as i32;
         }
     }
 
