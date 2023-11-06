@@ -21,12 +21,58 @@ const DEFINE_HUFFMAN_TABLE: u16 = 0xffc4;
 const START_OF_SCAN: u16 = 0xffda;
 const END_OF_IMAGE: u16 = 0xffd9;
 
+#[derive(Debug, Default)]
+struct DcDecoder {
+    huffman: HuffmanTree,
+}
+
+impl DcDecoder {
+    pub fn compose(&mut self, counting: &[u8], symbol: &[u8]) {
+        self.huffman.compose(counting, symbol)
+    }
+
+    pub fn decode<'a, T: Iterator<Item = u8> + 'a>(
+        &'a self,
+        iterator: &'a mut BitIterator<T>,
+    ) -> i32 {
+        let code = { self.huffman.decode(iterator).next() }.unwrap();
+        decode_right(code, iterator)
+    }
+}
+
+#[derive(Debug, Default)]
+struct AcDecoder {
+    huffman: HuffmanTree,
+}
+
+impl AcDecoder {
+    pub fn compose(&mut self, counting: &[u8], symbol: &[u8]) {
+        self.huffman.compose(counting, symbol)
+    }
+
+    pub fn decode<'a, T: Iterator<Item = u8> + 'a>(
+        &'a self,
+        iterator: &'a mut BitIterator<T>,
+    ) -> (u8, i32) {
+        let code = { self.huffman.decode(iterator).next() }.unwrap();
+        let zeros = code >> 4;
+
+        let code = code & 0x0F;
+        if code != 0 {
+            (zeros, decode_right(code, iterator))
+        } else {
+            (zeros, 0)
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct Decoder {
     precision: u8,
     size: (u16, u16), // r c
     components: Vec<(u8, u8, u8, u8)>,
-    huffman: HashMap<u8, HuffmanTree>,
+    dc_decoder: HashMap<u8, DcDecoder>,
+    ac_decoder: HashMap<u8, AcDecoder>,
     quant: HashMap<u8, Vec<u8>>,
 }
 
@@ -45,8 +91,13 @@ impl Decoder {
         for (quant, _) in self.quant.iter() {
             println!("   id: {}", quant);
         }
-        println!("-- huffman --");
-        for (huffman, _) in self.huffman.iter() {
+        println!("-- dc decoder --");
+        for (huffman, _) in self.dc_decoder.iter() {
+            println!("   id: {}", huffman);
+        }
+
+        println!("-- ac decoder --");
+        for (huffman, _) in self.ac_decoder.iter() {
             println!("   id: {}", huffman);
         }
     }
@@ -96,8 +147,8 @@ impl Decoder {
 
     fn decode_huffman(&mut self, f: &[u8]) {
         let header = f[0];
-        let _index = header & 0b0000_1111;
-        let _htype = (header & 0b0001_0000) >> 4;
+        let index = header & 0b0000_1111;
+        let htype = (header & 0b0001_0000) >> 4;
 
         // # Extract the 16 bytes containing length data
         let lengths = &f[1..1 + 16];
@@ -105,10 +156,17 @@ impl Decoder {
         let total = lengths.iter().fold(0, |a, b| a + *b as u32) as usize;
         let elements = &f[1 + 16..1 + 16 + total];
 
-        self.huffman
-            .entry(header)
-            .or_default()
-            .compose(lengths, elements);
+        if htype == 0 {
+            self.dc_decoder
+                .entry(index)
+                .or_default()
+                .compose(lengths, elements);
+        } else {
+            self.ac_decoder
+                .entry(index)
+                .or_default()
+                .compose(lengths, elements);
+        }
     }
 
     fn decode_quantization(&mut self, f: &[u8]) {
@@ -140,33 +198,30 @@ impl Decoder {
     }
 
     fn decode_start_of_scan(&mut self, f: &[u8]) -> usize {
+        let mut encoded = [0; 64];
         let iterator = RemoveFF00::new(f);
         let mut iterator = BitIterator::new(iterator);
 
-        // Using 0 but I should read from f
-        let code = {
-            let h = &self.huffman[&0];
+        encoded[0] = self.dc_decoder[&0].decode(&mut iterator);
 
-            h.decode(&mut iterator).next()
+        let mut l = 1;
+        while l < 64 {
+            let (zeros, value) = self.ac_decoder[&0].decode(&mut iterator);
+
+            if (zeros, value) == (0, 0) {
+                break;
+            }
+
+            l += zeros;
+            if l >= 64 {
+                break;
+            }
+
+            encoded[l as usize] = value;
+            l += 1;
         }
-        .unwrap();
-        println!("CODE {}", code);
 
-        let mut bits = 0i32;
-        for _ in 0..code {
-            bits = bits * 2 + iterator.next().unwrap() as i32;
-        }
-        println!("BITS {}", bits);
-
-        let l = 2_i32.pow(code as u32 - 1);
-        let decoded = if bits as i32 >= l {
-            bits
-        } else {
-            bits - (2 * l - 1)
-        };
-        println!("decoded {}", decoded);
-
-        // dbg!(res[0]);
+        dbg!(encoded);
         let mut iterator = RemoveFF00::new(f);
         for _ in iterator.by_ref() {}
 
@@ -180,6 +235,24 @@ impl Decoder {
 
         (chunk, final_index)
     }
+}
+
+fn decode_right(code: u8, iterator: &mut impl Iterator<Item = u8>) -> i32 {
+    let bits = {
+        let mut bits = 0i32;
+        for _ in 0..code {
+            bits = bits * 2 + iterator.next().unwrap() as i32;
+        }
+        bits
+    };
+
+    let l = 2_i32.pow(code as u32 - 1);
+    let decoded = if bits as i32 >= l {
+        bits
+    } else {
+        bits - (2 * l - 1)
+    };
+    decoded
 }
 
 pub fn marker_name(marker: u16) -> &'static str {
