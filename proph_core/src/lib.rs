@@ -84,11 +84,19 @@ fn decode_right(code: u8, iterator: &mut impl Iterator<Item = u8>) -> i32 {
     decoded
 }
 
+#[derive(Default, Debug)]
+struct Component {
+    id: u8,
+    samp_vert: u8,
+    samp_hori: u8,
+    qtbid: u8,
+}
+
 #[derive(Default)]
 pub struct Decoder {
     precision: u8,
     size: (u16, u16), // r c
-    components: Vec<(u8, u8, u8, u8)>,
+    components: Vec<Component>,
     dc_decoder: HashMap<u8, DcDecoder>,
     ac_decoder: HashMap<u8, AcDecoder>,
     quant: HashMap<u8, Vec<u8>>,
@@ -99,11 +107,8 @@ impl Decoder {
         println!("Size: height {} width {}", self.size.0, self.size.1);
         println!("Precision: {}", self.precision);
         println!("Components: {}", self.components.len());
-        for (id, vs, hs, qtbid) in self.components.iter() {
-            println!(
-                "   id: {}, samp_vert: {}, samp_hori: {}, qtbit: {}",
-                id, vs, hs, qtbid
-            )
+        for component in self.components.iter() {
+            println!("{:?}", component)
         }
         println!("-- quantization --");
         for (quant, _) in self.quant.iter() {
@@ -211,7 +216,12 @@ impl Decoder {
             let samp_hori = (0b1111_0000 & samp) >> 4;
             let qtbid = f[8 + i * 3];
 
-            self.components.push((id, samp_vert, samp_hori, qtbid));
+            self.components.push(Component {
+                id,
+                samp_vert,
+                samp_hori,
+                qtbid,
+            });
         }
     }
 
