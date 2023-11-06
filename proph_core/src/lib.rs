@@ -66,6 +66,24 @@ impl AcDecoder {
     }
 }
 
+fn decode_right(code: u8, iterator: &mut impl Iterator<Item = u8>) -> i32 {
+    let bits = {
+        let mut bits = 0i32;
+        for _ in 0..code {
+            bits = bits * 2 + iterator.next().unwrap() as i32;
+        }
+        bits
+    };
+
+    let l = 2_i32.pow(code as u32 - 1);
+    let decoded = if bits as i32 >= l {
+        bits
+    } else {
+        bits - (2 * l - 1)
+    };
+    decoded
+}
+
 #[derive(Default)]
 pub struct Decoder {
     precision: u8,
@@ -199,14 +217,31 @@ impl Decoder {
 
     fn decode_start_of_scan(&mut self, f: &[u8]) -> usize {
         let mut encoded = [0; 64];
-        let iterator = RemoveFF00::new(f);
-        let mut iterator = BitIterator::new(iterator);
+        let mut iterator = RemoveFF00::new(f);
 
-        encoded[0] = self.dc_decoder[&0].decode(&mut iterator);
+        self.decode_matrix(&mut encoded, &mut iterator, 0);
+
+        let mut iterator = RemoveFF00::new(f);
+        for _ in iterator.by_ref() {}
+
+        iterator.len()
+    }
+
+    fn decode_matrix(
+        &mut self,
+        encoded: &mut [i32; 64],
+        iterator: &mut impl Iterator<Item = u8>,
+        index: u8,
+    ) {
+        let iterator = &mut BitIterator::new(iterator);
+
+        let index = &index;
+
+        encoded[0] = self.dc_decoder[index].decode(iterator);
 
         let mut l = 1;
         while l < 64 {
-            let (zeros, value) = self.ac_decoder[&0].decode(&mut iterator);
+            let (zeros, value) = self.ac_decoder[index].decode(iterator);
 
             if (zeros, value) == (0, 0) {
                 break;
@@ -221,11 +256,9 @@ impl Decoder {
             l += 1;
         }
 
-        dbg!(encoded);
-        let mut iterator = RemoveFF00::new(f);
-        for _ in iterator.by_ref() {}
-
-        iterator.len()
+        for i in 0..64 {
+            encoded[i] *= self.quant[index][i] as i32;
+        }
     }
 
     fn take_chunk(f: &[u8], index: usize) -> (&[u8], usize) {
@@ -235,24 +268,6 @@ impl Decoder {
 
         (chunk, final_index)
     }
-}
-
-fn decode_right(code: u8, iterator: &mut impl Iterator<Item = u8>) -> i32 {
-    let bits = {
-        let mut bits = 0i32;
-        for _ in 0..code {
-            bits = bits * 2 + iterator.next().unwrap() as i32;
-        }
-        bits
-    };
-
-    let l = 2_i32.pow(code as u32 - 1);
-    let decoded = if bits as i32 >= l {
-        bits
-    } else {
-        bits - (2 * l - 1)
-    };
-    decoded
 }
 
 pub fn marker_name(marker: u16) -> &'static str {
