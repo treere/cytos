@@ -11,7 +11,7 @@ pub use huffman::HuffmanTree;
 pub use huffman_old::HuffmanTree as HuffmanTreeOld;
 use utils::RemoveFF00;
 
-use crate::utils::BitIterator;
+use crate::utils::{rearrange_from_zig_zag, BitIterator};
 
 const START_OF_IMAGE: u16 = 0xffd8;
 const APPLICATION_DEFAULT_HEADER: u16 = 0xffe0;
@@ -236,7 +236,10 @@ impl Decoder {
             &self.ac_decoder[&0],
         );
         Self::fix_quantization(&mut encoded, &self.quant[&0][..]);
-        dbg!(encoded);
+        let mut zigzag = [0; 64];
+        rearrange_from_zig_zag(&encoded, &mut zigzag);
+        dbg!(zigzag);
+
         let mut iterator = RemoveFF00::new(f);
         for _ in iterator.by_ref() {}
 
