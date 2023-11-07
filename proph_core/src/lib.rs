@@ -229,9 +229,14 @@ impl Decoder {
         let mut iterator = RemoveFF00::new(f);
 
         let mut encoded = [0; 64];
-        self.decode_encoding(&mut encoded, &mut iterator, 0);
-        self.fix_quantization(&mut encoded, 0);
-
+        Self::decode_encoding(
+            &mut encoded,
+            &mut iterator,
+            &self.dc_decoder[&0],
+            &self.ac_decoder[&0],
+        );
+        Self::fix_quantization(&mut encoded, &self.quant[&0][..]);
+        dbg!(encoded);
         let mut iterator = RemoveFF00::new(f);
         for _ in iterator.by_ref() {}
 
@@ -239,20 +244,18 @@ impl Decoder {
     }
 
     fn decode_encoding(
-        &mut self,
         encoded: &mut [i32; 64],
         iterator: &mut impl Iterator<Item = u8>,
-        index: u8,
+        dc_decoder: &DcDecoder,
+        ac_decoder: &AcDecoder,
     ) {
         let iterator = &mut BitIterator::new(iterator);
 
-        let index = &index;
-
-        encoded[0] = self.dc_decoder[index].decode(iterator);
+        encoded[0] = dc_decoder.decode(iterator);
 
         let mut l = 1;
         while l < 64 {
-            let (zeros, value) = self.ac_decoder[index].decode(iterator);
+            let (zeros, value) = ac_decoder.decode(iterator);
 
             if (zeros, value) == (0, 0) {
                 break;
@@ -268,9 +271,9 @@ impl Decoder {
         }
     }
 
-    fn fix_quantization(&self, encoded: &mut [i32; 64], index: u8) {
+    fn fix_quantization(encoded: &mut [i32; 64], quant: &[u8]) {
         for i in 0..64 {
-            encoded[i] *= self.quant[&index][i] as i32;
+            encoded[i] *= quant[i] as i32;
         }
     }
 
