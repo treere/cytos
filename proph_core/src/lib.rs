@@ -3,6 +3,7 @@ extern crate test;
 
 mod huffman;
 mod huffman_old;
+mod idct;
 mod utils;
 
 use std::collections::HashMap;
@@ -11,7 +12,10 @@ pub use huffman::HuffmanTree;
 pub use huffman_old::HuffmanTree as HuffmanTreeOld;
 use utils::RemoveFF00;
 
-use crate::utils::{rearrange_from_zig_zag, BitIterator};
+use crate::{
+    idct::IDCT,
+    utils::{rearrange_from_zig_zag, BitIterator},
+};
 
 const START_OF_IMAGE: u16 = 0xffd8;
 const APPLICATION_DEFAULT_HEADER: u16 = 0xffe0;
@@ -235,10 +239,14 @@ impl Decoder {
             &self.dc_decoder[&0],
             &self.ac_decoder[&0],
         );
+        dbg!(encoded[0]);
         Self::fix_quantization(&mut encoded, &self.quant[&0][..]);
         let mut zigzag = [0; 64];
         rearrange_from_zig_zag(&encoded, &mut zigzag);
-        dbg!(zigzag);
+        let mut result = [0; 64];
+        let idct = IDCT::default();
+        idct.perform_idct(&zigzag, &mut result);
+        dbg!(result);
 
         let mut iterator = RemoveFF00::new(f);
         for _ in iterator.by_ref() {}
