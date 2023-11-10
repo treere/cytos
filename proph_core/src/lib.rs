@@ -230,23 +230,15 @@ impl Decoder {
     }
 
     fn decode_start_of_scan(&mut self, f: &[u8]) -> usize {
-        let mut iterator = RemoveFF00::new(f);
+        let iterator = &mut BitIterator::new(RemoveFF00::new(f));
 
-        let mut encoded = [0; 64];
-        Self::decode_encoding(
-            &mut encoded,
-            &mut iterator,
-            &self.dc_decoder[&0],
-            &self.ac_decoder[&0],
-        );
-        dbg!(encoded[0]);
-        Self::fix_quantization(&mut encoded, &self.quant[&0][..]);
-        let mut zigzag = [0; 64];
-        rearrange_from_zig_zag(&encoded, &mut zigzag);
-        let mut result = [0; 64];
-        let idct = IDCT::default();
-        idct.perform_idct(&zigzag, &mut result);
-        dbg!(result);
+        let mut delta = vec![0; self.components.len()];
+        for Component { id, qtbid, .. } in self.components.iter() {
+            let mut encoded = [0; 64];
+            delta[(id - 1) as usize] =
+                self.build_matrix(iterator, *qtbid, &mut encoded, delta[(id - 1) as usize]);
+            dbg! {encoded};
+        }
 
         let mut iterator = RemoveFF00::new(f);
         for _ in iterator.by_ref() {}
@@ -254,15 +246,40 @@ impl Decoder {
         iterator.len()
     }
 
+    fn build_matrix(
+        &self,
+        iterator: &mut BitIterator<impl Iterator<Item = u8>>,
+        id: u8,
+        encoded: &mut [i32; 64],
+        delta: i32,
+    ) -> i32 {
+        let delta = Self::decode_encoding(
+            encoded,
+            iterator,
+            &self.dc_decoder[&id],
+            &self.ac_decoder[&id],
+            delta,
+        );
+        dbg!(self.quant.len());
+        Self::fix_quantization(encoded, &self.quant[&id][..]);
+        let mut zigzag = [0; 64];
+        rearrange_from_zig_zag(&encoded, &mut zigzag);
+
+        let idct = IDCT::default();
+        idct.perform_idct(&zigzag, encoded);
+        encoded.iter_mut().for_each(|x| *x = *x + 127);
+        delta
+    }
+
     fn decode_encoding(
         encoded: &mut [i32; 64],
-        iterator: &mut impl Iterator<Item = u8>,
+        iterator: &mut BitIterator<impl Iterator<Item = u8>>,
         dc_decoder: &DcDecoder,
         ac_decoder: &AcDecoder,
-    ) {
-        let iterator = &mut BitIterator::new(iterator);
-
-        encoded[0] = dc_decoder.decode(iterator);
+        delta: i32,
+    ) -> i32 {
+        let d = dc_decoder.decode(iterator) + delta;
+        encoded[0] = d;
 
         let mut l = 1;
         while l < 64 {
@@ -280,6 +297,7 @@ impl Decoder {
             encoded[l as usize] = value;
             l += 1;
         }
+        return d;
     }
 
     fn fix_quantization(encoded: &mut [i32; 64], quant: &[u8]) {
