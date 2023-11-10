@@ -79,13 +79,16 @@ fn decode_right(code: u8, iterator: &mut impl Iterator<Item = u8>) -> i32 {
         bits
     };
 
-    let l = 2_i32.pow(code as u32 - 1);
-    let decoded = if bits as i32 >= l {
-        bits
+    if code != 0 {
+        let l = 2_i32.pow(code as u32 - 1);
+        if bits as i32 >= l {
+            bits
+        } else {
+            bits - (2 * l - 1)
+        }
     } else {
-        bits - (2 * l - 1)
-    };
-    decoded
+        bits
+    }
 }
 
 #[derive(Default, Debug)]
@@ -233,13 +236,15 @@ impl Decoder {
         let iterator = &mut BitIterator::new(RemoveFF00::new(f));
 
         let mut delta = vec![0; self.components.len()];
-        for Component { id, qtbid, .. } in self.components.iter() {
-            let mut encoded = [0; 64];
-            delta[(id - 1) as usize] =
-                self.build_matrix(iterator, *qtbid, &mut encoded, delta[(id - 1) as usize]);
-            dbg! {encoded};
+        for _ in 0..self.size.0 / 8 {
+            for _ in 0..self.size.1 / 8 {
+                for Component { id, qtbid, .. } in self.components.iter() {
+                    let mut encoded = [0; 64];
+                    delta[(id - 1) as usize] =
+                        self.build_matrix(iterator, *qtbid, &mut encoded, delta[(id - 1) as usize]);
+                }
+            }
         }
-
         let mut iterator = RemoveFF00::new(f);
         for _ in iterator.by_ref() {}
 
