@@ -97,6 +97,7 @@ struct Component {
     samp_vert: u8,
     samp_hori: u8,
     qtbid: u8,
+    delta: i32,
 }
 
 #[derive(Default)]
@@ -107,6 +108,7 @@ pub struct Decoder {
     dc_decoder: HashMap<u8, DcDecoder>,
     ac_decoder: HashMap<u8, AcDecoder>,
     quant: HashMap<u8, Vec<u8>>,
+    idct: IDCT,
 }
 
 impl Decoder {
@@ -147,7 +149,7 @@ impl Decoder {
 
                 START_OF_SCAN => {
                     let lenchunk = u16::from_be_bytes([f[index], f[index + 1]]) as usize;
-                    let len = self.decode_start_of_scan(&f[index + lenchunk..]);
+                    let _len = self.decode_start_of_scan(&f[index + lenchunk..]);
                     return;
                     // index = lenchunk + len + 2;-
                 }
@@ -228,20 +230,38 @@ impl Decoder {
                 samp_vert,
                 samp_hori,
                 qtbid,
+                delta: 0,
             });
         }
     }
 
     fn decode_start_of_scan(&mut self, f: &[u8]) -> usize {
+        self.components.iter_mut().for_each(|c| c.delta = 0);
         let iterator = &mut BitIterator::new(RemoveFF00::new(f));
 
-        let mut delta = vec![0; self.components.len()];
+        let mut encoded = [0; 64];
+
         for _ in 0..self.size.0 / 8 {
             for _ in 0..self.size.1 / 8 {
-                for Component { id, qtbid, .. } in self.components.iter() {
-                    let mut encoded = [0; 64];
-                    delta[(id - 1) as usize] =
-                        self.build_matrix(iterator, *qtbid, &mut encoded, delta[(id - 1) as usize]);
+                for Component { qtbid, delta, .. } in self.components.iter_mut() {
+                    encoded.fill(0);
+
+                    let d = Self::decode_encoding(
+                        &mut encoded,
+                        iterator,
+                        &self.dc_decoder[&qtbid],
+                        &self.ac_decoder[&qtbid],
+                        *delta,
+                    );
+
+                    Self::fix_quantization(&mut encoded, &self.quant[&qtbid][..]);
+                    let mut zigzag = [0; 64];
+                    rearrange_from_zig_zag(&encoded, &mut zigzag);
+
+                    self.idct.perform_idct(&zigzag, &mut encoded);
+                    encoded.iter_mut().for_each(|x| *x = *x + 128);
+
+                    *delta = d;
                 }
             }
         }
@@ -249,31 +269,6 @@ impl Decoder {
         for _ in iterator.by_ref() {}
 
         iterator.len()
-    }
-
-    fn build_matrix(
-        &self,
-        iterator: &mut BitIterator<impl Iterator<Item = u8>>,
-        id: u8,
-        encoded: &mut [i32; 64],
-        delta: i32,
-    ) -> i32 {
-        let delta = Self::decode_encoding(
-            encoded,
-            iterator,
-            &self.dc_decoder[&id],
-            &self.ac_decoder[&id],
-            delta,
-        );
-        dbg!(self.quant.len());
-        Self::fix_quantization(encoded, &self.quant[&id][..]);
-        let mut zigzag = [0; 64];
-        rearrange_from_zig_zag(&encoded, &mut zigzag);
-
-        let idct = IDCT::default();
-        idct.perform_idct(&zigzag, encoded);
-        encoded.iter_mut().for_each(|x| *x = *x + 127);
-        delta
     }
 
     fn decode_encoding(
@@ -338,7 +333,6 @@ mod tests {
     use super::*;
 
     #[test]
-    // #[ignore]
     fn it_works() {
         let mut decoder = Decoder::default();
         // let f = include_bytes!("image.jpg");
@@ -355,15 +349,33 @@ mod benches {
     use test::{black_box, Bencher};
 
     #[bench]
-    #[ignore]
     fn load(b: &mut Bencher) {
         let mut decoder = Decoder::default();
-        let f = include_bytes!("image.jpg");
-        // let f = include_bytes!("profile.jpg");
+        // let f = include_bytes!("image.jpg");
+        let f = include_bytes!("profile.jpg");
         b.iter(|| {
-            for _ in 1..1000 {
-                black_box(decoder.load(f));
-            }
+            black_box(decoder.load(f));
+        })
+    }
+
+    #[bench]
+    fn load_turbojpeg(b: &mut Bencher) {
+        // let f = include_bytes!("image.jpg");
+        let f = include_bytes!("profile.jpg");
+
+        b.iter(|| {
+            black_box(turbojpeg::decompress_to_yuv(f).unwrap());
+        })
+    }
+
+    #[bench]
+    fn load_zune(b: &mut Bencher) {
+        // let f = include_bytes!("image.jpg");
+        let f = include_bytes!("profile.jpg");
+
+        b.iter(|| {
+            let mut decoder = zune_jpeg::JpegDecoder::new(f);
+            black_box(decoder.decode().unwrap());
         })
     }
 }
