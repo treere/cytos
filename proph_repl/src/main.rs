@@ -7,7 +7,7 @@ use proph::architecture::runner::{Command as RCommand, Response, Runner};
 use proph::loader::{GraphRepr, Registry};
 
 use proph_transformers::{
-    AddValue, GrayScale, ImageDecoder, IncrementalGenerator, Mean, Print, Rscam,
+    AddValue, GrayScale, ImageDecoder, IncrementalGenerator, Mean, Print, Rscam, ZuneImageDecoder,
 };
 use std::collections::HashMap;
 use std::fs::File;
@@ -18,14 +18,15 @@ use std::sync::Mutex;
 
 fn load_registry() -> Registry {
     Registry::default()
-        .add("IncrementalGenerator", IncrementalGenerator::default)
         .add("AddValue", AddValue::default)
-        .add("Rscam", Rscam::default)
         .add("ImageDecoder", ImageDecoder::default)
         .add("ImageGrayScale", GrayScale::default)
         .add("ImageMean", Mean::default)
-        .add("PrintU64", Print::<u64>::default)
+        .add("IncrementalGenerator", IncrementalGenerator::default)
         .add("PrintF64", Print::<f64>::default)
+        .add("PrintU64", Print::<u64>::default)
+        .add("Rscam", Rscam::default)
+        .add("ZuneImageDecoder", ZuneImageDecoder::default)
 }
 
 #[derive(Default)]
@@ -56,6 +57,17 @@ fn list_command(s: Rc<Mutex<Status>>) -> Command<'static> {
             for k in status.graphs.keys() {
                 println!("{}", k);
             }
+            Ok(CommandStatus::Done)
+        }
+    }
+}
+
+fn remove_command(s: Rc<Mutex<Status>>) -> Command<'static> {
+    command! {
+        "Remove a graph",
+        (graph: String) => |graph| {
+            let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
+            status.graphs.remove(&graph);
             Ok(CommandStatus::Done)
         }
     }
@@ -201,6 +213,7 @@ fn main() -> Result<(), &'static str> {
     Repl::builder()
         .add("list_graphs", list_command(status.clone()))
         .add("load_graph", load_command(status.clone()))
+        .add("remove_graph", remove_command(status.clone()))
         .add("start_graph", start_command(status.clone()))
         .add("stop_graph", stop_command(status.clone()))
         .add("status", status_command(status.clone()))
