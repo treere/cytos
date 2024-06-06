@@ -9,7 +9,7 @@ mod source;
 mod transform;
 
 pub use add_one::AddValue;
-pub use decoder::{ImageDecoder, TurboImageDecoder};
+pub use decoder::{ImageDecoder, ZuneImageDecoder};
 pub use incremental::IncrementalGenerator;
 pub use mean::Mean;
 pub use print::Print;
