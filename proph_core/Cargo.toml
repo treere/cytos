@@ -4,5 +4,3 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-turbojpeg = {version = "0.5", features = ["image"]}
-zune-jpeg = "0.3.17"

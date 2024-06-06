@@ -199,10 +199,10 @@ fn main() -> Result<(), &'static str> {
     let status = Rc::new(Mutex::new(Status::default()));
 
     Repl::builder()
-        .add("list", list_command(status.clone()))
-        .add("load", load_command(status.clone()))
-        .add("start", start_command(status.clone()))
-        .add("stop", stop_command(status.clone()))
+        .add("list_graphs", list_command(status.clone()))
+        .add("load_graph", load_command(status.clone()))
+        .add("start_graph", start_command(status.clone()))
+        .add("stop_graph", stop_command(status.clone()))
         .add("status", status_command(status.clone()))
         .add("list_nodes", list_nodes_command(status.clone()))
         .add("list_node_inputs", list_inputs_command(status.clone()))
