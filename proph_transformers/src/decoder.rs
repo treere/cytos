@@ -55,4 +55,3 @@ impl Stepper for ZuneImageDecoder {
         Ok(())
     }
 }
-
