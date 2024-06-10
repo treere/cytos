@@ -15,56 +15,7 @@ pub enum Command {
     Load(String, String, Value),
 }
 
-#[derive(Debug)]
-pub enum Response {
-    Ok,
-    List(Vec<String>),
-    Data(String),
-    Value(Value),
-    Error(&'static str),
-}
-
-impl From<&'static str> for Response {
-    fn from(value: &'static str) -> Self {
-        Response::Data(value.to_string())
-    }
-}
-
-impl From<()> for Response {
-    fn from(_value: ()) -> Self {
-        Response::Ok
-    }
-}
-
-impl From<String> for Response {
-    fn from(value: String) -> Self {
-        Response::Data(value)
-    }
-}
-
-impl From<Vec<String>> for Response {
-    fn from(value: Vec<String>) -> Self {
-        Response::List(value)
-    }
-}
-
-impl<T> From<Result<T, &'static str>> for Response
-where
-    T: Into<Response> + 'static,
-{
-    fn from(value: Result<T, &'static str>) -> Self {
-        match value {
-            Ok(x) => x.into(),
-            Err(x) => Response::Error(x),
-        }
-    }
-}
-
-impl From<Value> for Response {
-    fn from(value: Value) -> Self {
-        Self::Value(value)
-    }
-}
+pub type Response = Result<Value, &'static str>;
 
 struct Message {
     sender: Sender<Response>,
@@ -72,14 +23,14 @@ struct Message {
 }
 
 impl Message {
-    fn set_resp(&mut self, resp: impl Into<Response>) {
-        self.resp = Some(resp.into());
+    fn set_resp(&mut self, resp: Result<impl Into<Value>, &'static str>) {
+        self.resp = Some(resp.map(|v| v.into()));
     }
 }
 
 impl Drop for Message {
     fn drop(&mut self) {
-        let resp = self.resp.take().unwrap_or(Response::Ok);
+        let resp = self.resp.take().unwrap_or(Ok(Value::Null));
         self.sender.send(resp).expect("cannot send");
     }
 }
@@ -97,7 +48,7 @@ impl Runner {
                 while let Ok((command, mut message)) = receiver.recv() {
                     match command {
                         Command::Start => break,
-                        Command::Status => message.set_resp("Idle"),
+                        Command::Status => message.set_resp(Ok("Idle")),
                         _ => {
                             Self::dispatch_command(command, &mut message, &mut graph);
                         }
@@ -109,7 +60,7 @@ impl Runner {
                     while let Ok((command, mut message)) = receiver.try_recv() {
                         match command {
                             Command::Stop => break 'outer,
-                            Command::Status => message.set_resp("Running"),
+                            Command::Status => message.set_resp(Ok("Running")),
                             _ => {
                                 Self::dispatch_command(command, &mut message, &mut graph);
                             }
@@ -132,9 +83,7 @@ impl Runner {
         let (sender, receiver) = channel::<Response>();
 
         let _ = self.sender.send((command, Message { sender, resp: None }));
-        receiver
-            .recv()
-            .unwrap_or(Response::Error("Error unwrapping"))
+        receiver.recv().unwrap_or(Response::Err("Error unwrapping"))
     }
 
     fn dispatch_command(command: Command, message: &mut Message, graph: &mut Graph) {
@@ -142,7 +91,7 @@ impl Runner {
             Command::Start => (),
             Command::Stop => (),
             Command::Status => (),
-            Command::ListNodes => message.set_resp(graph.list_nodes()),
+            Command::ListNodes => message.set_resp(Ok(graph.list_nodes())),
             Command::ListInputs(node) => message.set_resp(graph.list_node_inputs(&node)),
             Command::ListOutputs(node) => message.set_resp(graph.list_node_outputs(&node)),
             Command::Dump(node, param) => message.set_resp(graph.dump((&node, &param))),
