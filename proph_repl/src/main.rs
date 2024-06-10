@@ -34,11 +34,11 @@ struct Status {
     graphs: HashMap<String, Runner>,
 }
 
-fn list_command(s: Rc<Mutex<Status>>) -> Command<'static> {
+fn list_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List graphs",
         () => ||{
-            let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
             for k in status.graphs.keys() {
                 println!("{}", k);
             }
@@ -47,11 +47,11 @@ fn list_command(s: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn remove_command(s: Rc<Mutex<Status>>) -> Command<'static> {
+fn remove_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Remove a graph",
         (graph: String) => |graph| {
-            let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
             status.graphs.remove(&graph);
             Ok(CommandStatus::Done)
         }
@@ -76,11 +76,11 @@ fn load_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     }}
 }
 
-fn start_command(s: Rc<Mutex<Status>>) -> Command<'static> {
+fn start_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Start a graph",
         (graph: String) => |graph| {
-            let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
             if let Some(runner) = status.graphs.get_mut(&graph) {
                 let result = runner.command(RCommand::Start);
                 println!("{:?}", result);
@@ -91,11 +91,11 @@ fn start_command(s: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn stop_command(s: Rc<Mutex<Status>>) -> Command<'static> {
+fn stop_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Step a graph",
         (graph: String) => |graph| {
-            let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
             if let Some(runner) = status.graphs.get_mut(&graph) {
                 let result = runner.command(RCommand::Stop);
                 println!("{:?}", result);
@@ -106,11 +106,11 @@ fn stop_command(s: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn status_command(s: Rc<Mutex<Status>>) -> Command<'static> {
+fn status_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Step a graph",
         (graph: String) => |graph| {
-            let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
             if let Some(runner) = status.graphs.get_mut(&graph) {
                 let result = runner.command(RCommand::Status);
                 println!("{:?}", result);
@@ -121,11 +121,11 @@ fn status_command(s: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn list_nodes_command(s: Rc<Mutex<Status>>) -> Command<'static> {
+fn list_nodes_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List graph nodes",
         (graph: String) => |graph| {
-            let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
             if let Some(runner) = status.graphs.get_mut(&graph) {
                 let result = runner.command(RCommand::ListNodes);
                 println!("{:?}", result);
@@ -136,11 +136,11 @@ fn list_nodes_command(s: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn list_inputs_command(s: Rc<Mutex<Status>>) -> Command<'static> {
+fn list_inputs_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List inputs of a graph node",
         (graph: String, node: String) => |graph, node| {
-            let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
             if let Some(runner) = status.graphs.get_mut(&graph) {
                 let result = runner.command(RCommand::ListInputs(node));
                 println!("{:?}", result);
@@ -151,11 +151,11 @@ fn list_inputs_command(s: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn list_outputs_command(s: Rc<Mutex<Status>>) -> Command<'static> {
+fn list_outputs_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List outputs of a graph node",
         (graph: String, node: String) => |graph, node| {
-            let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
             if let Some(runner) = status.graphs.get_mut(&graph) {
                 let result = runner.command(RCommand::ListOutputs(node));
                 println!("{:?}", result);
@@ -166,11 +166,11 @@ fn list_outputs_command(s: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn dump_node_command(s: Rc<Mutex<Status>>) -> Command<'static> {
+fn dump_node_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Dump a input/output of a graph node",
         (graph: String, node: String, param: String) => |graph, node, param| {
-            let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
             if let Some(runner) = status.graphs.get_mut(&graph) {
                 let result = runner.command(RCommand::Dump(node,param));
                 println!("{:?}", result);
@@ -181,11 +181,11 @@ fn dump_node_command(s: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn load_node_command(s: Rc<Mutex<Status>>) -> Command<'static> {
+fn load_node_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Load to an input/output of a graph node",
         (graph: String, node: String, param: String, value: String) => |graph, node, param, value| {
-            let mut status = s.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
             if let Ok( value) = load_value_from_string(value) {
                 if let Some(runner) = status.graphs.get_mut(&graph) {
                     let result = runner.command(RCommand::Load(node,param, value));
