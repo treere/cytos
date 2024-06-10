@@ -44,8 +44,8 @@ impl<T: 'static + DeserializeOwned> InputProp<T> {
 }
 
 impl<T: 'static + Serialize> InputProp<T> {
-    pub fn dump(&self) -> Result<String> {
-        serde_json::to_string(self.get()).or(Err("cannot dump value"))
+    pub fn dump(&self) -> Result<Value> {
+        serde_json::to_value(self.get()).or(Err("cannot dump value"))
     }
 }
 
@@ -82,8 +82,8 @@ impl<T: 'static> OutputProp<T> {
 }
 
 impl<T: 'static + Serialize> OutputProp<T> {
-    pub fn dump(&self) -> Result<String> {
-        serde_json::to_string(self.get()).or(Err("cannot dump value"))
+    pub fn dump(&self) -> Result<Value> {
+        serde_json::to_value(self.get()).or(Err("cannot dump value"))
     }
 }
 

@@ -45,6 +45,7 @@ impl Printer for Response {
             Response::List(list) => list.iter().for_each(|el| println!("{}", el)),
             Response::Data(data) => println!("{}", data),
             Response::Error(error) => println!("error: {}", error),
+            Response::Value(value) => println!("{}", value),
         }
     }
 }

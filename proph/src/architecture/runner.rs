@@ -20,6 +20,7 @@ pub enum Response {
     Ok,
     List(Vec<String>),
     Data(String),
+    Value(Value),
     Error(&'static str),
 }
 
@@ -56,6 +57,12 @@ where
             Ok(x) => x.into(),
             Err(x) => Response::Error(x),
         }
+    }
+}
+
+impl From<Value> for Response {
+    fn from(value: Value) -> Self {
+        Self::Value(value)
     }
 }
 

@@ -81,7 +81,7 @@ impl Graph {
         Ok(())
     }
 
-    pub fn dump(&self, src: (&NodeId, &ParamId)) -> Result<String> {
+    pub fn dump(&self, src: (&NodeId, &ParamId)) -> Result<Value> {
         self.nodes
             .iter()
             .find(|p| p.id == *src.0)
