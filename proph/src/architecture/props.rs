@@ -2,7 +2,7 @@
 use serde::{de::DeserializeOwned, Serialize};
 use std::{any::Any, cell::UnsafeCell, rc::Rc};
 
-use super::{Done, Result, Value};
+use super::{Result, Value};
 
 /// A property
 pub struct InputProp<T> {
@@ -20,7 +20,7 @@ impl<T: 'static> InputProp<T> {
         unsafe { &*self.val.get() }
     }
 
-    pub fn change_value(&mut self, val: GenericOutputProp) -> Done {
+    pub fn change_value(&mut self, val: GenericOutputProp) -> Result<()> {
         if let Ok(v) = val.prop.downcast::<UnsafeCell<T>>() {
             self.val = v;
             Ok(())
@@ -37,7 +37,7 @@ impl<T: 'static> InputProp<T> {
 }
 
 impl<T: 'static + DeserializeOwned> InputProp<T> {
-    pub fn load(&mut self, val: Value) -> Done {
+    pub fn load(&mut self, val: Value) -> Result<()> {
         self.val = Rc::new(UnsafeCell::new(serde_json::from_value(val).unwrap()));
         Ok(())
     }
@@ -99,7 +99,7 @@ pub struct GenericOutputProp {
 }
 
 impl GenericOutputProp {
-    pub fn try_read<T: 'static>(&self, f: impl Fn(&T)) -> Done {
+    pub fn try_read<T: 'static>(&self, f: impl Fn(&T)) -> Result<()> {
         if let Ok(v) = self.prop.clone().downcast::<UnsafeCell<T>>() {
             f(unsafe { &*v.get() });
             Ok(())
@@ -114,7 +114,7 @@ pub struct GenericInputProp {
 }
 
 impl GenericInputProp {
-    pub fn try_read<T: 'static>(&self, f: impl Fn(&T)) -> Done {
+    pub fn try_read<T: 'static>(&self, f: impl Fn(&T)) -> Result<()> {
         if let Ok(v) = self.prop.clone().downcast::<UnsafeCell<T>>() {
             f(unsafe { &*v.get() });
             Ok(())

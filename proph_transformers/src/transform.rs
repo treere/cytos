@@ -1,4 +1,4 @@
-use proph::architecture::{Done, InputProp, OutputProp, Stepper};
+use proph::architecture::{InputProp, OutputProp, Result, Stepper};
 use proph_derive::TransFn;
 
 use crate::decoder::Image;
@@ -10,7 +10,7 @@ pub struct GrayScale {
 }
 
 impl Stepper for GrayScale {
-    fn step(&mut self) -> Done {
+    fn step(&mut self) -> Result<()> {
         let p = image::imageops::grayscale(&self.input.get().data).into();
         *self.output.set() = Image { data: p };
         Ok(())

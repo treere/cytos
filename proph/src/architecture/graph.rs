@@ -1,4 +1,4 @@
-use super::{Done, NodeId, ParamId, Result, Stepper, Transformer, Value};
+use super::{NodeId, ParamId, Result, Stepper, Transformer, Value};
 
 /// A wrapper around a [`Transformer`] keeping trace of the node id.
 pub struct Processor {
@@ -17,15 +17,15 @@ impl Processor {
 }
 
 impl Stepper for Processor {
-    fn initialize(&mut self) -> Done {
+    fn initialize(&mut self) -> Result<()> {
         self.transformer.initialize()
     }
 
-    fn step(&mut self) -> Done {
+    fn step(&mut self) -> Result<()> {
         self.transformer.step()
     }
 
-    fn terminate(&mut self) -> Done {
+    fn terminate(&mut self) -> Result<()> {
         self.transformer.terminate()
     }
 }
@@ -50,7 +50,7 @@ impl Graph {
     }
 
     /// Connects a output data to an input one.
-    pub fn connect(&mut self, src: (&NodeId, &ParamId), dst: (&NodeId, &ParamId)) -> Done {
+    pub fn connect(&mut self, src: (&NodeId, &ParamId), dst: (&NodeId, &ParamId)) -> Result<()> {
         let output = self
             .nodes
             .iter()
@@ -70,7 +70,7 @@ impl Graph {
         Ok(())
     }
 
-    pub fn load(&mut self, src: (&NodeId, &ParamId), value: Value) -> Done {
+    pub fn load(&mut self, src: (&NodeId, &ParamId), value: Value) -> Result<()> {
         self.nodes
             .iter_mut()
             .find(|p| p.id == *src.0)
@@ -91,7 +91,7 @@ impl Graph {
     }
 
     /// Initialize the nodes
-    pub fn initialize(&mut self) -> Done {
+    pub fn initialize(&mut self) -> Result<()> {
         for node in self.nodes.iter_mut() {
             node.initialize()?;
         }
@@ -99,7 +99,7 @@ impl Graph {
     }
 
     /// Terminate the nodes
-    pub fn terminate(&mut self) -> Done {
+    pub fn terminate(&mut self) -> Result<()> {
         for node in self.nodes.iter_mut() {
             node.terminate()?;
         }
@@ -107,7 +107,7 @@ impl Graph {
     }
 
     /// Compute one step of processing
-    pub fn step(&mut self) -> Done {
+    pub fn step(&mut self) -> Result<()> {
         for node in self.nodes.iter_mut() {
             node.step()?;
         }

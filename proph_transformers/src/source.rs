@@ -1,4 +1,4 @@
-use proph::architecture::{Done, InputProp, OutputProp, Stepper};
+use proph::architecture::{InputProp, OutputProp, Result, Stepper};
 use proph_derive::TransFn;
 use rscam::Camera;
 
@@ -26,7 +26,7 @@ impl Default for Rscam {
 }
 
 impl Stepper for Rscam {
-    fn step(&mut self) -> Done {
+    fn step(&mut self) -> Result<()> {
         if let Some(camera) = self.camera.as_ref() {
             let frame = camera.capture().or(Err("cannot capture"))?;
 
@@ -38,7 +38,7 @@ impl Stepper for Rscam {
         }
     }
 
-    fn initialize(&mut self) -> Done {
+    fn initialize(&mut self) -> Result<()> {
         let mut camera = rscam::new(self.filename.get()).unwrap();
 
         camera
@@ -55,7 +55,7 @@ impl Stepper for Rscam {
         Ok(())
     }
 
-    fn terminate(&mut self) -> Done {
+    fn terminate(&mut self) -> Result<()> {
         if let Some(mut camera) = self.camera.take() {
             camera.stop().map_err(|_| "cannot stop")
         } else {

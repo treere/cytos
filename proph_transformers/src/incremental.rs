@@ -1,4 +1,4 @@
-use proph::architecture::{Done, OutputProp, Stepper};
+use proph::architecture::{OutputProp, Result, Stepper};
 use proph_derive::TransFn;
 
 #[derive(TransFn, Default)]
@@ -7,7 +7,7 @@ pub struct IncrementalGenerator {
 }
 
 impl Stepper for IncrementalGenerator {
-    fn step(&mut self) -> Done {
+    fn step(&mut self) -> Result<()> {
         *self.output.set() += 1;
         Ok(())
     }

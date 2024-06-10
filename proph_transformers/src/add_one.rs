@@ -1,4 +1,4 @@
-use proph::architecture::{Done, InputProp, OutputProp, Stepper};
+use proph::architecture::{InputProp, OutputProp, Result, Stepper};
 use proph_derive::TransFn;
 
 #[derive(TransFn)]
@@ -19,7 +19,7 @@ impl Default for AddValue {
 }
 
 impl Stepper for AddValue {
-    fn step(&mut self) -> Done {
+    fn step(&mut self) -> Result<()> {
         *self.output.set() = *self.input.get() + *self.increment.get();
 
         Ok(())

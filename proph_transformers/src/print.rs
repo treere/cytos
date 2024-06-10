@@ -1,4 +1,4 @@
-use proph::architecture::{Done, InputProp, Stepper};
+use proph::architecture::{InputProp, Result, Stepper};
 use proph_derive::TransFn;
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Display;
@@ -13,7 +13,7 @@ where
 }
 
 impl<T: Display + Default + DeserializeOwned + Serialize + 'static> Stepper for Print<T> {
-    fn step(&mut self) -> Done {
+    fn step(&mut self) -> Result<()> {
         println!("{} = {}", self.name.get(), self.input.get());
         Ok(())
     }

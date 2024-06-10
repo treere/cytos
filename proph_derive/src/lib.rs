@@ -65,7 +65,7 @@ fn create_link(fields: &Fields) -> proc_macro2::TokenStream {
 
     quote! {
         fn link(&mut self, name: &proph::architecture::ParamId, val: proph::architecture::props::GenericOutputProp)
-                -> proph::architecture::Done {
+                -> proph::architecture::Result<()> {
             match name.as_str() {
                 #(#inputs)*
                 _ => Err("missing input link data"),
@@ -92,7 +92,7 @@ fn create_load(fields: &Fields) -> proc_macro2::TokenStream {
                 &mut self,
                 name: &proph::architecture::ParamId,
                 value: proph::architecture::Value,
-            ) -> proph::architecture::Done {
+            ) -> proph::architecture::Result<()> {
                 match name.as_str() {
                     #(#inputs)*
                     _ => Err("parameter not found"),

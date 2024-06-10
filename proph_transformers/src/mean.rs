@@ -1,4 +1,4 @@
-use proph::architecture::{Done, InputProp, OutputProp, Stepper};
+use proph::architecture::{InputProp, OutputProp, Result, Stepper};
 use proph_derive::TransFn;
 
 use crate::decoder::Image;
@@ -10,7 +10,7 @@ pub struct Mean {
 }
 
 impl Stepper for Mean {
-    fn step(&mut self) -> Done {
+    fn step(&mut self) -> Result<()> {
         let img = &self.input.get().data;
         let sum = img.as_bytes().iter().fold(0u64, |a, b| (*b) as u64 + a) as f64;
 

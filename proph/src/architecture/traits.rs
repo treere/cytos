@@ -1,20 +1,20 @@
 use super::{
     props::{GenericInputProp, GenericOutputProp},
-    Done, ParamId, Result, Value,
+    ParamId, Result, Value,
 };
 
 /// Stepper trait
 pub trait Stepper {
     /// Initialize data
-    fn initialize(&mut self) -> Done {
+    fn initialize(&mut self) -> Result<()> {
         Ok(())
     }
 
     /// Do one computation step
-    fn step(&mut self) -> Done;
+    fn step(&mut self) -> Result<()>;
 
     /// Terminate execution
-    fn terminate(&mut self) -> Done {
+    fn terminate(&mut self) -> Result<()> {
         Ok(())
     }
 }
@@ -22,10 +22,10 @@ pub trait Stepper {
 /// Transformer trait
 pub trait Transformer: Stepper {
     /// Set input
-    fn link(&mut self, name: &ParamId, val: GenericOutputProp) -> Done;
+    fn link(&mut self, name: &ParamId, val: GenericOutputProp) -> Result<()>;
 
     /// Load
-    fn load(&mut self, name: &ParamId, val: Value) -> Done;
+    fn load(&mut self, name: &ParamId, val: Value) -> Result<()>;
 
     /// Dump
     fn dump(&self, name: &ParamId) -> Result<Value>;

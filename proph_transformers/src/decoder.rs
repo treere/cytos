@@ -1,5 +1,5 @@
 use image::{DynamicImage, ImageBuffer};
-use proph::architecture::{Done, InputProp, OutputProp, Stepper};
+use proph::architecture::{InputProp, OutputProp, Result, Stepper};
 use proph_derive::TransFn;
 use serde::{Deserialize, Serialize};
 
@@ -18,7 +18,7 @@ pub struct ImageDecoder {
 }
 
 impl Stepper for ImageDecoder {
-    fn step(&mut self) -> Done {
+    fn step(&mut self) -> Result<()> {
         if let Ok(image) = image::load_from_memory(&self.frame.get()[..]) {
             *self.decoded.set() = Image { data: image };
             Ok(())
@@ -36,7 +36,7 @@ pub struct ZuneImageDecoder {
 }
 
 impl Stepper for ZuneImageDecoder {
-    fn step(&mut self) -> Done {
+    fn step(&mut self) -> Result<()> {
         let mut decoder = zune_jpeg::JpegDecoder::new(&self.frame.get()[..]);
 
         decoder.decode_headers().unwrap();

@@ -12,7 +12,6 @@ pub type NodeId = String;
 pub type ParamId = String;
 
 pub type Result<T> = std::result::Result<T, &'static str>;
-pub type Done = Result<()>;
 pub type Value = serde_json::Value;
 
 pub fn load_value_from_string(s: String) -> Result<Value> {
