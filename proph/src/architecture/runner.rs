@@ -1,7 +1,7 @@
 use crate::loader::GraphRepr;
 
 use super::graph::Graph;
-use super::Value;
+use super::{Result, Value};
 
 use std::sync::mpsc::{channel, Sender};
 use std::thread::{self, JoinHandle};
@@ -17,7 +17,7 @@ pub enum Command {
     Load(String, String, Value),
 }
 
-pub type Response = Result<Value, &'static str>;
+pub type Response = Result<Value>;
 
 struct Message {
     sender: Sender<Response>,
@@ -25,7 +25,7 @@ struct Message {
 }
 
 impl Message {
-    fn set_resp(&mut self, resp: Result<impl Into<Value>, &'static str>) {
+    fn set_resp(&mut self, resp: Result<impl Into<Value>>) {
         self.resp = Some(resp.map(|v| v.into()));
     }
 }
@@ -89,8 +89,10 @@ impl Runner {
     pub fn command(&mut self, command: Command) -> Response {
         let (sender, receiver) = channel::<Response>();
 
-        let _ = self.sender.send((command, Message { sender, resp: None }));
-        receiver.recv().unwrap_or(Response::Err("Error unwrapping"))
+        match self.sender.send((command, Message { sender, resp: None })) {
+            Ok(()) => receiver.recv().unwrap_or(Response::Err("Error unwrapping")),
+            Err(_) => Response::Err("Cannot send"),
+        }
     }
 
     fn dispatch_command(command: Command, message: &mut Message, graph: &mut Graph) {
