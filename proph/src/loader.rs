@@ -17,7 +17,7 @@ pub struct GraphRepr {
 }
 
 impl GraphRepr {
-    pub fn new(file: &str) -> Result<Self> {
+    pub fn from_json(file: &str) -> Result<Self> {
         serde_json::from_str(file).or(Err("cannot load file"))
     }
 

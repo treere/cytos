@@ -67,7 +67,7 @@ fn load_command(status: Rc<Mutex<Status>>) -> Command<'static> {
         File::open(filename)?.read_to_string(&mut configuration)?;
 
         let loader = load_registry();
-        let repr = GraphRepr::new(&configuration).map_err(|x| anyhow!(x))?;
+        let repr = GraphRepr::from_json(&configuration).map_err(|x| anyhow!(x))?;
         let mut runner = Runner::new(repr,loader);
 
         let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
