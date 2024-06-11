@@ -38,7 +38,8 @@ impl<T: 'static> InputProp<T> {
 
 impl<T: 'static + DeserializeOwned> InputProp<T> {
     pub fn load(&mut self, val: Value) -> Result<()> {
-        self.val = Rc::new(UnsafeCell::new(serde_json::from_value(val).unwrap()));
+        let value = serde_json::from_value(val).or(Err("cannot load value"))?;
+        self.val = Rc::new(UnsafeCell::new(value));
         Ok(())
     }
 }
