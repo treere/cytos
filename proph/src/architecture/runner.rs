@@ -1,3 +1,5 @@
+use crate::loader::GraphRepr;
+
 use super::graph::Graph;
 use super::Value;
 
@@ -41,35 +43,40 @@ pub struct Runner {
 }
 
 impl Runner {
-    pub fn new(mut graph: Graph) -> Self {
+    pub fn new(repr: GraphRepr, reg: crate::loader::Registry) -> Self {
         let (sender, receiver) = channel::<(Command, Message)>();
         Self {
-            thread: thread::spawn(move || loop {
-                while let Ok((command, mut message)) = receiver.recv() {
-                    match command {
-                        Command::Start => break,
-                        Command::Status => message.set_resp(Ok("Idle")),
-                        _ => {
-                            Self::dispatch_command(command, &mut message, &mut graph);
-                        }
-                    }
-                }
-
-                graph.initialize().expect("cannot initialize");
-                'outer: loop {
-                    while let Ok((command, mut message)) = receiver.try_recv() {
-                        match command {
-                            Command::Stop => break 'outer,
-                            Command::Status => message.set_resp(Ok("Running")),
-                            _ => {
-                                Self::dispatch_command(command, &mut message, &mut graph);
+            thread: thread::spawn(move || {
+                let mut graph = repr.build(&reg).expect("Cannot build graph");
+                {
+                    loop {
+                        while let Ok((command, mut message)) = receiver.recv() {
+                            match command {
+                                Command::Start => break,
+                                Command::Status => message.set_resp(Ok("Idle")),
+                                _ => {
+                                    Self::dispatch_command(command, &mut message, &mut graph);
+                                }
                             }
                         }
-                    }
 
-                    graph.step().expect("cannot step")
+                        graph.initialize().expect("cannot initialize");
+                        'outer: loop {
+                            while let Ok((command, mut message)) = receiver.try_recv() {
+                                match command {
+                                    Command::Stop => break 'outer,
+                                    Command::Status => message.set_resp(Ok("Running")),
+                                    _ => {
+                                        Self::dispatch_command(command, &mut message, &mut graph);
+                                    }
+                                }
+                            }
+
+                            graph.step().expect("cannot step")
+                        }
+                        graph.terminate().expect("cannot terminate");
+                    }
                 }
-                graph.terminate().expect("cannot terminate");
             }),
             sender,
         }

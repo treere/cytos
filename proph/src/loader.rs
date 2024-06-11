@@ -17,11 +17,13 @@ pub struct GraphRepr {
 }
 
 impl GraphRepr {
-    pub fn load(file: &str, loader: &Registry) -> Result<Graph> {
-        let repr: Self = serde_json::from_str(file).or(Err("cannot load file"))?;
+    pub fn new(file: &str) -> Result<Self> {
+        serde_json::from_str(file).or(Err("cannot load file"))
+    }
 
+    pub fn build(self, loader: &Registry) -> Result<Graph> {
         let mut graph = Graph::default();
-        for node in repr.nodes.into_iter() {
+        for node in self.nodes.into_iter() {
             let processor = loader.load(node.name.as_str(), node.typ.as_str())?;
             graph = graph.insert(processor)?;
 
@@ -33,7 +35,7 @@ impl GraphRepr {
         for Link {
             src: (s0, s1),
             dst: (d0, d1),
-        } in repr.links.into_iter()
+        } in self.links.into_iter()
         {
             graph.connect((&s0, &s1), (&d0, &d1))?;
         }
@@ -65,11 +67,13 @@ struct Link {
     dst: (String, String),
 }
 
+type Factory = Box<dyn Fn() -> Box<dyn Transformer> + Send>;
+
 /// Registry of transformers
 #[derive(Default)]
 pub struct Registry {
     /// Factories
-    factories: HashMap<String, Box<dyn Fn() -> Box<dyn Transformer>>>,
+    factories: HashMap<String, Factory>,
 }
 
 impl Registry {
@@ -77,7 +81,7 @@ impl Registry {
     pub fn add<K: Transformer + 'static>(
         mut self,
         name: impl AsRef<str>,
-        factory: impl (Fn() -> K) + 'static,
+        factory: impl (Fn() -> K) + 'static + Send,
     ) -> Self {
         self.factories
             .entry(name.as_ref().to_owned())
@@ -86,7 +90,7 @@ impl Registry {
     }
 
     /// Load a Processor
-    fn load(&self, name: &str, typ: &str) -> Result<Processor> {
+    pub fn load(&self, name: &str, typ: &str) -> Result<Processor> {
         let factory = self.factories.get(typ).ok_or("missing type")?;
         Ok(Processor::new(name.to_owned(), factory()))
     }

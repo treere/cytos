@@ -138,5 +138,3 @@ impl Graph {
             .ok_or("missing node")
     }
 }
-
-unsafe impl Send for Graph {}
