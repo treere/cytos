@@ -17,7 +17,17 @@ pub enum Command {
     Load(String, String, Value),
 }
 
-pub type Response = Result<Value>;
+pub enum Response {
+    Data(Result<Value>),
+}
+
+impl std::fmt::Debug for Response {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Response::Data(data) => write!(f, "{:?}", data),
+        }
+    }
+}
 
 struct Message {
     sender: Sender<Response>,
@@ -26,13 +36,13 @@ struct Message {
 
 impl Message {
     fn set_resp(&mut self, resp: Result<impl Into<Value>>) {
-        self.resp = Some(resp.map(|v| v.into()));
+        self.resp = Some(Response::Data(resp.map(|v| v.into())));
     }
 }
 
 impl Drop for Message {
     fn drop(&mut self) {
-        let resp = self.resp.take().unwrap_or(Ok(Value::Null));
+        let resp = self.resp.take().unwrap_or(Response::Data(Ok(Value::Null)));
         self.sender.send(resp).expect("cannot send");
     }
 }
@@ -90,8 +100,10 @@ impl Runner {
         let (sender, receiver) = channel::<Response>();
 
         match self.sender.send((command, Message { sender, resp: None })) {
-            Ok(()) => receiver.recv().unwrap_or(Response::Err("Error unwrapping")),
-            Err(_) => Response::Err("Cannot send"),
+            Ok(()) => receiver
+                .recv()
+                .unwrap_or(Response::Data(Err("Error unwrapping"))),
+            Err(_) => Response::Data(Err("Cannot send")),
         }
     }
 
