@@ -3,7 +3,7 @@ use anyhow::anyhow;
 use easy_repl::{command, Command, CommandStatus, Repl};
 
 use proph::architecture::load_value_from_string;
-use proph::architecture::runner::{Command as RCommand, Runner};
+use proph::architecture::runner::{Command as RCommand, Response, Runner};
 use proph::loader::{GraphRepr, Registry};
 
 use proph_transformers::{
@@ -32,6 +32,7 @@ fn load_registry() -> Registry {
 #[derive(Default)]
 struct Status {
     graphs: HashMap<String, Runner>,
+    listeners: Vec<Box<dyn Fn() -> ()>>,
 }
 
 fn list_command(status: Rc<Mutex<Status>>) -> Command<'static> {
@@ -201,6 +202,28 @@ fn load_node_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
+fn listen_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+    command! {
+        "Listen to some nodes",
+        (graph: String) => |graph| {
+            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
+            if let Some(runner) = status.graphs.get_mut(&graph) {
+                if let Response::Receiver(result) = runner.command(RCommand::Listener) {
+                    if let Response::Receiver( r) = result.recv().unwrap() {
+                    status.listeners.push(Box::new( move || {
+                        loop {
+                            let r = r.recv().unwrap();
+                            println!("{:?}", r);
+                        }
+                    }))
+                    }
+                }
+            }
+            Ok(CommandStatus::Done)
+        }
+    }
+}
+
 fn main() -> Result<(), &'static str> {
     let status = Rc::new(Mutex::new(Status::default()));
 
@@ -216,6 +239,7 @@ fn main() -> Result<(), &'static str> {
         .add("list_node_outputs", list_outputs_command(status.clone()))
         .add("dump_node_param", dump_node_command(status.clone()))
         .add("load_node_param", load_node_command(status.clone()))
+        .add("listen", listen_command(status.clone()))
         .build()
         .or(Err("Failed to create repl"))
         .and_then(|mut repl| repl.run().or(Err("Critical REPL error")))
