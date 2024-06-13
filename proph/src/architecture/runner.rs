@@ -15,7 +15,7 @@ pub enum Command {
     ListOutputs(String),
     Dump(String, String),
     Load(String, String, Value),
-    Listener,
+    Listener(Vec<(String, String)>),
 }
 
 pub enum Response {
@@ -26,8 +26,9 @@ pub enum Response {
 impl std::fmt::Debug for Response {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Response::Data(data) => write!(f, "{:?}", data),
-            Response::Receiver(_) => write!(f, "Receiver"),
+            Response::Data(Ok(data)) => write!(f, "*  {:?}", serde_json::to_string_pretty(data)),
+            Response::Data(Err(reason)) => write!(f, "!: {:?}", reason),
+            Response::Receiver(_) => write!(f, "   receiver"),
         }
     }
 }
@@ -56,12 +57,13 @@ impl Drop for Message {
 
 struct Listener {
     sender: Sender<Response>,
+    nodes: Vec<(String, String)>,
 }
 
 impl Listener {
-    fn send(&self) -> Result<()> {
+    fn send(&self, data: Result<impl Into<Value>>) -> Result<()> {
         self.sender
-            .send(Response::Data(Ok(Value::Null)))
+            .send(Response::Data(data.map(|v| v.into())))
             .map_err(|_| "cannot send")
     }
 }
@@ -85,10 +87,10 @@ impl Runner {
                                 match command {
                                     Command::Start => break,
                                     Command::Status => message.set_resp(Ok("Idle")),
-                                    Command::Listener => {
+                                    Command::Listener(nodes) => {
                                         let (s, r) = channel::<Response>();
                                         message.set_listener(r);
-                                        listeners.push(Listener { sender: s })
+                                        listeners.push(Listener { sender: s, nodes })
                                     }
                                     _ => {
                                         Self::dispatch_command(command, &mut message, &mut graph);
@@ -102,10 +104,10 @@ impl Runner {
                                     match command {
                                         Command::Stop => break 'outer,
                                         Command::Status => message.set_resp(Ok("Running")),
-                                        Command::Listener => {
+                                        Command::Listener(nodes) => {
                                             let (s, r) = channel::<Response>();
                                             message.set_listener(r);
-                                            listeners.push(Listener { sender: s })
+                                            listeners.push(Listener { sender: s, nodes })
                                         }
 
                                         _ => {
@@ -120,7 +122,9 @@ impl Runner {
 
                                 graph.step().expect("cannot step");
                                 for l in &listeners {
-                                    l.send().expect("cannot sent to listener");
+                                    let data: Result<Vec<_>> =
+                                        l.nodes.iter().map(|(n, p)| graph.dump((&n, &p))).collect();
+                                    l.send(data).expect("cannot sent to listener");
                                 }
                             }
                             graph.terminate().expect("cannot terminate");
@@ -152,7 +156,7 @@ impl Runner {
             Command::Start => (),
             Command::Stop => (),
             Command::Status => (),
-            Command::Listener => (),
+            Command::Listener(_) => (),
             Command::ListNodes => message.set_resp(Ok(graph.list_nodes())),
             Command::ListInputs(node) => message.set_resp(graph.list_node_inputs(&node)),
             Command::ListOutputs(node) => message.set_resp(graph.list_node_outputs(&node)),

@@ -206,10 +206,22 @@ fn load_node_command(status: Rc<Mutex<Status>>) -> Command<'static> {
 fn listen_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Listen to some nodes",
-        (graph: String) => |graph| {
+        (graph: String, nodes: String) => |graph, nodes: String| {
             let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let nodes : Result<Vec<_>, &'static str>= nodes
+            .split("|")
+            .map(|g| {
+                let p = g.split(":").collect::<Vec<_>>();
+                if p.len() != 2 {
+                    Err("Malformed str")
+                }
+                else {
+                    Ok((p[0].to_owned(),p[1].to_owned()))
+                }
+            }).collect();
+            let nodes = nodes.unwrap();
             if let Some(runner) = status.graphs.get_mut(&graph) {
-                if let Response::Receiver(result) = runner.command(RCommand::Listener) {
+                if let Response::Receiver(result) = runner.command(RCommand::Listener(nodes)) {
                     status.listeners.push(thread::spawn( move || {
                         loop {
                             let r = result.recv().expect("Cannot receive");
