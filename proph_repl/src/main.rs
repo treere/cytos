@@ -15,6 +15,7 @@ use std::io::Read;
 
 use std::rc::Rc;
 use std::sync::Mutex;
+use std::thread::{self, JoinHandle};
 
 fn load_registry() -> Registry {
     Registry::default()
@@ -32,7 +33,7 @@ fn load_registry() -> Registry {
 #[derive(Default)]
 struct Status {
     graphs: HashMap<String, Runner>,
-    listeners: Vec<Box<dyn Fn() -> ()>>,
+    listeners: Vec<JoinHandle<()>>,
 }
 
 fn list_command(status: Rc<Mutex<Status>>) -> Command<'static> {
@@ -209,14 +210,12 @@ fn listen_command(status: Rc<Mutex<Status>>) -> Command<'static> {
             let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
             if let Some(runner) = status.graphs.get_mut(&graph) {
                 if let Response::Receiver(result) = runner.command(RCommand::Listener) {
-                    if let Response::Receiver( r) = result.recv().unwrap() {
-                    status.listeners.push(Box::new( move || {
+                    status.listeners.push(thread::spawn( move || {
                         loop {
-                            let r = r.recv().unwrap();
+                            let r = result.recv().expect("Cannot receive");
                             println!("{:?}", r);
                         }
                     }))
-                    }
                 }
             }
             Ok(CommandStatus::Done)
