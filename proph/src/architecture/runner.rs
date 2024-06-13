@@ -123,7 +123,7 @@ impl Runner {
                                 graph.step().expect("cannot step");
                                 for l in &listeners {
                                     let data: Result<Vec<_>> =
-                                        l.nodes.iter().map(|(n, p)| graph.dump((&n, &p))).collect();
+                                        l.nodes.iter().map(|(n, p)| graph.dump((n, p))).collect();
                                     l.send(data).expect("cannot sent to listener");
                                 }
                             }
