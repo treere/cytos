@@ -4,6 +4,20 @@ use std::{any::Any, cell::UnsafeCell, rc::Rc};
 
 use super::{Result, Value};
 
+pub trait Dump {
+    fn dump(&self) -> Result<Value>;
+}
+
+pub struct Dumper {
+    prop: Box<dyn Dump>,
+}
+
+impl Dumper {
+    pub fn dump(&self) -> Result<Value> {
+        self.prop.dump()
+    }
+}
+
 /// A property
 pub struct InputProp<T> {
     val: Rc<UnsafeCell<T>>,
@@ -44,9 +58,23 @@ impl<T: 'static + DeserializeOwned> InputProp<T> {
     }
 }
 
+impl<T: 'static + Serialize> Dump for InputProp<T> {
+    fn dump(&self) -> Result<Value> {
+        serde_json::to_value(self.get()).or(Err("cannot dump value"))
+    }
+}
+
 impl<T: 'static + Serialize> InputProp<T> {
     pub fn dump(&self) -> Result<Value> {
         serde_json::to_value(self.get()).or(Err("cannot dump value"))
+    }
+
+    pub fn as_dumper(&self) -> Dumper {
+        Dumper {
+            prop: Box::new(Self {
+                val: self.val.clone(),
+            }),
+        }
     }
 }
 
@@ -82,9 +110,23 @@ impl<T: 'static> OutputProp<T> {
     }
 }
 
+impl<T: 'static + Serialize> Dump for OutputProp<T> {
+    fn dump(&self) -> Result<Value> {
+        serde_json::to_value(self.get()).or(Err("cannot dump value"))
+    }
+}
+
 impl<T: 'static + Serialize> OutputProp<T> {
     pub fn dump(&self) -> Result<Value> {
         serde_json::to_value(self.get()).or(Err("cannot dump value"))
+    }
+
+    pub fn as_dumper(&self) -> Dumper {
+        Dumper {
+            prop: Box::new(Self {
+                val: self.val.clone(),
+            }),
+        }
     }
 }
 

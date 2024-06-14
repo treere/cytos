@@ -1,7 +1,7 @@
 use crate::loader::GraphRepr;
 
 use super::graph::Graph;
-use super::{Result, Value};
+use super::{Dumper, Result, Value};
 
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::{self, JoinHandle};
@@ -57,7 +57,7 @@ impl Drop for Message {
 
 struct Listener {
     sender: Sender<Response>,
-    nodes: Vec<(String, String)>,
+    dumpers: Vec<Dumper>,
 }
 
 impl Listener {
@@ -90,7 +90,12 @@ impl Runner {
                                     Command::Listener(nodes) => {
                                         let (s, r) = channel::<Response>();
                                         message.set_listener(r);
-                                        listeners.push(Listener { sender: s, nodes })
+
+                                        let dumpers = nodes
+                                            .iter()
+                                            .map(|(n, p)| graph.dump((n, p)).unwrap())
+                                            .collect();
+                                        listeners.push(Listener { sender: s, dumpers })
                                     }
                                     _ => {
                                         Self::dispatch_command(command, &mut message, &mut graph);
@@ -107,7 +112,12 @@ impl Runner {
                                         Command::Listener(nodes) => {
                                             let (s, r) = channel::<Response>();
                                             message.set_listener(r);
-                                            listeners.push(Listener { sender: s, nodes })
+
+                                            let dumpers = nodes
+                                                .iter()
+                                                .map(|(n, p)| graph.dump((n, p)).unwrap())
+                                                .collect();
+                                            listeners.push(Listener { sender: s, dumpers })
                                         }
 
                                         _ => {
@@ -123,7 +133,7 @@ impl Runner {
                                 graph.step().expect("cannot step");
                                 for l in &listeners {
                                     let data: Result<Vec<_>> =
-                                        l.nodes.iter().map(|(n, p)| graph.dump((n, p))).collect();
+                                        l.dumpers.iter().map(|x| x.dump()).collect();
                                     l.send(data).expect("cannot sent to listener");
                                 }
                             }
@@ -160,7 +170,9 @@ impl Runner {
             Command::ListNodes => message.set_resp(Ok(graph.list_nodes())),
             Command::ListInputs(node) => message.set_resp(graph.list_node_inputs(&node)),
             Command::ListOutputs(node) => message.set_resp(graph.list_node_outputs(&node)),
-            Command::Dump(node, param) => message.set_resp(graph.dump((&node, &param))),
+            Command::Dump(node, param) => {
+                message.set_resp(graph.dump((&node, &param)).and_then(|x| x.dump()))
+            }
             Command::Load(node, param, value) => {
                 message.set_resp(graph.load((&node, &param), value))
             }

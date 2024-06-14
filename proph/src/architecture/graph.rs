@@ -1,4 +1,4 @@
-use super::{NodeId, ParamId, Result, Stepper, Transformer, Value};
+use super::{Dumper, NodeId, ParamId, Result, Stepper, Transformer, Value};
 
 /// A wrapper around a [`Transformer`] keeping trace of the node id.
 pub struct Processor {
@@ -81,7 +81,7 @@ impl Graph {
         Ok(())
     }
 
-    pub fn dump(&self, src: (&NodeId, &ParamId)) -> Result<Value> {
+    pub fn dump(&self, src: (&NodeId, &ParamId)) -> Result<Dumper> {
         self.nodes
             .iter()
             .find(|p| p.id == *src.0)

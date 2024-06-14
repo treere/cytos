@@ -112,7 +112,7 @@ fn create_dump(fields: &Fields) -> proc_macro2::TokenStream {
                 &format!("{}", field.ident.clone().expect("missing ident")),
                 Span::call_site(),
             );
-            quote! {#f => self.#i.dump(),}
+            quote! {#f => Ok(self.#i.as_dumper()),}
         })
         .collect::<Vec<_>>();
 
@@ -121,7 +121,7 @@ fn create_dump(fields: &Fields) -> proc_macro2::TokenStream {
             fn dump(
                 & self,
                 name: &proph::architecture::ParamId
-            ) -> proph::architecture::Result<proph::architecture::Value> {
+            ) -> proph::architecture::Result<proph::architecture::Dumper> {
                 match name.as_str() {
                     #(#inputs)*
                     _ => Err("parameter not found"),

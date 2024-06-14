@@ -5,7 +5,7 @@ pub mod props;
 pub mod runner;
 mod traits;
 
-pub use self::props::{InputProp, OutputProp};
+pub use self::props::{Dumper, InputProp, OutputProp};
 pub use self::traits::{Stepper, Transformer};
 
 pub type NodeId = String;
