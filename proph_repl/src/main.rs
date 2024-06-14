@@ -41,9 +41,8 @@ fn list_command(status: Rc<Mutex<Status>>) -> Command<'static> {
         "List graphs",
         () => ||{
             let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
-            for k in status.graphs.keys() {
-                println!("{}", k);
-            }
+            let names :Vec<_>= status.graphs.keys().collect();
+            println!("{:?}", names);
             Ok(CommandStatus::Done)
         }
     }
@@ -54,8 +53,13 @@ fn remove_command(status: Rc<Mutex<Status>>) -> Command<'static> {
         "Remove a graph",
         (graph: String) => |graph| {
             let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
-            status.graphs.remove(&graph);
-            Ok(CommandStatus::Done)
+            match status.graphs.remove(&graph) {
+                Some(_) => {
+                    println!("removed!");
+                    Ok(CommandStatus::Done)
+                }
+                None => Err(anyhow!("not found")),
+            }
         }
     }
 }
@@ -74,6 +78,7 @@ fn load_command(status: Rc<Mutex<Status>>) -> Command<'static> {
 
         let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
         status.graphs.insert(graph, runner);
+        println!("loaded!");
 
         Ok(CommandStatus::Done)
     }}
