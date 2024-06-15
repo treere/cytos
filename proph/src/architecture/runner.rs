@@ -113,7 +113,6 @@ impl Runner {
                                 match command {
                                     Command::Kill => break 'main,
                                     Command::Stop => {
-                                        println!("STOP RECEIVED");
                                         break 'outer;
                                     }
                                     Command::Status => message.set_resp(Ok("Running")),
@@ -141,9 +140,7 @@ impl Runner {
                                 l.send(data).expect("cannot sent to listener");
                             }
                         }
-                        println!("TERMINATING");
                         graph.terminate().expect("cannot terminate");
-                        println!("DONE");
                     }
                 };
             })),

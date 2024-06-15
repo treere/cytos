@@ -238,7 +238,6 @@ fn listener_list(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-
 fn listener_add(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Listen some nodes",
