@@ -2,11 +2,10 @@ use anyhow::anyhow;
 
 use easy_repl::{command, Command, CommandStatus, Repl};
 
-use proph::architecture::load_value_from_string;
 use proph::architecture::runner::{Command as RCommand, Response, Runner};
 use proph::loader::{GraphRepr, Registry};
 
-use proph::utils::{string_to_nodeid, string_to_paramid};
+use proph::utils::{load_value_from_string, string_to_nodeid, string_to_paramid};
 use proph_transformers::{
     AddValue, GrayScale, ImageDecoder, IncrementalGenerator, Mean, Print, Rscam, ZuneImageDecoder,
 };
