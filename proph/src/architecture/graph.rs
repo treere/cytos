@@ -117,7 +117,7 @@ impl Graph {
 
     /// List nodes
     pub fn list_nodes(&self) -> Vec<NodeId> {
-        self.nodes.iter().map(|x| x.id.clone()).collect()
+        self.nodes.iter().map(|x| x.id).collect()
     }
 
     /// List node inputs

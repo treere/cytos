@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use proc_macro2::{Ident,Span};
+use proc_macro2::{Ident, Span};
 use quote::quote;
 use syn::{
     parse_macro_input, Data, DataStruct, DeriveInput, Field, Fields, LitInt, Type, TypePath,
@@ -50,7 +50,6 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
     }
     .into()
 }
-
 
 fn create_link(fields: &Fields) -> proc_macro2::TokenStream {
     let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
@@ -147,7 +146,7 @@ fn create_input(fields: &Fields) -> proc_macro2::TokenStream {
 fn create_input_names(fields: &Fields) -> proc_macro2::TokenStream {
     let input_names = filter_fields_by_type(fields, INPUT_PROP_TYPE)
         .map(|field| {
-let f =            ident_to_lit(&field.ident);
+            let f = ident_to_lit(&field.ident);
             quote!(#f)
         })
         .collect::<Vec<_>>();
@@ -184,7 +183,7 @@ fn create_output(fields: &Fields) -> proc_macro2::TokenStream {
 fn create_output_names(fields: &Fields) -> proc_macro2::TokenStream {
     let output_names = filter_fields_by_type(fields, OUTPUT_PROP_TYPE)
         .map(|field| {
-            let f =            ident_to_lit(&field.ident);
+            let f = ident_to_lit(&field.ident);
             quote!(#f)
         })
         .collect::<Vec<_>>();
@@ -222,6 +221,9 @@ fn is_of_type(ty: &Type, types: &[&str]) -> bool {
 
 fn ident_to_lit(ident: &'_ Option<Ident>) -> LitInt {
     let lit = format!("{}", ident.clone().expect("missing ident"));
-    let lit = format!("{}u64",    u64::from_str_radix(&lit, 36).expect("cannot parse"));
+    let lit = format!(
+        "{}u64",
+        u64::from_str_radix(&lit, 36).expect("cannot parse")
+    );
     LitInt::new(&lit, Span::call_site())
 }

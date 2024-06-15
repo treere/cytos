@@ -3,9 +3,10 @@ use anyhow::anyhow;
 use easy_repl::{command, Command, CommandStatus, Repl};
 
 use proph::architecture::runner::{Command as RCommand, Response, Runner};
+use proph::architecture::{NodeId, ParamId};
 use proph::loader::{GraphRepr, Registry};
 
-use proph::utils::{load_value_from_string, string_to_nodeid, string_to_paramid};
+use proph::utils::{load_value_from_string, nodeid_to_string, string_to_nodeid, string_to_paramid};
 use proph_transformers::{
     AddValue, GrayScale, ImageDecoder, IncrementalGenerator, Mean, Print, Rscam, ZuneImageDecoder,
 };
@@ -158,10 +159,17 @@ fn node_list(status: Rc<Mutex<Status>>) -> Command<'static> {
                 .graphs
                 .get_mut(&graph)
                 .ok_or(anyhow!("missing graph"))?
-                .command(RCommand::ListNodes);
-            println!("{:?}", result);
+            .command(RCommand::ListNodes);
 
-            Ok(CommandStatus::Done)
+            if let Response::Data(Ok(val))  = result {
+                let nodes: Vec<NodeId> = serde_json::from_value(val).map_err(|_| anyhow!("cannot read list"))?;
+                let result :Vec<_>= nodes.into_iter().map(nodeid_to_string).collect();
+                println!("{:?}", result);
+                Ok(CommandStatus::Done)
+            }
+            else {
+                Err(anyhow!("Invalid response"))
+            }
         }
     }
 }
@@ -178,10 +186,15 @@ fn node_inputs(status: Rc<Mutex<Status>>) -> Command<'static> {
             .ok_or(anyhow!("missing graph"))?
             .command(RCommand::ListInputs(node));
 
-            println!("{:?}", result);
-
-
-            Ok(CommandStatus::Done)
+            if let Response::Data(Ok(val))  = result {
+                let params: Vec<ParamId> = serde_json::from_value(val).map_err(|_| anyhow!("cannot read list"))?;
+                let result :Vec<_>= params.into_iter().map(nodeid_to_string).collect();
+                println!("{:?}", result);
+                Ok(CommandStatus::Done)
+            }
+            else {
+                Err(anyhow!("Invalid response"))
+            }
         }
     }
 }
@@ -198,9 +211,15 @@ fn node_outputs(status: Rc<Mutex<Status>>) -> Command<'static> {
             .ok_or(anyhow!("missing graph"))?
             .command(RCommand::ListOutputs(node));
 
-            println!("{:?}", result);
-
-            Ok(CommandStatus::Done)
+            if let Response::Data(Ok(val))  = result {
+                let params: Vec<ParamId> = serde_json::from_value(val).map_err(|_| anyhow!("cannot read list"))?;
+                let result :Vec<_>= params.into_iter().map(nodeid_to_string).collect();
+                println!("{:?}", result);
+                Ok(CommandStatus::Done)
+            }
+            else {
+                Err(anyhow!("Invalid response"))
+            }
         }
     }
 }

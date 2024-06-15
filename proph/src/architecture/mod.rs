@@ -13,4 +13,3 @@ pub type ParamId = u64;
 
 pub type Result<T> = std::result::Result<T, &'static str>;
 pub type Value = serde_json::Value;
-

@@ -880,6 +880,8 @@ dependencies = [
  "easy-repl",
  "proph",
  "proph_transformers",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
