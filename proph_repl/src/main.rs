@@ -38,10 +38,9 @@ struct Listener {
 
 impl Drop for Listener {
     fn drop(&mut self) {
-        self.run.store(false,Ordering::Release);
+        self.run.store(false, Ordering::Release);
     }
 }
-
 
 #[derive(Default)]
 struct Status {
@@ -283,6 +282,7 @@ fn listener_add(status: Rc<Mutex<Status>>) -> Command<'static> {
                     }
                 });
                 status.listeners.insert(graph, Listener{_handler: handler, run});
+                println!("added");
                 Ok(CommandStatus::Done)
             }
             else {

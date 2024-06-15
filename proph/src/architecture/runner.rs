@@ -134,11 +134,11 @@ impl Runner {
                             }
 
                             graph.step().expect("cannot step");
-                            for l in &listeners {
+                            listeners.retain(|l| {
                                 let data: Result<Vec<_>> =
                                     l.dumpers.iter().map(|x| x.dump()).collect();
-                                l.send(data).expect("cannot sent to listener");
-                            }
+                                l.send(data).is_ok()
+                            });
                         }
                         graph.terminate().expect("cannot terminate");
                     }
