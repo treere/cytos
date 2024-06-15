@@ -33,10 +33,10 @@ fn load_registry() -> Registry {
 #[derive(Default)]
 struct Status {
     graphs: HashMap<String, Runner>,
-    listeners: Vec<JoinHandle<()>>,
+    listeners: HashMap<String, JoinHandle<()>>,
 }
 
-fn list_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+fn graph_list(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List graphs",
         () => ||{
@@ -48,7 +48,7 @@ fn list_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn remove_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+fn graph_remove(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Remove a graph",
         (graph: String) => |graph| {
@@ -61,6 +61,7 @@ fn remove_command(status: Rc<Mutex<Status>>) -> Command<'static> {
             println!("{:?}", result);
 
             let runner = status.graphs.remove(&graph).ok_or(anyhow!("not found"))?;
+            status.listeners.remove(&graph);
             runner.join();
 
             println!("removed!");
@@ -69,7 +70,7 @@ fn remove_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn load_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+fn graph_load(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
     "Load a graph from a configuration",
     (graph: String, filename: String) =>   |graph, filename| {
@@ -89,7 +90,7 @@ fn load_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     }}
 }
 
-fn start_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+fn graph_start(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Start a graph",
         (graph: String) => |graph| {
@@ -104,7 +105,7 @@ fn start_command(status: Rc<Mutex<Status>>) -> Command<'static> {
         Ok(CommandStatus::Done)
     }}
 }
-fn stop_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+fn graph_stop(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Step a graph",
         (graph: String) => |graph| {
@@ -122,7 +123,7 @@ fn stop_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn status_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+fn graph_status(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Step a graph",
         (graph: String) => |graph| {
@@ -139,7 +140,7 @@ fn status_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn list_nodes_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+fn node_list(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List graph nodes",
         (graph: String) => |graph| {
@@ -156,7 +157,7 @@ fn list_nodes_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn list_inputs_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+fn node_inputs(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List inputs of a graph node",
         (graph: String, node: String) => |graph, node| {
@@ -175,7 +176,7 @@ fn list_inputs_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn list_outputs_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+fn node_outputs(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List outputs of a graph node",
         (graph: String, node: String) => |graph, node| {
@@ -193,7 +194,7 @@ fn list_outputs_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn dump_node_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+fn node_dump(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Dump a input/output of a graph node",
         (graph: String, node: String, param: String) => |graph, node, param| {
@@ -211,7 +212,7 @@ fn dump_node_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn load_node_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+fn node_load(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Load to an input/output of a graph node",
         (graph: String, node: String, param: String, value: String) => |graph, node, param, value| {
@@ -231,9 +232,9 @@ fn load_node_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn listen_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+fn listener_add(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
-        "Listen to some nodes",
+        "Listen some nodes",
         (graph: String, nodes: String) => |graph, nodes: String| {
             let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
             let nodes = nodes
@@ -253,9 +254,8 @@ fn listen_command(status: Rc<Mutex<Status>>) -> Command<'static> {
             .get_mut(&graph)
             .ok_or(anyhow!("missing graph"))?;
 
-
             if let Response::Receiver(result) = runner.command(RCommand::Listener(nodes)) {
-                status.listeners.push(thread::spawn( move || {
+                status.listeners.insert(graph, thread::spawn( move || {
                     loop {
                         let r = result.recv().expect("Cannot receive");
                         println!("{:?}", r);
@@ -271,23 +271,36 @@ fn listen_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
+fn listener_remove(status: Rc<Mutex<Status>>) -> Command<'static> {
+    command! {
+        "Listen some nodes",
+        (graph: String) => |graph| {
+            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
+            status.listeners.remove(&graph).ok_or(anyhow!("not found"))?;
+            println!("removed");
+            Ok(CommandStatus::Done)
+        }
+    }
+}
+
 fn main() -> Result<(), &'static str> {
     let status = Rc::new(Mutex::new(Status::default()));
 
     Repl::builder()
         .with_filename_completion(true)
-        .add("list_graphs", list_command(status.clone()))
-        .add("load_graph", load_command(status.clone()))
-        .add("remove_graph", remove_command(status.clone()))
-        .add("start_graph", start_command(status.clone()))
-        .add("stop_graph", stop_command(status.clone()))
-        .add("status", status_command(status.clone()))
-        .add("list_nodes", list_nodes_command(status.clone()))
-        .add("list_node_inputs", list_inputs_command(status.clone()))
-        .add("list_node_outputs", list_outputs_command(status.clone()))
-        .add("dump_node_param", dump_node_command(status.clone()))
-        .add("load_node_param", load_node_command(status.clone()))
-        .add("listen", listen_command(status.clone()))
+        .add("graph_list", graph_list(status.clone()))
+        .add("graph_load", graph_load(status.clone()))
+        .add("graph_remove", graph_remove(status.clone()))
+        .add("graph_start", graph_start(status.clone()))
+        .add("graph_stop", graph_stop(status.clone()))
+        .add("graph_status", graph_status(status.clone()))
+        .add("node_list", node_list(status.clone()))
+        .add("node_inputs", node_inputs(status.clone()))
+        .add("node_outputs", node_outputs(status.clone()))
+        .add("node_dump", node_dump(status.clone()))
+        .add("node_load", node_load(status.clone()))
+        .add("listener_add", listener_add(status.clone()))
+        .add("listener_remove", listener_remove(status.clone()))
         .build()
         .or(Err("Failed to create repl"))
         .and_then(|mut repl| repl.run().or(Err("Critical REPL error")))
