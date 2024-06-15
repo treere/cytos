@@ -15,8 +15,10 @@ use std::io::Read;
 
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::RecvTimeoutError;
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
+use std::time::Duration;
 
 fn load_registry() -> Registry {
     Registry::default()
@@ -34,6 +36,7 @@ fn load_registry() -> Registry {
 struct Listener {
     _handler: JoinHandle<()>,
     run: Arc<AtomicBool>,
+    description: String
 }
 
 impl Drop for Listener {
@@ -243,7 +246,7 @@ fn listener_list(status: Rc<Mutex<Status>>) -> Command<'static> {
         "List graphs",
         () => ||{
             let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
-            let names :Vec<_>= status.listeners.keys().collect();
+            let names :Vec<_>= status.listeners.iter().map(|(k,v)| (k, &v.description)).collect();
             println!("{:?}", names);
             Ok(CommandStatus::Done)
         }
@@ -253,9 +256,9 @@ fn listener_list(status: Rc<Mutex<Status>>) -> Command<'static> {
 fn listener_add(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Listen some nodes",
-        (graph: String, nodes: String) => |graph, nodes: String| {
+        (graph: String, description: String) => |graph, description: String| {
             let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
-            let nodes = nodes
+            let nodes = description
             .split("|")
             .map(|g| {
                 let p = g.split(":").collect::<Vec<_>>();
@@ -277,11 +280,14 @@ fn listener_add(status: Rc<Mutex<Status>>) -> Command<'static> {
                 let r1 = run.clone();
                 let handler = thread::spawn(move || {
                     while r1.load(Ordering::Relaxed) {
-                        let r = result.recv().expect("Cannot receive");
-                        println!("{:?}", r);
+                        match result.recv_timeout(Duration::from_millis(10)) {
+                            Ok(r) => println!("{:?}", r),
+                            Err(RecvTimeoutError::Timeout) => continue,
+                            Err(RecvTimeoutError::Disconnected) => break
+                        }
                     }
                 });
-                status.listeners.insert(graph, Listener{_handler: handler, run});
+                status.listeners.insert(graph, Listener{_handler: handler, run, description});
                 println!("added");
                 Ok(CommandStatus::Done)
             }
