@@ -81,7 +81,7 @@ impl Graph {
         Ok(())
     }
 
-    pub fn dump(&self, src: (&NodeId, &ParamId)) -> Result<Dumper> {
+    pub fn dumper_for(&self, src: (&NodeId, &ParamId)) -> Result<Dumper> {
         self.nodes
             .iter()
             .find(|p| p.id == *src.0)

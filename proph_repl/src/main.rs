@@ -275,7 +275,7 @@ fn listener_add(status: Rc<Mutex<Status>>) -> Command<'static> {
             if let Response::Receiver(result) = runner.command(RCommand::Listener(nodes)) {
                 let run = Arc::new(AtomicBool::new(true));
                 let r1 = run.clone();
-                let handler = thread::spawn( move || {
+                let handler = thread::spawn(move || {
                     while r1.load(Ordering::Relaxed) {
                         let r = result.recv().expect("Cannot receive");
                         println!("{:?}", r);
