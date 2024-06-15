@@ -7,6 +7,7 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 
 pub enum Command {
+    Kill,
     Start,
     Stop,
     Status,
@@ -83,12 +84,39 @@ impl Runner {
                 let mut listeners: Vec<Listener> = Vec::new();
                 {
                     let mut graph = repr.build(&reg).expect("Cannot build graph");
-                    {
-                        loop {
-                            while let Ok((command, mut message)) = receiver.recv() {
+
+                    'main: loop {
+                        while let Ok((command, mut message)) = receiver.recv() {
+                            match command {
+                                Command::Start => break,
+                                Command::Kill => break 'main,
+                                Command::Status => message.set_resp(Ok("Idle")),
+                                Command::Listener(nodes) => {
+                                    let (s, r) = channel::<Response>();
+                                    message.set_listener(r);
+
+                                    let dumpers = nodes
+                                        .iter()
+                                        .map(|(n, p)| graph.dump((n, p)).unwrap())
+                                        .collect();
+                                    listeners.push(Listener { sender: s, dumpers })
+                                }
+                                _ => {
+                                    Self::dispatch_command(command, &mut message, &mut graph);
+                                }
+                            }
+                        }
+
+                        graph.initialize().expect("cannot initialize");
+                        'outer: loop {
+                            while let Ok((command, mut message)) = receiver.try_recv() {
                                 match command {
-                                    Command::Start => break,
-                                    Command::Status => message.set_resp(Ok("Idle")),
+                                    Command::Kill => break 'main,
+                                    Command::Stop => {
+                                        println!("STOP RECEIVED");
+                                        break 'outer;
+                                    }
+                                    Command::Status => message.set_resp(Ok("Running")),
                                     Command::Listener(nodes) => {
                                         let (s, r) = channel::<Response>();
                                         message.set_listener(r);
@@ -99,48 +127,23 @@ impl Runner {
                                             .collect();
                                         listeners.push(Listener { sender: s, dumpers })
                                     }
+
                                     _ => {
                                         Self::dispatch_command(command, &mut message, &mut graph);
                                     }
                                 }
                             }
 
-                            graph.initialize().expect("cannot initialize");
-                            'outer: loop {
-                                while let Ok((command, mut message)) = receiver.try_recv() {
-                                    match command {
-                                        Command::Stop => break 'outer,
-                                        Command::Status => message.set_resp(Ok("Running")),
-                                        Command::Listener(nodes) => {
-                                            let (s, r) = channel::<Response>();
-                                            message.set_listener(r);
-
-                                            let dumpers = nodes
-                                                .iter()
-                                                .map(|(n, p)| graph.dump((n, p)).unwrap())
-                                                .collect();
-                                            listeners.push(Listener { sender: s, dumpers })
-                                        }
-
-                                        _ => {
-                                            Self::dispatch_command(
-                                                command,
-                                                &mut message,
-                                                &mut graph,
-                                            );
-                                        }
-                                    }
-                                }
-
-                                graph.step().expect("cannot step");
-                                for l in &listeners {
-                                    let data: Result<Vec<_>> =
-                                        l.dumpers.iter().map(|x| x.dump()).collect();
-                                    l.send(data).expect("cannot sent to listener");
-                                }
+                            graph.step().expect("cannot step");
+                            for l in &listeners {
+                                let data: Result<Vec<_>> =
+                                    l.dumpers.iter().map(|x| x.dump()).collect();
+                                l.send(data).expect("cannot sent to listener");
                             }
-                            graph.terminate().expect("cannot terminate");
                         }
+                        println!("TERMINATING");
+                        graph.terminate().expect("cannot terminate");
+                        println!("DONE");
                     }
                 };
             }),
@@ -165,6 +168,7 @@ impl Runner {
 
     fn dispatch_command(command: Command, message: &mut Message, graph: &mut Graph) {
         match command {
+            Command::Kill => (),
             Command::Start => (),
             Command::Stop => (),
             Command::Status => (),

@@ -53,7 +53,15 @@ fn remove_command(status: Rc<Mutex<Status>>) -> Command<'static> {
         "Remove a graph",
         (graph: String) => |graph| {
             let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
-            status.graphs.remove(&graph).ok_or(anyhow!("not found"))?;
+            let result = status
+                .graphs
+                .get_mut(&graph)
+                .ok_or(anyhow!("missing graph"))?
+                .command(RCommand::Kill);
+            println!("{:?}", result);
+
+            let runner = status.graphs.remove(&graph).ok_or(anyhow!("not found"))?;
+            runner.join();
 
             println!("removed!");
             Ok(CommandStatus::Done)
@@ -106,6 +114,7 @@ fn stop_command(status: Rc<Mutex<Status>>) -> Command<'static> {
             .get_mut(&graph)
             .ok_or(anyhow!("missing graph"))?
             .command(RCommand::Stop);
+
             println!("{:?}", result);
 
             Ok(CommandStatus::Done)
