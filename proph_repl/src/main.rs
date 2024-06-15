@@ -226,6 +226,19 @@ fn node_load(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
+fn listener_list(status: Rc<Mutex<Status>>) -> Command<'static> {
+    command! {
+        "List graphs",
+        () => ||{
+            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let names :Vec<_>= status.listeners.keys().collect();
+            println!("{:?}", names);
+            Ok(CommandStatus::Done)
+        }
+    }
+}
+
+
 fn listener_add(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Listen some nodes",
@@ -293,6 +306,7 @@ fn main() -> Result<(), &'static str> {
         .add("node_outputs", node_outputs(status.clone()))
         .add("node_dump", node_dump(status.clone()))
         .add("node_load", node_load(status.clone()))
+        .add("listener_list", listener_list(status.clone()))
         .add("listener_add", listener_add(status.clone()))
         .add("listener_remove", listener_remove(status.clone()))
         .build()
