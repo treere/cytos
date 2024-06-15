@@ -72,7 +72,7 @@ impl Listener {
 }
 
 pub struct Runner {
-    thread: JoinHandle<()>,
+    thread: Option<JoinHandle<()>>,
     sender: Sender<(Command, Message)>,
 }
 
@@ -80,7 +80,7 @@ impl Runner {
     pub fn new(repr: GraphRepr, reg: crate::loader::Registry) -> Self {
         let (sender, receiver) = channel::<(Command, Message)>();
         Self {
-            thread: thread::spawn(move || {
+            thread: Some(thread::spawn(move || {
                 let mut listeners: Vec<Listener> = Vec::new();
                 {
                     let mut graph = repr.build(&reg).expect("Cannot build graph");
@@ -146,13 +146,9 @@ impl Runner {
                         println!("DONE");
                     }
                 };
-            }),
+            })),
             sender,
         }
-    }
-
-    pub fn join(self) {
-        self.thread.join().expect("Cannot join");
     }
 
     pub fn command(&mut self, command: Command) -> Response {
@@ -182,6 +178,20 @@ impl Runner {
             Command::Load(node, param, value) => {
                 message.set_resp(graph.load((&node, &param), value))
             }
+        }
+    }
+}
+
+impl Drop for Runner {
+    fn drop(&mut self) {
+        if let Some(t) = self.thread.take() {
+            let (sender, _receiver) = channel::<Response>();
+
+            self.sender
+                .send((Command::Kill, Message { sender, resp: None }))
+                .unwrap();
+
+            t.join().unwrap();
         }
     }
 }
