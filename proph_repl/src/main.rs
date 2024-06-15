@@ -14,7 +14,8 @@ use std::fs::File;
 use std::io::Read;
 
 use std::rc::Rc;
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 
 fn load_registry() -> Registry {
@@ -30,10 +31,22 @@ fn load_registry() -> Registry {
         .add("ZuneImageDecoder", ZuneImageDecoder::default)
 }
 
+struct Listener {
+    _handler: JoinHandle<()>,
+    run: Arc<AtomicBool>,
+}
+
+impl Drop for Listener {
+    fn drop(&mut self) {
+        self.run.store(false,Ordering::Release);
+    }
+}
+
+
 #[derive(Default)]
 struct Status {
     graphs: HashMap<String, Runner>,
-    listeners: HashMap<String, JoinHandle<()>>,
+    listeners: HashMap<String, Listener>,
 }
 
 fn graph_list(status: Rc<Mutex<Status>>) -> Command<'static> {
@@ -261,12 +274,15 @@ fn listener_add(status: Rc<Mutex<Status>>) -> Command<'static> {
             .ok_or(anyhow!("missing graph"))?;
 
             if let Response::Receiver(result) = runner.command(RCommand::Listener(nodes)) {
-                status.listeners.insert(graph, thread::spawn( move || {
-                    loop {
+                let run = Arc::new(AtomicBool::new(true));
+                let r1 = run.clone();
+                let handler = thread::spawn( move || {
+                    while r1.load(Ordering::Relaxed) {
                         let r = result.recv().expect("Cannot receive");
                         println!("{:?}", r);
                     }
-                }));
+                });
+                status.listeners.insert(graph, Listener{_handler: handler, run});
                 Ok(CommandStatus::Done)
             }
             else {
