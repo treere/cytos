@@ -8,8 +8,8 @@ mod traits;
 pub use self::props::{Dumper, InputProp, OutputProp};
 pub use self::traits::{Stepper, Transformer};
 
-pub type NodeId = String;
-pub type ParamId = String;
+pub type NodeId = u64;
+pub type ParamId = u64;
 
 pub type Result<T> = std::result::Result<T, &'static str>;
 pub type Value = serde_json::Value;

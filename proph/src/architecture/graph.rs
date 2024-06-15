@@ -50,11 +50,11 @@ impl Graph {
     }
 
     /// Connects a output data to an input one.
-    pub fn connect(&mut self, src: (&NodeId, &ParamId), dst: (&NodeId, &ParamId)) -> Result<()> {
+    pub fn connect(&mut self, src: (NodeId, ParamId), dst: (NodeId, ParamId)) -> Result<()> {
         let output = self
             .nodes
             .iter()
-            .find(|p| p.id == *src.0)
+            .find(|p| p.id == src.0)
             .ok_or("cannot find source")?
             .transformer
             .output(src.1)
@@ -62,7 +62,7 @@ impl Graph {
 
         self.nodes
             .iter_mut()
-            .find(|p| p.id == *dst.0)
+            .find(|p| p.id == dst.0)
             .ok_or("cannot find dest")?
             .transformer
             .link(dst.1, output)?;
@@ -70,10 +70,10 @@ impl Graph {
         Ok(())
     }
 
-    pub fn load(&mut self, src: (&NodeId, &ParamId), value: Value) -> Result<()> {
+    pub fn load(&mut self, src: (NodeId, ParamId), value: Value) -> Result<()> {
         self.nodes
             .iter_mut()
-            .find(|p| p.id == *src.0)
+            .find(|p| p.id == src.0)
             .ok_or("cannot find node")?
             .transformer
             .load(src.1, value)?;
@@ -81,10 +81,10 @@ impl Graph {
         Ok(())
     }
 
-    pub fn dumper_for(&self, src: (&NodeId, &ParamId)) -> Result<Dumper> {
+    pub fn dumper_for(&self, src: (NodeId, ParamId)) -> Result<Dumper> {
         self.nodes
             .iter()
-            .find(|p| p.id == *src.0)
+            .find(|p| p.id == src.0)
             .ok_or("cannot find node")?
             .transformer
             .dump(src.1)
@@ -116,24 +116,24 @@ impl Graph {
     }
 
     /// List nodes
-    pub fn list_nodes(&self) -> Vec<String> {
+    pub fn list_nodes(&self) -> Vec<NodeId> {
         self.nodes.iter().map(|x| x.id.clone()).collect()
     }
 
     /// List node inputs
-    pub fn list_node_inputs(&self, node: &NodeId) -> Result<Vec<String>> {
+    pub fn list_node_inputs(&self, node: NodeId) -> Result<Vec<ParamId>> {
         self.nodes
             .iter()
-            .find(|n| n.id == *node)
+            .find(|n| n.id == node)
             .map(|n| n.transformer.input_names())
             .ok_or("missing node")
     }
 
     /// List node outputs
-    pub fn list_node_outputs(&self, node: &NodeId) -> Result<Vec<String>> {
+    pub fn list_node_outputs(&self, node: NodeId) -> Result<Vec<ParamId>> {
         self.nodes
             .iter()
-            .find(|n| n.id == *node)
+            .find(|n| n.id == node)
             .map(|n| n.transformer.output_names())
             .ok_or("missing node")
     }

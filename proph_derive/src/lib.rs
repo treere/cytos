@@ -1,8 +1,8 @@
 use proc_macro::TokenStream;
-use proc_macro2::Span;
+use proc_macro2::{Ident,Span};
 use quote::quote;
 use syn::{
-    parse_macro_input, Data, DataStruct, DeriveInput, Field, Fields, LitStr, Type, TypePath,
+    parse_macro_input, Data, DataStruct, DeriveInput, Field, Fields, LitInt, Type, TypePath,
 };
 
 const INPUT_PROP_TYPE: &[&str] = &["InputProp"];
@@ -51,22 +51,20 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
     .into()
 }
 
+
 fn create_link(fields: &Fields) -> proc_macro2::TokenStream {
     let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
         .map(|field| {
             let ident = &field.ident;
-            let lit = LitStr::new(
-                &format!("{}", ident.clone().expect("missing ident")),
-                Span::call_site(),
-            );
+            let lit = ident_to_lit(ident);
             quote! {#lit => self.#ident.change_value(val),}
         })
         .collect::<Vec<_>>();
 
     quote! {
-        fn link(&mut self, name: &proph::architecture::ParamId, val: proph::architecture::props::GenericOutputProp)
+        fn link(&mut self, name: proph::architecture::ParamId, val: proph::architecture::props::GenericOutputProp)
                 -> proph::architecture::Result<()> {
-            match name.as_str() {
+            match name {
                 #(#inputs)*
                 _ => Err("missing input link data"),
             }
@@ -78,10 +76,7 @@ fn create_load(fields: &Fields) -> proc_macro2::TokenStream {
     let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
         .map(|field| {
             let i = &field.ident;
-            let f = LitStr::new(
-                &format!("{}", field.ident.clone().expect("missing ident")),
-                Span::call_site(),
-            );
+            let f = ident_to_lit(i);
             quote! {#f => self.#i.load(value),}
         })
         .collect::<Vec<_>>();
@@ -90,10 +85,10 @@ fn create_load(fields: &Fields) -> proc_macro2::TokenStream {
         quote!(
             fn load(
                 &mut self,
-                name: &proph::architecture::ParamId,
+                name: proph::architecture::ParamId,
                 value: proph::architecture::Value,
             ) -> proph::architecture::Result<()> {
-                match name.as_str() {
+                match name {
                     #(#inputs)*
                     _ => Err("parameter not found"),
                 }
@@ -108,10 +103,7 @@ fn create_dump(fields: &Fields) -> proc_macro2::TokenStream {
         .chain(filter_fields_by_type(fields, OUTPUT_PROP_TYPE))
         .map(|field| {
             let i = &field.ident;
-            let f = LitStr::new(
-                &format!("{}", field.ident.clone().expect("missing ident")),
-                Span::call_site(),
-            );
+            let f = ident_to_lit(i);
             quote! {#f => Ok(self.#i.as_dumper()),}
         })
         .collect::<Vec<_>>();
@@ -120,9 +112,9 @@ fn create_dump(fields: &Fields) -> proc_macro2::TokenStream {
         quote!(
             fn dump(
                 & self,
-                name: &proph::architecture::ParamId
+                name: proph::architecture::ParamId
             ) -> proph::architecture::Result<proph::architecture::Dumper> {
-                match name.as_str() {
+                match name {
                     #(#inputs)*
                     _ => Err("parameter not found"),
                 }
@@ -136,18 +128,15 @@ fn create_input(fields: &Fields) -> proc_macro2::TokenStream {
     let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
         .map(|field| {
             let i = &field.ident;
-            let f = LitStr::new(
-                &format!("{}", field.ident.clone().expect("missing ident")),
-                Span::call_site(),
-            );
+            let f = ident_to_lit(i);
             quote! {#f => Some(self.#i.as_generic()),}
         })
         .collect::<Vec<_>>();
 
     quote! {
-        fn input(&self, val: &proph::architecture::ParamId)
+        fn input(&self, val: proph::architecture::ParamId)
                  -> Option<proph::architecture::props::GenericInputProp> {
-            match val.as_str() {
+            match val {
                 #(#inputs)*
                 _ => None,
             }
@@ -158,11 +147,8 @@ fn create_input(fields: &Fields) -> proc_macro2::TokenStream {
 fn create_input_names(fields: &Fields) -> proc_macro2::TokenStream {
     let input_names = filter_fields_by_type(fields, INPUT_PROP_TYPE)
         .map(|field| {
-            let f = LitStr::new(
-                &format!("{}", field.ident.clone().expect("missing ident")),
-                Span::call_site(),
-            );
-            quote!(#f.to_owned())
+let f =            ident_to_lit(&field.ident);
+            quote!(#f)
         })
         .collect::<Vec<_>>();
 
@@ -179,18 +165,15 @@ fn create_output(fields: &Fields) -> proc_macro2::TokenStream {
     let outputs = filter_fields_by_type(fields, OUTPUT_PROP_TYPE)
         .map(|field| {
             let i = &field.ident;
-            let f = LitStr::new(
-                &format!("{}", field.ident.clone().expect("missing ident")),
-                Span::call_site(),
-            );
+            let f = ident_to_lit(i);
             quote! {#f => Some(self.#i.as_generic()),}
         })
         .collect::<Vec<_>>();
 
     quote! {
-        fn output(&self, val: &proph::architecture::ParamId)
+        fn output(&self, val: proph::architecture::ParamId)
                   -> Option<proph::architecture::props::GenericOutputProp> {
-            match val.as_str() {
+            match val {
                 #(#outputs)*
                 _ => None,
             }
@@ -201,11 +184,8 @@ fn create_output(fields: &Fields) -> proc_macro2::TokenStream {
 fn create_output_names(fields: &Fields) -> proc_macro2::TokenStream {
     let output_names = filter_fields_by_type(fields, OUTPUT_PROP_TYPE)
         .map(|field| {
-            let f = LitStr::new(
-                &format!("{}", field.ident.clone().expect("missing ident")),
-                Span::call_site(),
-            );
-            quote!(#f.to_owned())
+            let f =            ident_to_lit(&field.ident);
+            quote!(#f)
         })
         .collect::<Vec<_>>();
 
@@ -238,4 +218,10 @@ fn is_of_type(ty: &Type, types: &[&str]) -> bool {
         }
         _ => false,
     }
+}
+
+fn ident_to_lit(ident: &'_ Option<Ident>) -> LitInt {
+    let lit = format!("{}", ident.clone().expect("missing ident"));
+    let lit = format!("{}u64",    u64::from_str_radix(&lit, 36).expect("cannot parse"));
+    LitInt::new(&lit, Span::call_site())
 }

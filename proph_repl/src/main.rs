@@ -6,6 +6,7 @@ use proph::architecture::load_value_from_string;
 use proph::architecture::runner::{Command as RCommand, Response, Runner};
 use proph::loader::{GraphRepr, Registry};
 
+use proph::utils::{string_to_nodeid, string_to_paramid};
 use proph_transformers::{
     AddValue, GrayScale, ImageDecoder, IncrementalGenerator, Mean, Print, Rscam, ZuneImageDecoder,
 };
@@ -36,7 +37,7 @@ fn load_registry() -> Registry {
 struct Listener {
     _handler: JoinHandle<()>,
     run: Arc<AtomicBool>,
-    description: String
+    description: String,
 }
 
 impl Drop for Listener {
@@ -170,6 +171,7 @@ fn node_inputs(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List inputs of a graph node",
         (graph: String, node: String) => |graph, node| {
+            let node = string_to_nodeid(node).map_err(|_| anyhow!("invalid node"))?;
             let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
             let result = status
             .graphs
@@ -189,6 +191,7 @@ fn node_outputs(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List outputs of a graph node",
         (graph: String, node: String) => |graph, node| {
+            let node = string_to_nodeid(node).map_err(|_| anyhow!("invalid node"))?;
             let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
             let result = status
             .graphs
@@ -207,6 +210,8 @@ fn node_dump(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Dump a input/output of a graph node",
         (graph: String, node: String, param: String) => |graph, node, param| {
+            let node = string_to_nodeid(node).map_err(|_| anyhow!("invalid node"))?;
+            let param = string_to_paramid(param).map_err(|_| anyhow!("invalid param"))?;
             let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
             let result = status
             .graphs
@@ -225,6 +230,8 @@ fn node_load(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Load to an input/output of a graph node",
         (graph: String, node: String, param: String, value: String) => |graph, node, param, value| {
+            let node = string_to_nodeid(node).map_err(|_| anyhow!("invalid node"))?;
+            let param = string_to_paramid(param).map_err(|_| anyhow!("invalid param"))?;
             let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
             let value = load_value_from_string(value).map_err(|_| anyhow!("cannot parse value"))?;
 
@@ -266,7 +273,9 @@ fn listener_add(status: Rc<Mutex<Status>>) -> Command<'static> {
                     Err("Malformed str")
                 }
                 else {
-                    Ok((p[0].to_owned(),p[1].to_owned()))
+                    let nodeid =  string_to_paramid(p[0]).map_err(|_| anyhow!("invalid node")).unwrap();
+                    let paramid =  string_to_paramid(p[1]).map_err(|_| anyhow!("invalid param")).unwrap();
+                    Ok((nodeid, paramid))
                 }
             }).collect::<Result<Vec<_>,_>>().map_err(|_| anyhow!("Invalid string"))?;
 

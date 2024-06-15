@@ -1,7 +1,7 @@
 use crate::loader::GraphRepr;
 
 use super::graph::Graph;
-use super::{Dumper, Result, Value};
+use super::{Dumper, NodeId, ParamId, Result, Value};
 
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::{self, JoinHandle};
@@ -12,11 +12,11 @@ pub enum Command {
     Stop,
     Status,
     ListNodes,
-    ListInputs(String),
-    ListOutputs(String),
-    Dump(String, String),
-    Load(String, String, Value),
-    Listener(Vec<(String, String)>),
+    ListInputs(NodeId),
+    ListOutputs(NodeId),
+    Dump(NodeId, ParamId),
+    Load(NodeId, ParamId, Value),
+    Listener(Vec<(NodeId, ParamId)>),
 }
 
 pub enum Response {
@@ -28,7 +28,11 @@ impl std::fmt::Debug for Response {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Response::Data(Ok(data)) => {
-                write!(f, "*  {}", serde_json::to_string(data).expect("cannot write to string"))
+                write!(
+                    f,
+                    "*  {}",
+                    serde_json::to_string(data).expect("cannot write to string")
+                )
             }
             Response::Data(Err(reason)) => write!(f, "!: {:?}", reason),
             Response::Receiver(_) => write!(f, "   receiver"),
@@ -95,7 +99,7 @@ impl Runner {
                                     let (s, r) = channel::<Response>();
 
                                     let dumpers: Result<Vec<_>> = nodes
-                                        .iter()
+                                        .into_iter()
                                         .map(|(n, p)| graph.dumper_for((n, p)))
                                         .collect();
                                     match dumpers {
@@ -127,7 +131,7 @@ impl Runner {
                                         let (s, r) = channel::<Response>();
 
                                         let dumpers: Result<Vec<_>> = nodes
-                                            .iter()
+                                            .into_iter()
                                             .map(|(n, p)| graph.dumper_for((n, p)))
                                             .collect();
 
@@ -181,14 +185,12 @@ impl Runner {
             Command::Status => (),
             Command::Listener(_) => (),
             Command::ListNodes => message.set_resp(Ok(graph.list_nodes())),
-            Command::ListInputs(node) => message.set_resp(graph.list_node_inputs(&node)),
-            Command::ListOutputs(node) => message.set_resp(graph.list_node_outputs(&node)),
+            Command::ListInputs(node) => message.set_resp(graph.list_node_inputs(node)),
+            Command::ListOutputs(node) => message.set_resp(graph.list_node_outputs(node)),
             Command::Dump(node, param) => {
-                message.set_resp(graph.dumper_for((&node, &param)).and_then(|x| x.dump()))
+                message.set_resp(graph.dumper_for((node, param)).and_then(|x| x.dump()))
             }
-            Command::Load(node, param, value) => {
-                message.set_resp(graph.load((&node, &param), value))
-            }
+            Command::Load(node, param, value) => message.set_resp(graph.load((node, param), value)),
         }
     }
 }

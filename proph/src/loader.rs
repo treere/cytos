@@ -1,6 +1,9 @@
-use crate::architecture::{
-    graph::{Graph, Processor},
-    Result, Transformer, Value,
+use crate::{
+    architecture::{
+        graph::{Graph, Processor},
+        Result, Transformer, Value,
+    },
+    utils::{string_to_nodeid, string_to_paramid},
 };
 
 use serde::Deserialize;
@@ -26,9 +29,11 @@ impl GraphRepr {
         for node in self.nodes.into_iter() {
             let processor = loader.load(node.name.as_str(), node.typ.as_str())?;
             graph = graph.insert(processor)?;
+            let nodeid = string_to_nodeid(&node.name)?;
 
             for (prop, value) in node.props.into_iter() {
-                graph.load((&node.name, &prop), value)?;
+                let propid = string_to_paramid(&prop)?;
+                graph.load((nodeid, propid), value)?;
             }
         }
 
@@ -37,7 +42,12 @@ impl GraphRepr {
             dst: (d0, d1),
         } in self.links.into_iter()
         {
-            graph.connect((&s0, &s1), (&d0, &d1))?;
+            let s0 = string_to_nodeid(&s0)?;
+            let s1 = string_to_paramid(&s1)?;
+            let d0 = string_to_nodeid(&d0)?;
+            let d1 = string_to_paramid(&d1)?;
+
+            graph.connect((s0, s1), (d0, d1))?;
         }
         Ok(graph)
     }
@@ -92,6 +102,7 @@ impl Registry {
     /// Load a Processor
     pub fn load(&self, name: &str, typ: &str) -> Result<Processor> {
         let factory = self.factories.get(typ).ok_or("missing type")?;
-        Ok(Processor::new(name.to_owned(), factory()))
+        let name = string_to_nodeid(name)?;
+        Ok(Processor::new(name, factory()))
     }
 }
