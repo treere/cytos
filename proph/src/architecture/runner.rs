@@ -27,7 +27,7 @@ impl std::fmt::Debug for Response {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Response::Data(Ok(data)) => {
-                write!(f, "*  {:?}", serde_json::to_string_pretty(data).unwrap())
+                write!(f, "*  {}", serde_json::to_string_pretty(data).unwrap())
             }
             Response::Data(Err(reason)) => write!(f, "!: {:?}", reason),
             Response::Receiver(_) => write!(f, "   receiver"),
