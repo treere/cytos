@@ -163,7 +163,7 @@ fn node_list(status: Rc<Mutex<Status>>) -> Command<'static> {
                 .ok_or(anyhow!("missing graph"))?
             .command(RCommand::ListNodes);
 
-            if let Response::Data(Ok(val))  = result {
+            if let Ok(Response::Data(val))  = result {
                 let result  = convert_val_to_nodeid_string(val).map_err(|_|anyhow!("missing graph"))?;
                 println!("{:?}", result);
                 Ok(CommandStatus::Done)
@@ -187,7 +187,7 @@ fn node_inputs(status: Rc<Mutex<Status>>) -> Command<'static> {
             .ok_or(anyhow!("missing graph"))?
             .command(RCommand::ListInputs(node));
 
-            if let Response::Data(Ok(val))  = result {
+            if let Ok(Response::Data(val))  = result {
                 let result = convert_val_to_paramid_string(val).map_err(|_| anyhow!("cannot read list"))?;
                 println!("{:?}", result);
                 Ok(CommandStatus::Done)
@@ -211,7 +211,7 @@ fn node_outputs(status: Rc<Mutex<Status>>) -> Command<'static> {
             .ok_or(anyhow!("missing graph"))?
             .command(RCommand::ListOutputs(node));
 
-            if let Response::Data(Ok(val))  = result {
+            if let Ok(Response::Data(val))  = result {
                 let result  = convert_val_to_nodeid_string(val).map_err(|_|anyhow!("missing graph"))?;
                 println!("{:?}", result);
                 Ok(CommandStatus::Done)
@@ -301,7 +301,7 @@ fn listener_add(status: Rc<Mutex<Status>>) -> Command<'static> {
             .get_mut(&graph)
             .ok_or(anyhow!("missing graph"))?;
 
-            if let Response::Receiver(result) = runner.command(RCommand::Listener(nodes)) {
+            if let Ok(Response::Receiver(result)) = runner.command(RCommand::Listener(nodes)) {
                 let run = Arc::new(AtomicBool::new(true));
                 let r1 = run.clone();
                 let handler = thread::spawn(move || {

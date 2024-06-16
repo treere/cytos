@@ -21,57 +21,56 @@ pub enum Command {
 }
 
 pub enum Response {
-    Data(Result<Value>),
-    Receiver(Receiver<Response>),
+    Data(Value),
+    Receiver(Receiver<Result<Response>>),
 }
 
 impl std::fmt::Debug for Response {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Response::Data(Ok(data)) => {
+            Response::Data(data) => {
                 write!(
                     f,
                     "*  {}",
                     dump_to_string(data).expect("cannot write to string")
                 )
             }
-            Response::Data(Err(reason)) => write!(f, "!: {:?}", reason),
             Response::Receiver(_) => write!(f, "   receiver"),
         }
     }
 }
 
 struct Message {
-    sender: Sender<Response>,
-    resp: Option<Response>,
+    sender: Sender<Result<Response>>,
+    resp: Option<Result<Response>>,
 }
 
 impl Message {
     fn set_resp(&mut self, resp: Result<impl Into<Value>>) {
-        self.resp = Some(Response::Data(resp.map(|v| v.into())));
+        self.resp = Some(resp.map(|v| Response::Data(v.into())));
     }
 
-    fn set_listener(&mut self, recv: Receiver<Response>) {
-        self.resp = Some(Response::Receiver(recv));
+    fn set_listener(&mut self, recv: Receiver<Result<Response>>) {
+        self.resp = Some(Ok(Response::Receiver(recv)));
     }
 }
 
 impl Drop for Message {
     fn drop(&mut self) {
-        let resp = self.resp.take().unwrap_or(Response::Data(Ok(Value::Null)));
+        let resp = self.resp.take().unwrap_or(Ok(Response::Data(Value::Null)));
         self.sender.send(resp).expect("cannot send");
     }
 }
 
 struct Listener {
-    sender: Sender<Response>,
+    sender: Sender<Result<Response>>,
     dumpers: Vec<Dumper>,
 }
 
 impl Listener {
     fn send(&self, data: Result<impl Into<Value>>) -> Result<()> {
         self.sender
-            .send(Response::Data(data.map(|v| v.into())))
+            .send(data.map(|v| Response::Data(v.into())))
             .map_err(|_| "cannot send")
     }
 }
@@ -97,7 +96,7 @@ impl Runner {
                                 Command::Kill => break 'main,
                                 Command::Status => message.set_resp(Ok("Idle")),
                                 Command::Listener(nodes) => {
-                                    let (s, r) = channel::<Response>();
+                                    let (s, r) = channel::<Result<Response>>();
 
                                     let dumpers: Result<Vec<_>> = nodes
                                         .into_iter()
@@ -129,7 +128,7 @@ impl Runner {
                                     }
                                     Command::Status => message.set_resp(Ok("Running")),
                                     Command::Listener(nodes) => {
-                                        let (s, r) = channel::<Response>();
+                                        let (s, r) = channel::<Result<Response>>();
 
                                         let dumpers: Result<Vec<_>> = nodes
                                             .into_iter()
@@ -167,14 +166,14 @@ impl Runner {
         }
     }
 
-    pub fn command(&mut self, command: Command) -> Response {
-        let (sender, receiver) = channel::<Response>();
+    pub fn command(&mut self, command: Command) -> Result<Response> {
+        let (sender, receiver) = channel::<Result<Response>>();
 
         match self.sender.send((command, Message { sender, resp: None })) {
             Ok(()) => receiver
                 .recv()
-                .unwrap_or(Response::Data(Err("Error unwrapping"))),
-            Err(_) => Response::Data(Err("Cannot send")),
+                .unwrap_or(Err("Error unwrapping")),
+            Err(_) => Err("Cannot send"),
         }
     }
 
@@ -199,7 +198,7 @@ impl Runner {
 impl Drop for Runner {
     fn drop(&mut self) {
         if let Some(t) = self.thread.take() {
-            let (sender, _receiver) = channel::<Response>();
+            let (sender, _receiver) = channel::<Result<Response>>();
 
             self.sender
                 .send((Command::Kill, Message { sender, resp: None }))
