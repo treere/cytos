@@ -58,7 +58,7 @@ fn graph_list(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List graphs",
         () => ||{
-            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let names :Vec<_>= status.graphs.keys().collect();
             println!("{:?}", names);
             Ok(CommandStatus::Done)
@@ -70,7 +70,7 @@ fn graph_remove(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Remove a graph",
         (graph: String) => |graph| {
-            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
 
             let runner = status.graphs.remove(&graph).ok_or(anyhow!("not found"))?;
             status.listeners.remove(&graph);
@@ -94,7 +94,7 @@ fn graph_load(status: Rc<Mutex<Status>>) -> Command<'static> {
         let repr = GraphRepr::from_json(&configuration).map_err(|x| anyhow!(x))?;
         let mut runner = Runner::new(repr,loader);
 
-        let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
+        let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
         status.graphs.insert(graph, runner);
         println!("loaded!");
 
@@ -106,7 +106,7 @@ fn graph_start(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Start a graph",
         (graph: String) => |graph| {
-        let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
+        let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
         let result = status
             .graphs
             .get_mut(&graph)
@@ -121,7 +121,7 @@ fn graph_stop(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Step a graph",
         (graph: String) => |graph| {
-            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let result = status
             .graphs
             .get_mut(&graph)
@@ -139,7 +139,7 @@ fn graph_status(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Step a graph",
         (graph: String) => |graph| {
-            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let result = status
             .graphs
             .get_mut(&graph)
@@ -156,7 +156,7 @@ fn node_list(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List graph nodes",
         (graph: String) => |graph| {
-            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let result = status
                 .graphs
                 .get_mut(&graph)
@@ -180,7 +180,7 @@ fn node_inputs(status: Rc<Mutex<Status>>) -> Command<'static> {
         "List inputs of a graph node",
         (graph: String, node: String) => |graph, node| {
             let node = string_to_nodeid(node).map_err(|x| anyhow!(x))?;
-            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let result = status
             .graphs
             .get_mut(&graph)
@@ -204,7 +204,7 @@ fn node_outputs(status: Rc<Mutex<Status>>) -> Command<'static> {
         "List outputs of a graph node",
         (graph: String, node: String) => |graph, node| {
             let node = string_to_nodeid(node).map_err(|x| anyhow!(x))?;
-            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let result = status
             .graphs
             .get_mut(&graph)
@@ -229,7 +229,7 @@ fn node_dump(status: Rc<Mutex<Status>>) -> Command<'static> {
         (graph: String, node: String, param: String) => |graph, node, param| {
             let node = string_to_nodeid(node).map_err(|x| anyhow!(x))?;
             let param = string_to_paramid(param).map_err(|x| anyhow!(x))?;
-            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let result = status
             .graphs
             .get_mut(&graph)
@@ -249,7 +249,7 @@ fn node_load(status: Rc<Mutex<Status>>) -> Command<'static> {
         (graph: String, node: String, param: String, value: String) => |graph, node, param, value| {
             let node = string_to_nodeid(node).map_err(|x| anyhow!(x))?;
             let param = string_to_paramid(param).map_err(|x| anyhow!(x))?;
-            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let value = load_value_from_string(value).map_err(|x| anyhow!(x))?;
 
             let result = status
@@ -269,7 +269,7 @@ fn listener_list(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List graphs",
         () => ||{
-            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let names :Vec<_>= status.listeners.iter().map(|(k,v)| (k, &v.description)).collect();
             println!("{:?}", names);
             Ok(CommandStatus::Done)
@@ -281,7 +281,7 @@ fn listener_add(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Listen some nodes",
         (graph: String, description: String) => |graph, description: String| {
-            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let nodes = description
             .split("|")
             .map(|g| {
@@ -329,7 +329,7 @@ fn listener_remove(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Listen some nodes",
         (graph: String) => |graph| {
-            let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
+            let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             status.listeners.remove(&graph).ok_or(anyhow!("not found"))?;
             println!("removed");
             Ok(CommandStatus::Done)

@@ -17,11 +17,11 @@ pub fn execution_time<T: FnMut()>(mut f: T) -> f64 {
 }
 
 pub fn string_to_nodeid(s: impl AsRef<str>) -> Result<u64> {
-    u64::from_str_radix(s.as_ref(), 36).map_err(|_| "invalid string")
+    u64::from_str_radix(s.as_ref(), 36).or(Err("invalid string"))
 }
 
 pub fn string_to_paramid(s: impl AsRef<str>) -> Result<u64> {
-    u64::from_str_radix(s.as_ref(), 36).map_err(|_| "invalid string")
+    u64::from_str_radix(s.as_ref(), 36).or(Err("invalid string"))
 }
 
 pub fn nodeid_to_string(val: u64) -> String {
@@ -49,7 +49,7 @@ fn format_radix(mut x: u64, radix: u64) -> String {
 }
 
 pub fn load_value_from_string(s: String) -> Result<Value> {
-    serde_json::to_value(s).map_err(|_| "Cannot decode")
+    serde_json::to_value(s).or(Err("Cannot decode"))
 }
 
 pub fn dump_to_value<T: Serialize>(val: &T) -> Result<Value> {

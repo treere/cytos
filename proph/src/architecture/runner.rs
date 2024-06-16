@@ -71,7 +71,7 @@ impl Listener {
     fn send(&self, data: Result<impl Into<Value>>) -> Result<()> {
         self.sender
             .send(data.map(|v| Response::Data(v.into())))
-            .map_err(|_| "cannot send")
+            .or(Err("cannot send"))
     }
 }
 
