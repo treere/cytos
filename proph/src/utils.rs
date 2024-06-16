@@ -2,7 +2,9 @@
 
 use std::time::Instant;
 
-use crate::architecture::{Result, Value};
+use serde::{de::DeserializeOwned, Serialize};
+
+use crate::architecture::{NodeId, ParamId, Result, Value};
 
 /// Returns the seconds needed to execute the given function
 pub fn execution_time<T: FnMut()>(mut f: T) -> f64 {
@@ -48,4 +50,26 @@ fn format_radix(mut x: u64, radix: u64) -> String {
 
 pub fn load_value_from_string(s: String) -> Result<Value> {
     serde_json::to_value(s).map_err(|_| "Cannot decode")
+}
+
+pub fn dump_to_value<T: Serialize>(val: &T) -> Result<Value> {
+    serde_json::to_value(val).or(Err("cannot dump value"))
+}
+
+pub fn dump_to_string(data: &Value) -> Result<String> {
+    serde_json::to_string(data).or(Err("cannot dump to string"))
+}
+
+pub fn load_value<T: DeserializeOwned>(val: Value) -> Result<T> {
+    serde_json::from_value(val).or(Err("cannot load value"))
+}
+
+pub fn convert_val_to_nodeid_string(val: Value) -> Result<Vec<String>> {
+    let nodes: Vec<NodeId> = serde_json::from_value(val).or(Err("cannot convert to NodeId"))?;
+    Ok(nodes.into_iter().map(nodeid_to_string).collect())
+}
+
+pub fn convert_val_to_paramid_string(val: Value) -> Result<Vec<String>> {
+    let nodes: Vec<ParamId> = serde_json::from_value(val).or(Err("cannot convert to ParamId"))?;
+    Ok(nodes.into_iter().map(paramid_to_string).collect())
 }

@@ -1,4 +1,5 @@
 use crate::loader::GraphRepr;
+use crate::utils::dump_to_string;
 
 use super::graph::Graph;
 use super::{Dumper, NodeId, ParamId, Result, Value};
@@ -31,7 +32,7 @@ impl std::fmt::Debug for Response {
                 write!(
                     f,
                     "*  {}",
-                    serde_json::to_string(data).expect("cannot write to string")
+                    dump_to_string(data).expect("cannot write to string")
                 )
             }
             Response::Data(Err(reason)) => write!(f, "!: {:?}", reason),

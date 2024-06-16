@@ -3,10 +3,12 @@ use anyhow::anyhow;
 use easy_repl::{command, Command, CommandStatus, Repl};
 
 use proph::architecture::runner::{Command as RCommand, Response, Runner};
-use proph::architecture::{NodeId, ParamId};
 use proph::loader::{GraphRepr, Registry};
 
-use proph::utils::{load_value_from_string, nodeid_to_string, string_to_nodeid, string_to_paramid};
+use proph::utils::{
+    convert_val_to_nodeid_string, convert_val_to_paramid_string, load_value_from_string,
+    string_to_nodeid, string_to_paramid,
+};
 use proph_transformers::{
     AddValue, GrayScale, ImageDecoder, IncrementalGenerator, Mean, Print, Rscam, ZuneImageDecoder,
 };
@@ -162,8 +164,7 @@ fn node_list(status: Rc<Mutex<Status>>) -> Command<'static> {
             .command(RCommand::ListNodes);
 
             if let Response::Data(Ok(val))  = result {
-                let nodes: Vec<NodeId> = serde_json::from_value(val).map_err(|_| anyhow!("cannot read list"))?;
-                let result :Vec<_>= nodes.into_iter().map(nodeid_to_string).collect();
+                let result  = convert_val_to_nodeid_string(val).map_err(|_|anyhow!("missing graph"))?;
                 println!("{:?}", result);
                 Ok(CommandStatus::Done)
             }
@@ -187,8 +188,7 @@ fn node_inputs(status: Rc<Mutex<Status>>) -> Command<'static> {
             .command(RCommand::ListInputs(node));
 
             if let Response::Data(Ok(val))  = result {
-                let params: Vec<ParamId> = serde_json::from_value(val).map_err(|_| anyhow!("cannot read list"))?;
-                let result :Vec<_>= params.into_iter().map(nodeid_to_string).collect();
+                let result = convert_val_to_paramid_string(val).map_err(|_| anyhow!("cannot read list"))?;
                 println!("{:?}", result);
                 Ok(CommandStatus::Done)
             }
@@ -212,8 +212,7 @@ fn node_outputs(status: Rc<Mutex<Status>>) -> Command<'static> {
             .command(RCommand::ListOutputs(node));
 
             if let Response::Data(Ok(val))  = result {
-                let params: Vec<ParamId> = serde_json::from_value(val).map_err(|_| anyhow!("cannot read list"))?;
-                let result :Vec<_>= params.into_iter().map(nodeid_to_string).collect();
+                let result  = convert_val_to_nodeid_string(val).map_err(|_|anyhow!("missing graph"))?;
                 println!("{:?}", result);
                 Ok(CommandStatus::Done)
             }
