@@ -164,7 +164,7 @@ fn node_list(status: Rc<Mutex<Status>>) -> Command<'static> {
             .command(RCommand::ListNodes);
 
             if let Ok(Response::Data(val))  = result {
-                let result  = convert_val_to_nodeid_string(val).map_err(|_|anyhow!("missing graph"))?;
+                let result  = convert_val_to_nodeid_string(val).map_err(|x|anyhow!(x))?;
                 println!("{:?}", result);
                 Ok(CommandStatus::Done)
             }
@@ -179,7 +179,7 @@ fn node_inputs(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List inputs of a graph node",
         (graph: String, node: String) => |graph, node| {
-            let node = string_to_nodeid(node).map_err(|_| anyhow!("invalid node"))?;
+            let node = string_to_nodeid(node).map_err(|x| anyhow!(x))?;
             let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
             let result = status
             .graphs
@@ -188,7 +188,7 @@ fn node_inputs(status: Rc<Mutex<Status>>) -> Command<'static> {
             .command(RCommand::ListInputs(node));
 
             if let Ok(Response::Data(val))  = result {
-                let result = convert_val_to_paramid_string(val).map_err(|_| anyhow!("cannot read list"))?;
+                let result = convert_val_to_paramid_string(val).map_err(|x| anyhow!(x))?;
                 println!("{:?}", result);
                 Ok(CommandStatus::Done)
             }
@@ -203,7 +203,7 @@ fn node_outputs(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List outputs of a graph node",
         (graph: String, node: String) => |graph, node| {
-            let node = string_to_nodeid(node).map_err(|_| anyhow!("invalid node"))?;
+            let node = string_to_nodeid(node).map_err(|x| anyhow!(x))?;
             let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
             let result = status
             .graphs
@@ -212,7 +212,7 @@ fn node_outputs(status: Rc<Mutex<Status>>) -> Command<'static> {
             .command(RCommand::ListOutputs(node));
 
             if let Ok(Response::Data(val))  = result {
-                let result  = convert_val_to_nodeid_string(val).map_err(|_|anyhow!("missing graph"))?;
+                let result  = convert_val_to_nodeid_string(val).map_err(|x|anyhow!(x))?;
                 println!("{:?}", result);
                 Ok(CommandStatus::Done)
             }
@@ -227,8 +227,8 @@ fn node_dump(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Dump a input/output of a graph node",
         (graph: String, node: String, param: String) => |graph, node, param| {
-            let node = string_to_nodeid(node).map_err(|_| anyhow!("invalid node"))?;
-            let param = string_to_paramid(param).map_err(|_| anyhow!("invalid param"))?;
+            let node = string_to_nodeid(node).map_err(|x| anyhow!(x))?;
+            let param = string_to_paramid(param).map_err(|x| anyhow!(x))?;
             let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
             let result = status
             .graphs
@@ -247,10 +247,10 @@ fn node_load(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Load to an input/output of a graph node",
         (graph: String, node: String, param: String, value: String) => |graph, node, param, value| {
-            let node = string_to_nodeid(node).map_err(|_| anyhow!("invalid node"))?;
-            let param = string_to_paramid(param).map_err(|_| anyhow!("invalid param"))?;
+            let node = string_to_nodeid(node).map_err(|x| anyhow!(x))?;
+            let param = string_to_paramid(param).map_err(|x| anyhow!(x))?;
             let mut status = status.lock().map_err(|_| anyhow!("cannot lock"))?;
-            let value = load_value_from_string(value).map_err(|_| anyhow!("cannot parse value"))?;
+            let value = load_value_from_string(value).map_err(|x| anyhow!(x))?;
 
             let result = status
             .graphs
@@ -290,11 +290,11 @@ fn listener_add(status: Rc<Mutex<Status>>) -> Command<'static> {
                     Err("Malformed str")
                 }
                 else {
-                    let nodeid =  string_to_paramid(p[0]).map_err(|_| anyhow!("invalid node")).unwrap();
-                    let paramid =  string_to_paramid(p[1]).map_err(|_| anyhow!("invalid param")).unwrap();
+                    let nodeid =  string_to_paramid(p[0]).map_err(|x| anyhow!(x)).unwrap();
+                    let paramid =  string_to_paramid(p[1]).map_err(|x| anyhow!(x)).unwrap();
                     Ok((nodeid, paramid))
                 }
-            }).collect::<Result<Vec<_>,_>>().map_err(|_| anyhow!("Invalid string"))?;
+            }).collect::<Result<Vec<_>,_>>().map_err(|x| anyhow!(x))?;
 
             let runner = status
             .graphs
