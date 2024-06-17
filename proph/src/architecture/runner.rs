@@ -1,5 +1,7 @@
+use serde::Serialize;
+
 use crate::loader::GraphRepr;
-use crate::utils::dump_to_string;
+use crate::utils::{dump_to_string, dump_to_value};
 
 use super::graph::Graph;
 use super::{Dumper, NodeId, ParamId, Result, Value};
@@ -46,8 +48,8 @@ struct Message {
 }
 
 impl Message {
-    fn set_resp(&mut self, resp: Result<impl Into<Value>>) {
-        self.resp = Some(resp.map(|v| Response::Data(v.into())));
+    fn set_resp<T: Serialize>(&mut self, resp: Result<T>) {
+        self.resp = Some(resp.and_then(|v| dump_to_value(&v).map(|x| Response::Data(x))));
     }
 
     fn set_listener(&mut self, recv: Receiver<Result<Response>>) {
@@ -57,7 +59,8 @@ impl Message {
 
 impl Drop for Message {
     fn drop(&mut self) {
-        let resp = self.resp.take().unwrap_or(Ok(Response::Data(Value::Null)));
+        let null = dump_to_value(&Value::Null).unwrap();
+        let resp = self.resp.take().unwrap_or(Ok(Response::Data(null)));
         self.sender.send(resp).expect("cannot send");
     }
 }
@@ -68,9 +71,9 @@ struct Listener {
 }
 
 impl Listener {
-    fn send(&self, data: Result<impl Into<Value>>) -> Result<()> {
+    fn send<T: Serialize>(&self, data: Result<T>) -> Result<()> {
         self.sender
-            .send(data.map(|v| Response::Data(v.into())))
+            .send(data.and_then(|v| dump_to_value(&v).map(|x| Response::Data(x))))
             .or(Err("cannot send"))
     }
 }
@@ -108,7 +111,7 @@ impl Runner {
                                             listeners.push(Listener { sender: s, dumpers })
                                         }
                                         Err(_) => {
-                                            message.set_resp(Err::<(), _>("cannot load dumpers"))
+                                            message.set_resp(Err::<Value, _>("cannot load dumpers"))
                                         }
                                     }
                                 }
@@ -141,7 +144,7 @@ impl Runner {
                                                 listeners.push(Listener { sender: s, dumpers })
                                             }
                                             Err(_) => message
-                                                .set_resp(Err::<(), _>("cannot load dumpers")),
+                                                .set_resp(Err::<Value, _>("cannot load dumpers")),
                                         }
                                     }
 
