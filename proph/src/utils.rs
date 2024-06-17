@@ -49,7 +49,7 @@ fn format_radix(mut x: u64, radix: u64) -> String {
 }
 
 pub fn load_value_from_string(s: String) -> Result<Value> {
-    serde_json::to_value(s).or(Err("Cannot decode"))
+    serde_json::from_str(&s).or(Err("Cannot decode"))
 }
 
 pub fn dump_to_value<T: Serialize>(val: &T) -> Result<Value> {
@@ -65,11 +65,11 @@ pub fn load_value<T: DeserializeOwned>(val: Value) -> Result<T> {
 }
 
 pub fn convert_val_to_nodeid_string(val: Value) -> Result<Vec<String>> {
-    let nodes: Vec<NodeId> = serde_json::from_value(val).or(Err("cannot convert to NodeId"))?;
+    let nodes: Vec<NodeId> = load_value(val)?;
     Ok(nodes.into_iter().map(nodeid_to_string).collect())
 }
 
 pub fn convert_val_to_paramid_string(val: Value) -> Result<Vec<String>> {
-    let nodes: Vec<ParamId> = serde_json::from_value(val).or(Err("cannot convert to ParamId"))?;
+    let nodes: Vec<ParamId> = load_value(val)?;
     Ok(nodes.into_iter().map(paramid_to_string).collect())
 }
