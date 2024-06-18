@@ -2,9 +2,10 @@
 use serde::{de::DeserializeOwned, Serialize};
 use std::{any::Any, cell::UnsafeCell, rc::Rc};
 
-use crate::utils::{dump_to_value, load_value};
-
-use super::{Result, Value};
+use super::{
+    value::{dump_to_value, load_value},
+    Result, Value,
+};
 
 pub trait Dump {
     fn dump(&self) -> Result<Value>;

@@ -2,9 +2,7 @@
 
 use std::time::Instant;
 
-use serde::{de::DeserializeOwned, Serialize};
-
-use crate::architecture::{NodeId, ParamId, Result, Value};
+use crate::architecture::{value::load_value, NodeId, ParamId, Result, Value};
 
 /// Returns the seconds needed to execute the given function
 pub fn execution_time<T: FnMut()>(mut f: T) -> f64 {
@@ -46,22 +44,6 @@ fn format_radix(mut x: u64, radix: u64) -> String {
         }
     }
     result.into_iter().rev().collect()
-}
-
-pub fn load_value_from_string(s: String) -> Result<Value> {
-    serde_json::from_str(&s).or(Err("Cannot decode"))
-}
-
-pub fn dump_to_value<T: Serialize>(val: &T) -> Result<Value> {
-    serde_json::to_value(val).or(Err("cannot dump value"))
-}
-
-pub fn dump_to_string(data: &Value) -> Result<String> {
-    serde_json::to_string(data).or(Err("cannot dump to string"))
-}
-
-pub fn load_value<T: DeserializeOwned>(val: Value) -> Result<T> {
-    serde_json::from_value(val).or(Err("cannot load value"))
 }
 
 pub fn convert_val_to_nodeid_string(val: Value) -> Result<Vec<String>> {

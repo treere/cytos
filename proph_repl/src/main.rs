@@ -3,11 +3,12 @@ use anyhow::anyhow;
 use easy_repl::{command, Command, CommandStatus, Repl};
 
 use proph::architecture::runner::{Command as RCommand, Response, Runner};
+use proph::architecture::value::load_value_from_string;
 use proph::loader::{GraphRepr, Registry};
 
 use proph::utils::{
-    convert_val_to_nodeid_string, convert_val_to_paramid_string, load_value_from_string,
-    string_to_nodeid, string_to_paramid,
+    convert_val_to_nodeid_string, convert_val_to_paramid_string, string_to_nodeid,
+    string_to_paramid,
 };
 use proph_transformers::{
     AddValue, GrayScale, ImageDecoder, IncrementalGenerator, Mean, Print, Rscam, ZuneImageDecoder,

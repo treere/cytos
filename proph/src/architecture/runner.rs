@@ -1,9 +1,10 @@
 use serde::Serialize;
 
+use crate::architecture::value::dump_to_string;
 use crate::loader::GraphRepr;
-use crate::utils::{dump_to_string, dump_to_value};
 
 use super::graph::Graph;
+use super::value::dump_to_value;
 use super::{Dumper, NodeId, ParamId, Result, Value};
 
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -173,9 +174,7 @@ impl Runner {
         let (sender, receiver) = channel::<Result<Response>>();
 
         match self.sender.send((command, Message { sender, resp: None })) {
-            Ok(()) => receiver
-                .recv()
-                .unwrap_or(Err("Error unwrapping")),
+            Ok(()) => receiver.recv().unwrap_or(Err("Error unwrapping")),
             Err(_) => Err("Cannot send"),
         }
     }
