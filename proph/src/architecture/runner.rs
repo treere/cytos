@@ -1,10 +1,8 @@
 use serde::Serialize;
 
-use crate::architecture::value::dump_to_string;
 use crate::loader::GraphRepr;
 
 use super::graph::Graph;
-use super::value::dump_to_value;
 use super::{Dumper, NodeId, ParamId, Result, Value};
 
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -35,7 +33,7 @@ impl std::fmt::Debug for Response {
                 write!(
                     f,
                     "*  {}",
-                    dump_to_string(data).expect("cannot write to string")
+                    data.to_string().expect("cannot write to string")
                 )
             }
             Response::Receiver(_) => write!(f, "   receiver"),
@@ -50,7 +48,7 @@ struct Message {
 
 impl Message {
     fn set_resp<T: Serialize>(&mut self, resp: Result<T>) {
-        self.resp = Some(resp.and_then(|v| dump_to_value(&v).map(|x| Response::Data(x))));
+        self.resp = Some(resp.and_then(|v| Value::from_t(&v).map(|x| Response::Data(x))));
     }
 
     fn set_listener(&mut self, recv: Receiver<Result<Response>>) {
@@ -60,7 +58,7 @@ impl Message {
 
 impl Drop for Message {
     fn drop(&mut self) {
-        let null = dump_to_value(&Value::Null).unwrap();
+        let null = Value::from_t(&()).unwrap();
         let resp = self.resp.take().unwrap_or(Ok(Response::Data(null)));
         self.sender.send(resp).expect("cannot send");
     }
@@ -74,7 +72,7 @@ struct Listener {
 impl Listener {
     fn send<T: Serialize>(&self, data: Result<T>) -> Result<()> {
         self.sender
-            .send(data.and_then(|v| dump_to_value(&v).map(|x| Response::Data(x))))
+            .send(data.and_then(|v| Value::from_t(&v).map(|x| Response::Data(x))))
             .or(Err("cannot send"))
     }
 }

@@ -2,7 +2,7 @@
 
 use std::time::Instant;
 
-use crate::architecture::{value::load_value, NodeId, ParamId, Result, Value};
+use crate::architecture::{NodeId, ParamId, Result, Value};
 
 /// Returns the seconds needed to execute the given function
 pub fn execution_time<T: FnMut()>(mut f: T) -> f64 {
@@ -47,11 +47,11 @@ fn format_radix(mut x: u64, radix: u64) -> String {
 }
 
 pub fn convert_val_to_nodeid_string(val: Value) -> Result<Vec<String>> {
-    let nodes: Vec<NodeId> = load_value(val)?;
+    let nodes: Vec<NodeId> = val.convert()?;
     Ok(nodes.into_iter().map(nodeid_to_string).collect())
 }
 
 pub fn convert_val_to_paramid_string(val: Value) -> Result<Vec<String>> {
-    let nodes: Vec<ParamId> = load_value(val)?;
+    let nodes: Vec<ParamId> = val.convert()?;
     Ok(nodes.into_iter().map(paramid_to_string).collect())
 }

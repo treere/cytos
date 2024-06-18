@@ -3,7 +3,7 @@ use anyhow::anyhow;
 use easy_repl::{command, Command, CommandStatus, Repl};
 
 use proph::architecture::runner::{Command as RCommand, Response, Runner};
-use proph::architecture::value::load_value_from_string;
+use proph::architecture::Value;
 use proph::loader::{GraphRepr, Registry};
 
 use proph::utils::{
@@ -251,7 +251,7 @@ fn node_load(status: Rc<Mutex<Status>>) -> Command<'static> {
             let node = string_to_nodeid(node).map_err(|x| anyhow!(x))?;
             let param = string_to_paramid(param).map_err(|x| anyhow!(x))?;
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
-            let value = load_value_from_string(value).map_err(|x| anyhow!(x))?;
+            let value = Value::from_string(value).map_err(|x| anyhow!(x))?;
 
             let result = status
             .graphs

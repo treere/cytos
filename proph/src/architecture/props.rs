@@ -2,10 +2,7 @@
 use serde::{de::DeserializeOwned, Serialize};
 use std::{any::Any, cell::UnsafeCell, rc::Rc};
 
-use super::{
-    value::{dump_to_value, load_value},
-    Result, Value,
-};
+use super::{    Result, Value};
 
 pub trait Dump {
     fn dump(&self) -> Result<Value>;
@@ -55,7 +52,7 @@ impl<T: 'static> InputProp<T> {
 
 impl<T: 'static + DeserializeOwned> InputProp<T> {
     pub fn load(&mut self, val: Value) -> Result<()> {
-        let value = load_value(val)?;
+        let value = val.convert()?;
         self.val = Rc::new(UnsafeCell::new(value));
         Ok(())
     }
@@ -63,13 +60,13 @@ impl<T: 'static + DeserializeOwned> InputProp<T> {
 
 impl<T: 'static + Serialize> Dump for InputProp<T> {
     fn dump(&self) -> Result<Value> {
-        dump_to_value(self.get())
+        Value::from_t(self.get())
     }
 }
 
 impl<T: 'static + Serialize> InputProp<T> {
     pub fn dump(&self) -> Result<Value> {
-        dump_to_value(self.get())
+        Value::from_t(self.get())
     }
 
     pub fn as_dumper(&self) -> Dumper {
@@ -115,13 +112,13 @@ impl<T: 'static> OutputProp<T> {
 
 impl<T: 'static + Serialize> Dump for OutputProp<T> {
     fn dump(&self) -> Result<Value> {
-        dump_to_value(self.get())
+        Value::from_t(self.get())
     }
 }
 
 impl<T: 'static + Serialize> OutputProp<T> {
     pub fn dump(&self) -> Result<Value> {
-        dump_to_value(self.get())
+        Value::from_t(self.get())
     }
 
     pub fn as_dumper(&self) -> Dumper {
