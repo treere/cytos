@@ -2,7 +2,7 @@
 use serde::{de::DeserializeOwned, Serialize};
 use std::{any::Any, cell::UnsafeCell, rc::Rc};
 
-use super::{    Result, Value};
+use super::{Result, Value};
 
 pub trait Dump {
     fn dump(&self) -> Result<Value>;

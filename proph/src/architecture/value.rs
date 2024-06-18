@@ -7,14 +7,12 @@ pub struct Value(serde_json::Value);
 
 impl Value {
     pub fn from_string(s: String) -> Result<Self> {
-        serde_json::from_str(&s)
-            .map(|v| Self(v))
-            .or(Err("Cannot decode"))
+        serde_json::from_str(&s).map(Self).or(Err("Cannot decode"))
     }
 
     pub fn from_t<T: Serialize>(val: &T) -> Result<Self> {
         serde_json::to_value(val)
-            .map(|v| Self(v))
+            .map(Self)
             .or(Err("cannot dump value"))
     }
 

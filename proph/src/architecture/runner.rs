@@ -48,7 +48,7 @@ struct Message {
 
 impl Message {
     fn set_resp<T: Serialize>(&mut self, resp: Result<T>) {
-        self.resp = Some(resp.and_then(|v| Value::from_t(&v).map(|x| Response::Data(x))));
+        self.resp = Some(resp.and_then(|v| Value::from_t(&v).map(Response::Data)));
     }
 
     fn set_listener(&mut self, recv: Receiver<Result<Response>>) {
@@ -72,7 +72,7 @@ struct Listener {
 impl Listener {
     fn send<T: Serialize>(&self, data: Result<T>) -> Result<()> {
         self.sender
-            .send(data.and_then(|v| Value::from_t(&v).map(|x| Response::Data(x))))
+            .send(data.and_then(|v| Value::from_t(&v).map(Response::Data)))
             .or(Err("cannot send"))
     }
 }
