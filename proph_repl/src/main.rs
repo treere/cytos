@@ -308,7 +308,8 @@ fn listener_add(status: Rc<Mutex<Status>>) -> Command<'static> {
                 let handler = thread::spawn(move || {
                     while r1.load(Ordering::Relaxed) {
                         match result.recv_timeout(Duration::from_millis(10)) {
-                            Ok(r) => println!("{:?}", r),
+                            Ok(Ok(r)) => println!("{:?}", r),
+                            Ok(Err(r)) => println!("{:?}", r),
                             Err(RecvTimeoutError::Timeout) => continue,
                             Err(RecvTimeoutError::Disconnected) => break
                         }
