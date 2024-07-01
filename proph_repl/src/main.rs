@@ -10,9 +10,6 @@ use proph::utils::{
     convert_val_to_nodeid_string, convert_val_to_paramid_string, string_to_nodeid,
     string_to_paramid,
 };
-use proph_transformers::{
-    AddValue, GrayScale, ImageDecoder, IncrementalGenerator, Mean, Print, Rscam, ZuneImageDecoder,
-};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
@@ -24,17 +21,15 @@ use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-fn load_registry() -> Registry {
-    Registry::default()
-        .add("AddValue", AddValue::default)
-        .add("ImageDecoder", ImageDecoder::default)
-        .add("ImageGrayScale", GrayScale::default)
-        .add("ImageMean", Mean::default)
-        .add("IncrementalGenerator", IncrementalGenerator::default)
-        .add("PrintF64", Print::<f64>::default)
-        .add("PrintU64", Print::<u64>::default)
-        .add("Rscam", Rscam::default)
-        .add("ZuneImageDecoder", ZuneImageDecoder::default)
+fn load_registry() -> Box<Registry> {
+    let lib = unsafe {
+        libloading::Library::new(libloading::library_filename("proph_transformers")).unwrap()
+    };
+
+    let func: libloading::Symbol<fn() -> *mut Registry> =
+        unsafe { lib.get(b"load_registry").unwrap() };
+    let r = func();
+    unsafe { Box::from_raw(r) }
 }
 
 struct Listener {
@@ -51,6 +46,7 @@ impl Drop for Listener {
 
 #[derive(Default)]
 struct Status {
+    libs: Vec<Arc<libloading::Library>>,
     graphs: HashMap<String, Runner>,
     listeners: HashMap<String, Listener>,
 }
@@ -91,12 +87,24 @@ fn graph_load(status: Rc<Mutex<Status>>) -> Command<'static> {
 
         File::open(filename)?.read_to_string(&mut configuration)?;
 
-        let loader = load_registry();
+        let mut registry = Registry::default();
+
+        let lib = unsafe {
+            libloading::Library::new(libloading::library_filename("proph_transformers")).unwrap()
+        };
+        let lib = Arc::new(lib);
+
+        let func: libloading::Symbol<fn(&mut Registry) -> ()> =
+            unsafe { lib.get(b"load_registry").unwrap() };
+
+        func(&mut registry);
+
         let repr = GraphRepr::from_json(&configuration).map_err(|x| anyhow!(x))?;
-        let mut runner = Runner::new(repr,loader);
+        let mut runner = Runner::new(repr,registry);
 
         let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
         status.graphs.insert(graph, runner);
+        status.libs.push(lib);
         println!("loaded!");
 
         Ok(CommandStatus::Done)

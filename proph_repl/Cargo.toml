@@ -7,4 +7,4 @@ edition = "2021"
 anyhow = "1.0.75"
 easy-repl = "0.2.1"
 proph = { path = "../proph" }
-proph_transformers = { path = "../proph_transformers" }
+libloading = "0.8.4"

@@ -1,27 +1,11 @@
 use clap::{value_parser, Arg, Command};
 use proph::loader::{GraphRepr, Registry};
 use proph::utils::execution_time;
-use proph_transformers::{
-    AddValue, GrayScale, ImageDecoder, IncrementalGenerator, Mean, Print, Rscam, ZuneImageDecoder,
-};
 use std::fs::File;
 use std::io::Read;
 
-fn load_registry() -> Registry {
-    Registry::default()
-        .add("IncrementalGenerator", IncrementalGenerator::default)
-        .add("AddValue", AddValue::default)
-        .add("Rscam", Rscam::default)
-        .add("ImageDecoder", ImageDecoder::default)
-        .add("ZuneImageDecoder", ZuneImageDecoder::default)
-        .add("ImageGrayScale", GrayScale::default)
-        .add("ImageMean", Mean::default)
-        .add("PrintU64", Print::<u64>::default)
-        .add("PrintF64", Print::<f64>::default)
-}
-
 fn main() -> Result<(), String> {
-    let loader = load_registry();
+    let loader = Registry::default();
 
     let matches = Command::new("bench")
         .about("benchmark a configuration")

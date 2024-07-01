@@ -89,10 +89,10 @@ pub struct Registry {
 impl Registry {
     /// Add a factory
     pub fn add<K: Transformer + 'static>(
-        mut self,
+        &mut self,
         name: impl AsRef<str>,
         factory: impl (Fn() -> K) + 'static + Send,
-    ) -> Self {
+    ) -> &mut Self {
         self.factories
             .entry(name.as_ref().to_owned())
             .or_insert(Box::new(move || Box::new(factory())));
