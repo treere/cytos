@@ -30,11 +30,7 @@ impl std::fmt::Debug for Response {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Response::Data(data) => {
-                write!(
-                    f,
-                    "*  {}",
-                    data.to_string().expect("cannot write to string")
-                )
+                write!(f, "*  {:?}", data)
             }
             Response::Receiver(_) => write!(f, "   receiver"),
         }

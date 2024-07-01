@@ -16,10 +16,6 @@ impl Value {
             .or(Err("cannot dump value"))
     }
 
-    pub fn to_string(&self) -> Result<String> {
-        serde_json::to_string(&self.0).or(Err("cannot dump to string"))
-    }
-
     pub fn convert<T: DeserializeOwned>(self) -> Result<T> {
         serde_json::from_value(self.0).or(Err("cannot load value"))
     }
