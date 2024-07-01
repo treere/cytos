@@ -6,8 +6,9 @@ use crate::{
     utils::{string_to_nodeid, string_to_paramid},
 };
 
+use libloading::{Library, Symbol};
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 /// Graph representatio to be loaded
 #[derive(Deserialize, Debug)]
@@ -84,6 +85,9 @@ type Factory = Box<dyn Fn() -> Box<dyn Transformer> + Send>;
 pub struct Registry {
     /// Factories
     factories: HashMap<String, Factory>,
+
+    /// Libs
+    libs: Vec<Arc<Library>>
 }
 
 impl Registry {
@@ -104,5 +108,22 @@ impl Registry {
         let factory = self.factories.get(typ).ok_or("missing type")?;
         let name = string_to_nodeid(name)?;
         Ok(Processor::new(name, factory()))
+    }
+
+    pub fn load_library(&mut self, file: &str) -> Result<()> {
+        let lib = unsafe {
+            Library::new(libloading::library_filename(file))
+                .or(Err("cannot load library"))?
+        };
+        let lib = Arc::new(lib);
+
+        let load_registry: Symbol<fn(&mut Registry) -> ()> = unsafe {
+            lib.get(b"load_registry")
+                .or(Err("missing load_registry function"))?
+        };
+
+        load_registry(self);
+        self.libs.push(lib);
+        Ok(())
     }
 }

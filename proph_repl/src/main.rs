@@ -21,17 +21,6 @@ use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-fn load_registry() -> Box<Registry> {
-    let lib = unsafe {
-        libloading::Library::new(libloading::library_filename("proph_transformers")).unwrap()
-    };
-
-    let func: libloading::Symbol<fn() -> *mut Registry> =
-        unsafe { lib.get(b"load_registry").unwrap() };
-    let r = func();
-    unsafe { Box::from_raw(r) }
-}
-
 struct Listener {
     _handler: JoinHandle<()>,
     run: Arc<AtomicBool>,
@@ -46,7 +35,6 @@ impl Drop for Listener {
 
 #[derive(Default)]
 struct Status {
-    libs: Vec<Arc<libloading::Library>>,
     graphs: HashMap<String, Runner>,
     listeners: HashMap<String, Listener>,
 }
@@ -88,23 +76,14 @@ fn graph_load(status: Rc<Mutex<Status>>) -> Command<'static> {
         File::open(filename)?.read_to_string(&mut configuration)?;
 
         let mut registry = Registry::default();
-
-        let lib = unsafe {
-            libloading::Library::new(libloading::library_filename("proph_transformers")).unwrap()
-        };
-        let lib = Arc::new(lib);
-
-        let func: libloading::Symbol<fn(&mut Registry) -> ()> =
-            unsafe { lib.get(b"load_registry").unwrap() };
-
-        func(&mut registry);
+        registry.load_library("proph_transformers").or(Err(anyhow!("cannot load library")))?;
 
         let repr = GraphRepr::from_json(&configuration).map_err(|x| anyhow!(x))?;
         let mut runner = Runner::new(repr,registry);
 
         let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
         status.graphs.insert(graph, runner);
-        status.libs.push(lib);
+
         println!("loaded!");
 
         Ok(CommandStatus::Done)
