@@ -110,6 +110,10 @@ impl Registry {
         Ok(Processor::new(name, factory()))
     }
 
+    pub fn list_factories(&self) -> impl Iterator<Item = &String> {
+        self.factories.keys()
+    }
+
     pub fn load_library(&mut self, file: &str) -> Result<()> {
         let lib = unsafe {
             Library::new(libloading::library_filename(file)).or(Err("cannot load library"))?

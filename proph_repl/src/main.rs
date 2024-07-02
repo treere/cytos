@@ -180,6 +180,23 @@ fn library_remove(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
+fn library_inspect() -> Command<'static> {
+    command! {
+        "Inspect a library",
+        (library: String) => |library:String| {
+
+            let mut registry = Registry::default();
+            registry.load_library(&library).or(Err(anyhow!("cannot load library")))?;
+
+            for f in registry.list_factories() {
+                println!("{}", f);
+            }
+
+            Ok(CommandStatus::Done)
+        }
+    }
+}
+
 fn node_list(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List graph nodes",
@@ -380,6 +397,7 @@ fn main() -> Result<(), &'static str> {
         .add("library_list", library_list(status.clone()))
         .add("library_add", library_add(status.clone()))
         .add("library_remove", library_remove(status.clone()))
+        .add("library_inspect", library_inspect())
         .add("node_list", node_list(status.clone()))
         .add("node_inputs", node_inputs(status.clone()))
         .add("node_outputs", node_outputs(status.clone()))
