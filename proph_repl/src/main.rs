@@ -10,7 +10,7 @@ use proph::utils::{
     convert_val_to_nodeid_string, convert_val_to_paramid_string, string_to_nodeid,
     string_to_paramid,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
 
@@ -37,6 +37,7 @@ impl Drop for Listener {
 struct Status {
     graphs: HashMap<String, Runner>,
     listeners: HashMap<String, Listener>,
+    libraries: HashSet<String>,
 }
 
 fn graph_list(status: Rc<Mutex<Status>>) -> Command<'static> {
@@ -74,14 +75,16 @@ fn graph_load(status: Rc<Mutex<Status>>) -> Command<'static> {
         let mut configuration = String::new();
 
         File::open(filename)?.read_to_string(&mut configuration)?;
+        let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
 
         let mut registry = Registry::default();
-        registry.load_library("proph_transformers").or(Err(anyhow!("cannot load library")))?;
+        for lib in status.libraries.iter() {
+            registry.load_library(lib).or(Err(anyhow!("cannot load library")))?;
+        }
 
         let repr = GraphRepr::from_json(&configuration).map_err(|x| anyhow!(x))?;
         let mut runner = Runner::new(repr,registry);
 
-        let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
         status.graphs.insert(graph, runner);
 
         println!("loaded!");
@@ -135,6 +138,43 @@ fn graph_status(status: Rc<Mutex<Status>>) -> Command<'static> {
             .command(RCommand::Status);
             println!("{:?}", result);
 
+            Ok(CommandStatus::Done)
+        }
+    }
+}
+
+fn library_list(status: Rc<Mutex<Status>>) -> Command<'static> {
+    command! {
+        "List libraries",
+        () => || {
+            let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
+            for lib in status.libraries.iter() {
+                println!("{}", lib);
+            }
+            Ok(CommandStatus::Done)
+        }
+    }
+}
+
+fn library_add(status: Rc<Mutex<Status>>) -> Command<'static> {
+    command! {
+        "Add a library",
+            (library: String) => |library| {
+                let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
+                status.libraries.insert(library);
+                println!("added");
+                Ok(CommandStatus::Done)
+            }
+    }
+}
+
+fn library_remove(status: Rc<Mutex<Status>>) -> Command<'static> {
+    command! {
+        "Remove a library",
+        (library: String) => |library| {
+            let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
+            status.libraries.remove(&library);
+            println!("removed");
             Ok(CommandStatus::Done)
         }
     }
@@ -337,6 +377,9 @@ fn main() -> Result<(), &'static str> {
         .add("graph_start", graph_start(status.clone()))
         .add("graph_stop", graph_stop(status.clone()))
         .add("graph_status", graph_status(status.clone()))
+        .add("library_list", library_list(status.clone()))
+        .add("library_add", library_add(status.clone()))
+        .add("library_remove", library_remove(status.clone()))
         .add("node_list", node_list(status.clone()))
         .add("node_inputs", node_inputs(status.clone()))
         .add("node_outputs", node_outputs(status.clone()))
@@ -345,7 +388,10 @@ fn main() -> Result<(), &'static str> {
         .add("listener_list", listener_list(status.clone()))
         .add("listener_add", listener_add(status.clone()))
         .add("listener_remove", listener_remove(status.clone()))
-        .add("exit", command! { "Exit program", () => || Ok(CommandStatus::Quit) })
+        .add(
+            "exit",
+            command! { "Exit program", () => || Ok(CommandStatus::Quit) },
+        )
         .build()
         .or(Err("Failed to create repl"))
         .and_then(|mut repl| repl.run().or(Err("Critical REPL error")))
