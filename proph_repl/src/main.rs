@@ -345,6 +345,7 @@ fn main() -> Result<(), &'static str> {
         .add("listener_list", listener_list(status.clone()))
         .add("listener_add", listener_add(status.clone()))
         .add("listener_remove", listener_remove(status.clone()))
+        .add("exit", command! { "Exit program", () => || Ok(CommandStatus::Quit) })
         .build()
         .or(Err("Failed to create repl"))
         .and_then(|mut repl| repl.run().or(Err("Critical REPL error")))
