@@ -159,12 +159,19 @@ fn library_list(status: Rc<Mutex<Status>>) -> Command<'static> {
 fn library_add(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Add a library",
-            (library: String) => |library| {
-                let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
-                status.libraries.insert(library);
-                println!("added");
-                Ok(CommandStatus::Done)
+        (library: String) => |library: String| {
+            let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
+            let mut registry = Registry::default();
+            registry.load_library(&library).or(Err(anyhow!("cannot load library")))?;
+
+            for f in registry.list_factories() {
+                println!("{}", f);
             }
+
+            status.libraries.insert(library);
+            println!("added");
+            Ok(CommandStatus::Done)
+        }
     }
 }
 
