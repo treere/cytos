@@ -9,7 +9,7 @@ mod source;
 mod transform;
 
 pub use add_one::AddValue;
-pub use decoder::{ImageDecoder, ZuneImageDecoder};
+pub use decoder::ImageDecoder;
 pub use incremental::IncrementalGenerator;
 pub use mean::Mean;
 pub use print::Print;
@@ -24,9 +24,9 @@ pub extern "C" fn load_registry(registry: &mut Registry) {
         .add("AddValue", AddValue::default)
         .add("Rscam", Rscam::default)
         .add("ImageDecoder", ImageDecoder::default)
-        .add("ZuneImageDecoder", ZuneImageDecoder::default)
         .add("ImageGrayScale", GrayScale::default)
         .add("ImageMean", Mean::default)
         .add("PrintU64", Print::<u64>::default)
-        .add("PrintF64", Print::<f64>::default);
+        .add("PrintF64", Print::<f64>::default)
+        .add("PrintString", Print::<String>::default);
 }
