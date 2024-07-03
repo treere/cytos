@@ -3,19 +3,21 @@ extern crate proph_derive;
 mod add_one;
 mod decoder;
 mod incremental;
+mod list_files;
 mod mean;
 mod print;
 mod source;
 mod transform;
 
-pub use add_one::AddValue;
-pub use decoder::ImageDecoder;
-pub use incremental::IncrementalGenerator;
-pub use mean::Mean;
-pub use print::Print;
+use add_one::AddValue;
+use decoder::ImageDecoder;
+use incremental::IncrementalGenerator;
+use list_files::ListFiles;
+use mean::Mean;
+use print::Print;
 use proph::loader::Registry;
-pub use source::Rscam;
-pub use transform::GrayScale;
+use source::Rscam;
+use transform::GrayScale;
 
 #[no_mangle]
 pub extern "C" fn load_registry(registry: &mut Registry) {
@@ -28,5 +30,6 @@ pub extern "C" fn load_registry(registry: &mut Registry) {
         .add("ImageMean", Mean::default)
         .add("PrintU64", Print::<u64>::default)
         .add("PrintF64", Print::<f64>::default)
-        .add("PrintString", Print::<String>::default);
+        .add("PrintString", Print::<String>::default)
+        .add("ListFiles", ListFiles::default);
 }
