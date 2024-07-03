@@ -102,8 +102,11 @@ impl InternalRunner {
                     }
                 }
 
-                self.graph.step().expect("cannot step");
-                self.notify_listeners();
+                if self.graph.step().is_ok() {
+                    self.notify_listeners();
+                } else {
+                    break 'outer;
+                }
             }
             self.graph.terminate().expect("cannot terminate");
         }
