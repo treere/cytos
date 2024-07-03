@@ -79,10 +79,6 @@ impl<T: 'static> InputProp<T> {
         Self(Prop::new(val))
     }
 
-    pub fn get(&self) -> &T {
-        self.0.get()
-    }
-
     pub fn change_value(&mut self, val: GenericOutputProp) -> Result<()> {
         self.0.change_value(val)
     }
@@ -116,19 +112,19 @@ impl<T: Default + 'static> Default for InputProp<T> {
     }
 }
 
+impl<T:'static> std::ops::Deref for InputProp<T> {
+    type Target=T;
+
+    fn deref(&self) -> &Self::Target {
+        self.0.get()
+    }
+}
+
 pub struct OutputProp<T>(Prop<T>);
 
 impl<T: 'static> OutputProp<T> {
     pub fn new(val: T) -> Self {
         Self(Prop::new(val))
-    }
-
-    pub fn get(&self) -> &T {
-        self.0.get()
-    }
-
-    pub fn set(&mut self) -> &mut T {
-        self.0.set()
     }
 
     pub fn as_generic(&self) -> GenericOutputProp {
@@ -138,7 +134,7 @@ impl<T: 'static> OutputProp<T> {
 
 impl<T: 'static + Serialize> Dump for OutputProp<T> {
     fn dump(&self) -> Result<Value> {
-        Value::from_t(self.get())
+        Value::from_t(self.0.get())
     }
 }
 
@@ -153,6 +149,21 @@ impl<T: Default + 'static> Default for OutputProp<T> {
         Self::new(T::default())
     }
 }
+
+impl<T:'static> std::ops::Deref for OutputProp<T> {
+    type Target=T;
+
+    fn deref(&self) -> &Self::Target {
+        self.0.get()
+    }
+}
+
+impl<T:'static> std::ops::DerefMut for OutputProp<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.0.set()
+    }    
+}
+
 
 struct GenericProp(Rc<dyn Any>);
 

@@ -15,7 +15,7 @@ impl Stepper for ListFiles {
         if let Some(entry) = self.read_dir.as_mut().and_then(|r| r.next()) {
             let file_name = entry.unwrap().file_name();
 
-            *self.output.set() = file_name.to_str().unwrap().to_owned();
+            *self.output = file_name.to_str().unwrap().to_owned();
             Ok(())
         } else {
             Err("cannot list dir")
@@ -23,7 +23,7 @@ impl Stepper for ListFiles {
     }
 
     fn initialize(&mut self) -> proph::architecture::Result<()> {
-        let r = std::fs::read_dir(self.input.get()).or(Err(""))?;
+        let r = std::fs::read_dir(&*self.input).or(Err(""))?;
         self.read_dir.replace(r);
         Ok(())
     }

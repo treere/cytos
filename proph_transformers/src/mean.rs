@@ -11,10 +11,10 @@ pub struct Mean {
 
 impl Stepper for Mean {
     fn step(&mut self) -> Result<()> {
-        let img = &self.input.get().data;
+        let img = &self.input.data;
         let sum = img.as_bytes().iter().fold(0u64, |a, b| (*b) as u64 + a) as f64;
 
-        *self.output.set() = sum / (img.width() * img.height()) as f64;
+        *self.output = sum / (img.width() * img.height()) as f64;
         Ok(())
     }
 }

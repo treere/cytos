@@ -30,7 +30,7 @@ impl Stepper for Rscam {
         if let Some(camera) = self.camera.as_ref() {
             let frame = camera.capture().or(Err("cannot capture"))?;
 
-            *self.frame.set() = Vec::from_iter(frame.iter().cloned());
+            *self.frame = Vec::from_iter(frame.iter().cloned());
 
             Ok(())
         } else {
@@ -39,12 +39,12 @@ impl Stepper for Rscam {
     }
 
     fn initialize(&mut self) -> Result<()> {
-        let mut camera = rscam::new(self.filename.get()).unwrap();
+        let mut camera = rscam::new(&*self.filename).unwrap();
 
         camera
             .start(&rscam::Config {
-                interval: *self.interval.get(),
-                resolution: *self.resolution.get(),
+                interval: *self.interval,
+                resolution: *self.resolution,
                 format: b"MJPG",
                 nbuffers: 4,
                 ..Default::default()

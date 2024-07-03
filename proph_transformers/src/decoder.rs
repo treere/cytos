@@ -19,8 +19,8 @@ pub struct ImageDecoder {
 
 impl Stepper for ImageDecoder {
     fn step(&mut self) -> Result<()> {
-        if let Ok(image) = image::load_from_memory(&self.frame.get()[..]) {
-            *self.decoded.set() = Image { data: image };
+        if let Ok(image) = image::load_from_memory(&self.frame[..]) {
+            *self.decoded = Image { data: image };
             Ok(())
         } else {
             Err("cannot decode image")

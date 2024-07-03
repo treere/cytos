@@ -20,7 +20,7 @@ impl Default for AddValue {
 
 impl Stepper for AddValue {
     fn step(&mut self) -> Result<()> {
-        *self.output.set() = *self.input.get() + *self.increment.get();
+        *self.output = *self.input + *self.increment;
 
         Ok(())
     }
@@ -34,7 +34,7 @@ mod tests {
     fn test_starts_at_zero() {
         let add = AddValue::default();
 
-        assert_eq!(*add.output.get(), 0);
+        assert_eq!(*add.output, 0);
     }
 
     #[test]
@@ -43,6 +43,6 @@ mod tests {
 
         add.step().expect("canont fail");
 
-        assert_eq!(*add.output.get(), 1);
+        assert_eq!(*add.output, 1);
     }
 }

@@ -8,7 +8,7 @@ pub struct IncrementalGenerator {
 
 impl Stepper for IncrementalGenerator {
     fn step(&mut self) -> Result<()> {
-        *self.output.set() += 1;
+        *self.output += 1;
         Ok(())
     }
 }
@@ -21,7 +21,7 @@ mod tests {
     fn test_create_at_zero() {
         let incremental = IncrementalGenerator::default();
 
-        assert_eq!(*incremental.output.get(), 0)
+        assert_eq!(*incremental.output, 0)
     }
 
     #[test]
@@ -29,7 +29,7 @@ mod tests {
         let mut incremental = IncrementalGenerator::default();
 
         incremental.step().expect("cannot fail");
-        assert_eq!(*incremental.output.get(), 1)
+        assert_eq!(*incremental.output, 1)
     }
 
     #[test]
@@ -38,6 +38,6 @@ mod tests {
 
         incremental.step().expect("cannot fail");
         incremental.step().expect("cannot fail");
-        assert_eq!(*incremental.output.get(), 2)
+        assert_eq!(*incremental.output, 2)
     }
 }

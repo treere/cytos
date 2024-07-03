@@ -14,7 +14,7 @@ where
 
 impl<T: Display + Default + DeserializeOwned + Serialize + 'static> Stepper for Print<T> {
     fn step(&mut self) -> Result<()> {
-        println!("{} = {}", self.name.get(), self.input.get());
+        println!("{} = {}", *self.name, *self.input);
         Ok(())
     }
 }
