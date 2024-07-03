@@ -73,6 +73,81 @@ impl Listener {
     }
 }
 
+struct InternalRunner {
+    listeners: Vec<Listener>,
+    graph: Graph,
+    receiver: Receiver<(Command, Message)>,
+}
+
+impl InternalRunner {
+    fn run(mut self) {
+        'main: loop {
+            while let Ok((command, mut message)) = self.receiver.recv() {
+                match command {
+                    Command::Kill => break 'main,
+                    Command::Start => break,
+                    Command::Status => message.set_resp(Ok("Idle")),
+                    _ => self.dispatch_command(command, &mut message),
+                }
+            }
+
+            self.graph.initialize().expect("cannot initialize");
+            'outer: loop {
+                while let Ok((command, mut message)) = self.receiver.try_recv() {
+                    match command {
+                        Command::Kill => break 'main,
+                        Command::Stop => break 'outer,
+                        Command::Status => message.set_resp(Ok("Running")),
+                        _ => self.dispatch_command(command, &mut message),
+                    }
+                }
+
+                self.graph.step().expect("cannot step");
+                self.notify_listeners();
+            }
+            self.graph.terminate().expect("cannot terminate");
+        }
+    }
+
+    fn notify_listeners(&mut self) {
+        self.listeners.retain(|l| {
+            let data: Result<Vec<_>> = l.dumpers.iter().map(|x| x.dump()).collect();
+            l.send(data).is_ok()
+        });
+    }
+
+    fn dispatch_command(&mut self, command: Command, message: &mut Message) {
+        match command {
+            Command::ListNodes => message.set_resp(Ok(self.graph.list_nodes())),
+            Command::ListInputs(node) => message.set_resp(self.graph.list_node_inputs(node)),
+            Command::ListOutputs(node) => message.set_resp(self.graph.list_node_outputs(node)),
+            Command::Dump(node, param) => {
+                message.set_resp(self.graph.dumper_for((node, param)).and_then(|x| x.dump()))
+            }
+            Command::Load(node, param, value) => {
+                message.set_resp(self.graph.load((node, param), value))
+            }
+            Command::Listener(nodes) => {
+                let (s, r) = channel::<Result<Response>>();
+
+                let dumpers: Result<Vec<_>> = nodes
+                    .into_iter()
+                    .map(|(n, p)| self.graph.dumper_for((n, p)))
+                    .collect();
+
+                match dumpers {
+                    Ok(dumpers) => {
+                        message.set_listener(r);
+                        self.listeners.push(Listener { sender: s, dumpers })
+                    }
+                    Err(_) => message.set_resp(Err::<Value, _>("cannot load dumpers")),
+                }
+            }
+            _ => (),
+        }
+    }
+}
+
 pub struct Runner {
     thread: Option<JoinHandle<()>>,
     sender: Sender<(Command, Message)>,
@@ -83,82 +158,12 @@ impl Runner {
         let (sender, receiver) = channel::<(Command, Message)>();
         Self {
             thread: Some(thread::spawn(move || {
-                let mut listeners: Vec<Listener> = Vec::new();
-                {
-                    let mut graph = repr.build(&reg).expect("Cannot build graph");
-
-                    'main: loop {
-                        while let Ok((command, mut message)) = receiver.recv() {
-                            match command {
-                                Command::Start => break,
-                                Command::Kill => break 'main,
-                                Command::Status => message.set_resp(Ok("Idle")),
-                                Command::Listener(nodes) => {
-                                    let (s, r) = channel::<Result<Response>>();
-
-                                    let dumpers: Result<Vec<_>> = nodes
-                                        .into_iter()
-                                        .map(|(n, p)| graph.dumper_for((n, p)))
-                                        .collect();
-                                    match dumpers {
-                                        Ok(dumpers) => {
-                                            message.set_listener(r);
-                                            listeners.push(Listener { sender: s, dumpers })
-                                        }
-                                        Err(_) => {
-                                            message.set_resp(Err::<Value, _>("cannot load dumpers"))
-                                        }
-                                    }
-                                }
-                                _ => {
-                                    Self::dispatch_command(command, &mut message, &mut graph);
-                                }
-                            }
-                        }
-
-                        graph.initialize().expect("cannot initialize");
-                        'outer: loop {
-                            while let Ok((command, mut message)) = receiver.try_recv() {
-                                match command {
-                                    Command::Kill => break 'main,
-                                    Command::Stop => {
-                                        break 'outer;
-                                    }
-                                    Command::Status => message.set_resp(Ok("Running")),
-                                    Command::Listener(nodes) => {
-                                        let (s, r) = channel::<Result<Response>>();
-
-                                        let dumpers: Result<Vec<_>> = nodes
-                                            .into_iter()
-                                            .map(|(n, p)| graph.dumper_for((n, p)))
-                                            .collect();
-
-                                        match dumpers {
-                                            Ok(dumpers) => {
-                                                message.set_listener(r);
-                                                listeners.push(Listener { sender: s, dumpers })
-                                            }
-                                            Err(_) => message
-                                                .set_resp(Err::<Value, _>("cannot load dumpers")),
-                                        }
-                                    }
-
-                                    _ => {
-                                        Self::dispatch_command(command, &mut message, &mut graph);
-                                    }
-                                }
-                            }
-
-                            graph.step().expect("cannot step");
-                            listeners.retain(|l| {
-                                let data: Result<Vec<_>> =
-                                    l.dumpers.iter().map(|x| x.dump()).collect();
-                                l.send(data).is_ok()
-                            });
-                        }
-                        graph.terminate().expect("cannot terminate");
-                    }
-                };
+                InternalRunner {
+                    listeners: Vec::new(),
+                    graph: repr.build(&reg).expect("Cannot build graph"),
+                    receiver,
+                }
+                .run()
             })),
             sender,
         }
@@ -170,23 +175,6 @@ impl Runner {
         match self.sender.send((command, Message { sender, resp: None })) {
             Ok(()) => receiver.recv().unwrap_or(Err("Error unwrapping")),
             Err(_) => Err("Cannot send"),
-        }
-    }
-
-    fn dispatch_command(command: Command, message: &mut Message, graph: &mut Graph) {
-        match command {
-            Command::Kill => (),
-            Command::Start => (),
-            Command::Stop => (),
-            Command::Status => (),
-            Command::Listener(_) => (),
-            Command::ListNodes => message.set_resp(Ok(graph.list_nodes())),
-            Command::ListInputs(node) => message.set_resp(graph.list_node_inputs(node)),
-            Command::ListOutputs(node) => message.set_resp(graph.list_node_outputs(node)),
-            Command::Dump(node, param) => {
-                message.set_resp(graph.dumper_for((node, param)).and_then(|x| x.dump()))
-            }
-            Command::Load(node, param, value) => message.set_resp(graph.load((node, param), value)),
         }
     }
 }
