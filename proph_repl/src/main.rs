@@ -29,7 +29,7 @@ fn graph_list(status: Rc<Mutex<Status>>) -> Command<'static> {
         () => ||{
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let names :Vec<_>= status.graphs.keys().collect();
-            println!("{:?}", names);
+            println!("{names:?}");
             Ok(CommandStatus::Done)
         }
     }
@@ -60,7 +60,7 @@ fn graph_load(status: Rc<Mutex<Status>>) -> Command<'static> {
         let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
 
         let mut registry = Registry::default();
-        for lib in status.libraries.iter() {
+        for lib in &status.libraries {
             registry.load_library(lib).or(Err(anyhow!("cannot load library")))?;
         }
 
@@ -85,7 +85,7 @@ fn graph_start(status: Rc<Mutex<Status>>) -> Command<'static> {
             .get_mut(&graph)
             .ok_or(anyhow!("missing graph"))?
             .command(RCommand::Start);
-        println!("{:?}", result);
+        println!("{result:?}");
 
         Ok(CommandStatus::Done)
     }}
@@ -101,7 +101,7 @@ fn graph_stop(status: Rc<Mutex<Status>>) -> Command<'static> {
             .ok_or(anyhow!("missing graph"))?
             .command(RCommand::Stop);
 
-            println!("{:?}", result);
+            println!("{result:?}");
 
             Ok(CommandStatus::Done)
         }
@@ -118,7 +118,7 @@ fn graph_status(status: Rc<Mutex<Status>>) -> Command<'static> {
             .get_mut(&graph)
             .ok_or(anyhow!("missing graph"))?
             .command(RCommand::Status);
-            println!("{:?}", result);
+            println!("{result:?}");
 
             Ok(CommandStatus::Done)
         }
@@ -130,8 +130,8 @@ fn library_list(status: Rc<Mutex<Status>>) -> Command<'static> {
         "List libraries",
         () => || {
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
-            for lib in status.libraries.iter() {
-                println!("{}", lib);
+            for lib in & status.libraries {
+                println!("{lib}");
             }
             Ok(CommandStatus::Done)
         }
@@ -147,7 +147,7 @@ fn library_add(status: Rc<Mutex<Status>>) -> Command<'static> {
             registry.load_library(&library).or(Err(anyhow!("cannot load library")))?;
 
             for f in registry.list_factories() {
-                println!("{}", f);
+                println!("{f}");
             }
 
             status.libraries.insert(library);
@@ -178,7 +178,7 @@ fn library_inspect() -> Command<'static> {
             registry.load_library(&library).or(Err(anyhow!("cannot load library")))?;
 
             for f in registry.list_factories() {
-                println!("{}", f);
+                println!("{f}");
             }
 
             Ok(CommandStatus::Done)
@@ -199,7 +199,7 @@ fn node_list(status: Rc<Mutex<Status>>) -> Command<'static> {
 
             if let Ok(Response::Data(val))  = result {
                 let result  = convert_val_to_nodeid_string(val).map_err(|x|anyhow!(x))?;
-                println!("{:?}", result);
+                println!("{result:?}");
                 Ok(CommandStatus::Done)
             }
             else {
@@ -223,7 +223,7 @@ fn node_inputs(status: Rc<Mutex<Status>>) -> Command<'static> {
 
             if let Ok(Response::Data(val))  = result {
                 let result = convert_val_to_paramid_string(val).map_err(|x| anyhow!(x))?;
-                println!("{:?}", result);
+                println!("{result:?}");
                 Ok(CommandStatus::Done)
             }
             else {
@@ -247,7 +247,7 @@ fn node_outputs(status: Rc<Mutex<Status>>) -> Command<'static> {
 
             if let Ok(Response::Data(val))  = result {
                 let result  = convert_val_to_nodeid_string(val).map_err(|x|anyhow!(x))?;
-                println!("{:?}", result);
+                println!("{result:?}");
                 Ok(CommandStatus::Done)
             }
             else {
@@ -270,7 +270,7 @@ fn node_dump(status: Rc<Mutex<Status>>) -> Command<'static> {
             .ok_or(anyhow!("missing graph"))?
             .command(RCommand::Dump(node,param));
 
-            println!("{:?}", result);
+            println!("{result:?}");
 
             Ok(CommandStatus::Done)
         }
@@ -280,11 +280,11 @@ fn node_dump(status: Rc<Mutex<Status>>) -> Command<'static> {
 fn node_load(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Load to an input/output of a graph node",
-        (graph: String, node: String, param: String, value: String) => |graph, node, param, value| {
+        (graph: String, node: String, param: String, value: String) => |graph, node, param, value: String| {
             let node = string_to_nodeid(node).map_err(|x| anyhow!(x))?;
             let param = string_to_paramid(param).map_err(|x| anyhow!(x))?;
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
-            let value = Value::from_string(value).map_err(|x| anyhow!(x))?;
+            let value = Value::from_string(&value).map_err(|x| anyhow!(x))?;
 
             let result = status
             .graphs
@@ -292,7 +292,7 @@ fn node_load(status: Rc<Mutex<Status>>) -> Command<'static> {
             .ok_or(anyhow!("missing graph"))?
             .command(RCommand::Load(node,param, value));
 
-            println!("{:?}", result);
+            println!("{result:?}");
 
             Ok(CommandStatus::Done)
         }

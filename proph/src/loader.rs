@@ -27,12 +27,12 @@ impl GraphRepr {
 
     pub fn build(self, loader: &Registry) -> Result<Graph> {
         let mut graph = Graph::default();
-        for node in self.nodes.into_iter() {
+        for node in self.nodes {
             let processor = loader.load(node.name.as_str(), node.typ.as_str())?;
             graph = graph.insert(processor)?;
             let nodeid = string_to_nodeid(&node.name)?;
 
-            for (prop, value) in node.props.into_iter() {
+            for (prop, value) in node.props {
                 let propid = string_to_paramid(&prop)?;
                 graph.load((nodeid, propid), value)?;
             }
@@ -41,7 +41,7 @@ impl GraphRepr {
         for Link {
             src: (s0, s1),
             dst: (d0, d1),
-        } in self.links.into_iter()
+        } in self.links
         {
             let s0 = string_to_nodeid(&s0)?;
             let s1 = string_to_paramid(&s1)?;

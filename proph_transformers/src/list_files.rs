@@ -12,10 +12,10 @@ pub struct ListFiles {
 
 impl Stepper for ListFiles {
     fn step(&mut self) -> proph::architecture::Result<()> {
-        if let Some(entry) = self.read_dir.as_mut().and_then(|r| r.next()) {
+        if let Some(entry) = self.read_dir.as_mut().and_then(std::iter::Iterator::next) {
             let file_name = entry.unwrap().file_name();
 
-            *self.output = file_name.to_str().unwrap().to_owned();
+            file_name.to_str().unwrap().clone_into(&mut self.output);
             Ok(())
         } else {
             Err("cannot list dir")

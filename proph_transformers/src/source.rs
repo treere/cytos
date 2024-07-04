@@ -30,7 +30,7 @@ impl Stepper for Rscam {
         if let Some(camera) = self.camera.as_ref() {
             let frame = camera.capture().or(Err("cannot capture"))?;
 
-            *self.frame = Vec::from_iter(frame.iter().cloned());
+            *self.frame = frame.iter().copied().collect::<Vec<_>>();
 
             Ok(())
         } else {

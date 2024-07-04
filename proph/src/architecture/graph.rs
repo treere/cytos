@@ -92,7 +92,7 @@ impl Graph {
 
     /// Initialize the nodes
     pub fn initialize(&mut self) -> Result<()> {
-        for node in self.nodes.iter_mut() {
+        for node in &mut self.nodes {
             node.initialize()?;
         }
         Ok(())
@@ -100,7 +100,7 @@ impl Graph {
 
     /// Terminate the nodes
     pub fn terminate(&mut self) -> Result<()> {
-        for node in self.nodes.iter_mut() {
+        for node in &mut self.nodes {
             node.terminate()?;
         }
         Ok(())
@@ -108,7 +108,7 @@ impl Graph {
 
     /// Compute one step of processing
     pub fn step(&mut self) -> Result<()> {
-        for node in self.nodes.iter_mut() {
+        for node in &mut self.nodes {
             node.step()?;
         }
 

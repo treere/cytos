@@ -28,7 +28,7 @@ impl std::fmt::Debug for Response {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Response::Data(data) => {
-                write!(f, "*  {:?}", data)
+                write!(f, "*  {data:?}")
             }
         }
     }
@@ -96,7 +96,7 @@ impl InternalRunner {
             Command::ListOutputs(node) => message.set_resp(self.graph.list_node_outputs(node)),
             Command::Dump(node, param) => message.set_resp(self.graph.dumper_for((node, param))),
             Command::Load(node, param, value) => {
-                message.set_resp(self.graph.load((node, param), value))
+                message.set_resp(self.graph.load((node, param), value));
             }
             _ => (),
         }
@@ -117,7 +117,7 @@ impl Runner {
                     graph: repr.build(&reg).expect("Cannot build graph"),
                     receiver,
                 }
-                .run()
+                    .run();
             })),
             sender,
         }

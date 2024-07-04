@@ -6,8 +6,8 @@ use crate::architecture::Result;
 pub struct Value(serde_json::Value);
 
 impl Value {
-    pub fn from_string(s: String) -> Result<Self> {
-        serde_json::from_str(&s).map(Self).or(Err("Cannot decode"))
+    pub fn from_string(s: &str) -> Result<Self> {
+        serde_json::from_str(s).map(Self).or(Err("Cannot decode"))
     }
 
     pub fn from_t<T: Serialize>(val: &T) -> Result<Self> {
