@@ -3,7 +3,7 @@ use crate::{
         graph::{Graph, Processor},
         Result, Transformer, Value,
     },
-    utils::{string_to_nodeid, string_to_paramid},
+    utils::{string_to_graphid, string_to_nodeid, string_to_paramid},
 };
 
 use libloading::{Library, Symbol};
@@ -13,6 +13,9 @@ use std::{collections::HashMap, sync::Arc};
 /// Graph representatio to be loaded
 #[derive(Deserialize, Debug)]
 pub struct GraphRepr {
+    /// Graph name
+    name: String,
+
     /// List of nodes
     nodes: Vec<Node>,
 
@@ -26,7 +29,7 @@ impl GraphRepr {
     }
 
     pub fn build(self, loader: &Registry) -> Result<Graph> {
-        let mut graph = Graph::default();
+        let mut graph = Graph::new(string_to_graphid(&self.name)?);
         for node in self.nodes {
             let processor = loader.load(node.name.as_str(), node.typ.as_str())?;
             graph = graph.insert(processor)?;

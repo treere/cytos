@@ -1,4 +1,5 @@
 {
+  "name": "capture",
   "nodes": [
     {
       "name": "SOURCE",

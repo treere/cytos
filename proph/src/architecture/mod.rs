@@ -10,6 +10,7 @@ pub use self::props::{InputProp, OutputProp};
 pub use self::traits::{Stepper, Transformer};
 pub use value::Value;
 
+pub type GraphId = u64;
 pub type NodeId = u64;
 pub type ParamId = u64;
 

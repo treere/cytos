@@ -1,4 +1,4 @@
-use super::{NodeId, ParamId, Result, Stepper, Transformer, Value};
+use super::{GraphId, NodeId, ParamId, Result, Stepper, Transformer, Value};
 
 /// A wrapper around a [`Transformer`] keeping trace of the node id.
 pub struct Processor {
@@ -30,14 +30,22 @@ impl Stepper for Processor {
     }
 }
 
-#[derive(Default)]
 /// Graph.
 pub struct Graph {
+    /// Name
+    pub id: GraphId,
+
     /// Processors
     nodes: Vec<Processor>,
 }
 
 impl Graph {
+    pub fn new(id: GraphId) -> Self {
+        Self {
+            id,
+            nodes: Vec::default(),
+        }
+    }
     /// Add a processor with a given id to the graph.
     pub fn insert(mut self, processor: Processor) -> Result<Self> {
         if self.nodes.iter().all(|x| x.id != processor.id) {

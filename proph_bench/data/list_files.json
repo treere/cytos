@@ -1,4 +1,5 @@
 {
+  "name": "listfiles",
   "nodes": [
     {
       "name": "lister",

@@ -15,6 +15,7 @@ pub enum Command {
     Status,
     ListNodes,
     ListInputs(NodeId),
+    Name,
     ListOutputs(NodeId),
     Dump(NodeId, ParamId),
     Load(NodeId, ParamId, Value),
@@ -97,7 +98,8 @@ impl InternalRunner {
             Command::Dump(node, param) => message.set_resp(self.graph.dumper_for((node, param))),
             Command::Load(node, param, value) => {
                 message.set_resp(self.graph.load((node, param), value));
-            }
+            },
+            Command::Name => message.set_resp(Ok(self.graph.id)),
             _ => (),
         }
     }
@@ -117,7 +119,7 @@ impl Runner {
                     graph: repr.build(&reg).expect("Cannot build graph"),
                     receiver,
                 }
-                    .run();
+                .run();
             })),
             sender,
         }

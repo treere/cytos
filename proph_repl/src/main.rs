@@ -7,8 +7,7 @@ use proph::architecture::Value;
 use proph::loader::{GraphRepr, Registry};
 
 use proph::utils::{
-    convert_val_to_nodeid_string, convert_val_to_paramid_string, string_to_nodeid,
-    string_to_paramid,
+    convert_val_to_graphid_string, convert_val_to_nodeid_string, convert_val_to_paramid_string, string_to_nodeid, string_to_paramid
 };
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
@@ -53,7 +52,7 @@ fn graph_remove(status: Rc<Mutex<Status>>) -> Command<'static> {
 fn graph_load(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
     "Load a graph from a configuration",
-    (graph: String, filename: String) =>   |graph, filename| {
+    (filename: String) =>   |filename| {
         let mut configuration = String::new();
 
         File::open(filename)?.read_to_string(&mut configuration)?;
@@ -66,12 +65,17 @@ fn graph_load(status: Rc<Mutex<Status>>) -> Command<'static> {
 
         let repr = GraphRepr::from_json(&configuration).map_err(|x| anyhow!(x))?;
         let mut runner = Runner::new(repr,registry);
+        let result =         runner.command(RCommand::Name);
 
-        status.graphs.insert(graph, runner);
-
-        println!("loaded!");
-
-        Ok(CommandStatus::Done)
+        if let Ok(Response::Data(val))  = result {
+            let result  = convert_val_to_graphid_string(val).map_err(|x|anyhow!(x))?;
+            status.graphs.insert(result, runner);
+            println!("loaded!");
+            Ok(CommandStatus::Done)
+        }
+        else {
+            Err(anyhow!("Invalid response"))
+        }
     }}
 }
 

@@ -19,7 +19,9 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
 
     let gwhere = generics.where_clause.clone();
 
-    let Data::Struct(DataStruct { ref fields, .. }) = data else {        unreachable!()    };
+    let Data::Struct(DataStruct { ref fields, .. }) = data else {
+        unreachable!()
+    };
 
     let link = create_link(fields);
     let load = create_load(fields);
