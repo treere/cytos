@@ -41,16 +41,16 @@ fn main() -> Result<(), String> {
 
     graph.initialize().expect("cannot initialize");
 
-    println!("running {} steps", steps);
+    println!("running {steps} steps");
     graph.step().expect("step");
 
     let seconds = execution_time(|| {
         for _ in 0..steps {
-            graph.step().unwrap()
+            graph.step().unwrap();
         }
     });
 
-    println!("{} seconds.", seconds);
+    println!("{seconds} seconds.");
     println!("{} step/seconds", steps as f64 / seconds);
     println!("{} seconds/steps", seconds / steps as f64);
 
