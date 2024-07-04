@@ -15,28 +15,11 @@ use std::fs::File;
 use std::io::Read;
 
 use std::rc::Rc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::RecvTimeoutError;
-use std::sync::{Arc, Mutex};
-use std::thread::{self, JoinHandle};
-use std::time::Duration;
-
-struct Listener {
-    _handler: JoinHandle<()>,
-    run: Arc<AtomicBool>,
-    description: String,
-}
-
-impl Drop for Listener {
-    fn drop(&mut self) {
-        self.run.store(false, Ordering::Release);
-    }
-}
+use std::sync::Mutex;
 
 #[derive(Default)]
 struct Status {
     graphs: HashMap<String, Runner>,
-    listeners: HashMap<String, Listener>,
     libraries: HashSet<String>,
 }
 
@@ -59,7 +42,6 @@ fn graph_remove(status: Rc<Mutex<Status>>) -> Command<'static> {
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
 
             let runner = status.graphs.remove(&graph).ok_or(anyhow!("not found"))?;
-            status.listeners.remove(&graph);
             drop(runner);
 
             println!("removed!");
@@ -317,79 +299,6 @@ fn node_load(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn listener_list(status: Rc<Mutex<Status>>) -> Command<'static> {
-    command! {
-        "List graphs",
-        () => ||{
-            let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
-            let names :Vec<_>= status.listeners.iter().map(|(k,v)| (k, &v.description)).collect();
-            println!("{:?}", names);
-            Ok(CommandStatus::Done)
-        }
-    }
-}
-
-fn listener_add(status: Rc<Mutex<Status>>) -> Command<'static> {
-    command! {
-        "Listen some nodes",
-        (graph: String, description: String) => |graph, description: String| {
-            let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
-            let nodes = description
-            .split("|")
-            .map(|g| {
-                let p = g.split(":").collect::<Vec<_>>();
-                if p.len() != 2 {
-                    Err("Malformed str")
-                }
-                else {
-                    let nodeid =  string_to_paramid(p[0]).map_err(|x| anyhow!(x)).unwrap();
-                    let paramid =  string_to_paramid(p[1]).map_err(|x| anyhow!(x)).unwrap();
-                    Ok((nodeid, paramid))
-                }
-            }).collect::<Result<Vec<_>,_>>().map_err(|x| anyhow!(x))?;
-
-            let runner = status
-            .graphs
-            .get_mut(&graph)
-            .ok_or(anyhow!("missing graph"))?;
-
-            if let Ok(Response::Receiver(result)) = runner.command(RCommand::Listener(nodes)) {
-                let run = Arc::new(AtomicBool::new(true));
-                let r1 = run.clone();
-                let handler = thread::spawn(move || {
-                    while r1.load(Ordering::Relaxed) {
-                        match result.recv_timeout(Duration::from_millis(10)) {
-                            Ok(Ok(r)) => println!("{:?}", r),
-                            Ok(Err(r)) => println!("{:?}", r),
-                            Err(RecvTimeoutError::Timeout) => continue,
-                            Err(RecvTimeoutError::Disconnected) => break
-                        }
-                    }
-                });
-                status.listeners.insert(graph, Listener{_handler: handler, run, description});
-                println!("added");
-                Ok(CommandStatus::Done)
-            }
-            else {
-                Err(anyhow!("Invalid return value"))
-            }
-
-        }
-    }
-}
-
-fn listener_remove(status: Rc<Mutex<Status>>) -> Command<'static> {
-    command! {
-        "Listen some nodes",
-        (graph: String) => |graph| {
-            let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
-            status.listeners.remove(&graph).ok_or(anyhow!("not found"))?;
-            println!("removed");
-            Ok(CommandStatus::Done)
-        }
-    }
-}
-
 fn main() -> Result<(), &'static str> {
     let status = Rc::new(Mutex::new(Status::default()));
 
@@ -410,9 +319,6 @@ fn main() -> Result<(), &'static str> {
         .add("node_outputs", node_outputs(status.clone()))
         .add("node_dump", node_dump(status.clone()))
         .add("node_load", node_load(status.clone()))
-        .add("listener_list", listener_list(status.clone()))
-        .add("listener_add", listener_add(status.clone()))
-        .add("listener_remove", listener_remove(status.clone()))
         .add(
             "exit",
             command! { "Exit program", () => || Ok(CommandStatus::Quit) },

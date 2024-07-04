@@ -4,18 +4,6 @@ use std::{any::Any, cell::UnsafeCell, rc::Rc};
 
 use super::{Result, Value};
 
-pub trait Dump {
-    fn dump(&self) -> Result<Value>;
-}
-
-pub struct Dumper(Box<dyn Dump>);
-
-impl Dumper {
-    pub fn dump(&self) -> Result<Value> {
-        self.0.dump()
-    }
-}
-
 struct Prop<T>(Rc<UnsafeCell<T>>);
 
 impl<T: 'static> Prop<T> {
@@ -53,15 +41,9 @@ impl<T: 'static + DeserializeOwned> Prop<T> {
     }
 }
 
-impl<T: 'static + Serialize> Dump for Prop<T> {
+impl<T: 'static + Serialize> Prop<T> {
     fn dump(&self) -> Result<Value> {
         Value::from_t(self.get())
-    }
-}
-
-impl<T: 'static + Serialize> Prop<T> {
-    pub fn as_dumper(&self) -> Dumper {
-        Dumper(Box::new(Self(self.0.clone())))
     }
 }
 
@@ -94,15 +76,9 @@ impl<T: 'static + DeserializeOwned> InputProp<T> {
     }
 }
 
-impl<T: 'static + Serialize> Dump for InputProp<T> {
-    fn dump(&self) -> Result<Value> {
-        self.0.dump()
-    }
-}
-
 impl<T: 'static + Serialize> InputProp<T> {
-    pub fn as_dumper(&self) -> Dumper {
-        self.0.as_dumper()
+    pub fn dump(&self) -> Result<Value> {
+        self.0.dump()
     }
 }
 
@@ -112,8 +88,8 @@ impl<T: Default + 'static> Default for InputProp<T> {
     }
 }
 
-impl<T:'static> std::ops::Deref for InputProp<T> {
-    type Target=T;
+impl<T: 'static> std::ops::Deref for InputProp<T> {
+    type Target = T;
 
     fn deref(&self) -> &Self::Target {
         self.0.get()
@@ -132,15 +108,9 @@ impl<T: 'static> OutputProp<T> {
     }
 }
 
-impl<T: 'static + Serialize> Dump for OutputProp<T> {
-    fn dump(&self) -> Result<Value> {
-        Value::from_t(self.0.get())
-    }
-}
-
 impl<T: 'static + Serialize> OutputProp<T> {
-    pub fn as_dumper(&self) -> Dumper {
-        self.0.as_dumper()
+    pub fn dump(&self) -> Result<Value> {
+        self.0.dump()
     }
 }
 
@@ -150,20 +120,19 @@ impl<T: Default + 'static> Default for OutputProp<T> {
     }
 }
 
-impl<T:'static> std::ops::Deref for OutputProp<T> {
-    type Target=T;
+impl<T: 'static> std::ops::Deref for OutputProp<T> {
+    type Target = T;
 
     fn deref(&self) -> &Self::Target {
         self.0.get()
     }
 }
 
-impl<T:'static> std::ops::DerefMut for OutputProp<T> {
+impl<T: 'static> std::ops::DerefMut for OutputProp<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.0.set()
-    }    
+    }
 }
-
 
 struct GenericProp(Rc<dyn Any>);
 

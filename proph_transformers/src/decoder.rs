@@ -27,4 +27,3 @@ impl Stepper for ImageDecoder {
         }
     }
 }
-

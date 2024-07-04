@@ -3,7 +3,7 @@ use serde::Serialize;
 use crate::loader::GraphRepr;
 
 use super::graph::Graph;
-use super::{Dumper, NodeId, ParamId, Result, Value};
+use super::{NodeId, ParamId, Result, Value};
 
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::{self, JoinHandle};
@@ -18,12 +18,10 @@ pub enum Command {
     ListOutputs(NodeId),
     Dump(NodeId, ParamId),
     Load(NodeId, ParamId, Value),
-    Listener(Vec<(NodeId, ParamId)>),
 }
 
 pub enum Response {
     Data(Value),
-    Receiver(Receiver<Result<Response>>),
 }
 
 impl std::fmt::Debug for Response {
@@ -32,7 +30,6 @@ impl std::fmt::Debug for Response {
             Response::Data(data) => {
                 write!(f, "*  {:?}", data)
             }
-            Response::Receiver(_) => write!(f, "   receiver"),
         }
     }
 }
@@ -46,10 +43,6 @@ impl Message {
     fn set_resp<T: Serialize>(&mut self, resp: Result<T>) {
         self.resp = Some(resp.and_then(|v| Value::from_t(&v).map(Response::Data)));
     }
-
-    fn set_listener(&mut self, recv: Receiver<Result<Response>>) {
-        self.resp = Some(Ok(Response::Receiver(recv)));
-    }
 }
 
 impl Drop for Message {
@@ -60,21 +53,7 @@ impl Drop for Message {
     }
 }
 
-struct Listener {
-    sender: Sender<Result<Response>>,
-    dumpers: Vec<Dumper>,
-}
-
-impl Listener {
-    fn send<T: Serialize>(&self, data: Result<T>) -> Result<()> {
-        self.sender
-            .send(data.and_then(|v| Value::from_t(&v).map(Response::Data)))
-            .or(Err("cannot send"))
-    }
-}
-
 struct InternalRunner {
-    listeners: Vec<Listener>,
     graph: Graph,
     receiver: Receiver<(Command, Message)>,
 }
@@ -102,9 +81,7 @@ impl InternalRunner {
                     }
                 }
 
-                if self.graph.step().is_ok() {
-                    self.notify_listeners();
-                } else {
+                if self.graph.step().is_err() {
                     break 'outer;
                 }
             }
@@ -112,39 +89,14 @@ impl InternalRunner {
         }
     }
 
-    fn notify_listeners(&mut self) {
-        self.listeners.retain(|l| {
-            let data: Result<Vec<_>> = l.dumpers.iter().map(|x| x.dump()).collect();
-            l.send(data).is_ok()
-        });
-    }
-
     fn dispatch_command(&mut self, command: Command, message: &mut Message) {
         match command {
             Command::ListNodes => message.set_resp(Ok(self.graph.list_nodes())),
             Command::ListInputs(node) => message.set_resp(self.graph.list_node_inputs(node)),
             Command::ListOutputs(node) => message.set_resp(self.graph.list_node_outputs(node)),
-            Command::Dump(node, param) => {
-                message.set_resp(self.graph.dumper_for((node, param)).and_then(|x| x.dump()))
-            }
+            Command::Dump(node, param) => message.set_resp(self.graph.dumper_for((node, param))),
             Command::Load(node, param, value) => {
                 message.set_resp(self.graph.load((node, param), value))
-            }
-            Command::Listener(nodes) => {
-                let (s, r) = channel::<Result<Response>>();
-
-                let dumpers: Result<Vec<_>> = nodes
-                    .into_iter()
-                    .map(|(n, p)| self.graph.dumper_for((n, p)))
-                    .collect();
-
-                match dumpers {
-                    Ok(dumpers) => {
-                        message.set_listener(r);
-                        self.listeners.push(Listener { sender: s, dumpers })
-                    }
-                    Err(_) => message.set_resp(Err::<Value, _>("cannot load dumpers")),
-                }
             }
             _ => (),
         }
@@ -162,7 +114,6 @@ impl Runner {
         Self {
             thread: Some(thread::spawn(move || {
                 InternalRunner {
-                    listeners: Vec::new(),
                     graph: repr.build(&reg).expect("Cannot build graph"),
                     receiver,
                 }

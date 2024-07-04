@@ -39,7 +39,7 @@ impl Stepper for Rscam {
     }
 
     fn initialize(&mut self) -> Result<()> {
-        let mut camera = rscam::new(&*self.filename).unwrap();
+        let mut camera = rscam::new(&self.filename).unwrap();
 
         camera
             .start(&rscam::Config {

@@ -6,7 +6,7 @@ pub mod runner;
 mod traits;
 pub mod value;
 
-pub use self::props::{Dumper, InputProp, OutputProp};
+pub use self::props::{InputProp, OutputProp};
 pub use self::traits::{Stepper, Transformer};
 pub use value::Value;
 

@@ -103,7 +103,7 @@ fn create_dump(fields: &Fields) -> proc_macro2::TokenStream {
         .map(|field| {
             let i = &field.ident;
             let f = ident_to_lit(i);
-            quote! {#f => Ok(self.#i.as_dumper()),}
+            quote! {#f => self.#i.dump(),}
         })
         .collect::<Vec<_>>();
 
@@ -112,7 +112,7 @@ fn create_dump(fields: &Fields) -> proc_macro2::TokenStream {
             fn dump(
                 & self,
                 name: proph::architecture::ParamId
-            ) -> proph::architecture::Result<proph::architecture::Dumper> {
+            ) -> proph::architecture::Result<proph::architecture::Value> {
                 match name {
                     #(#inputs)*
                     _ => Err("parameter not found"),
