@@ -40,12 +40,14 @@ pub struct Graph {
 }
 
 impl Graph {
+    /// Create a graph
     pub fn new(id: GraphId) -> Self {
         Self {
             id,
             nodes: Vec::default(),
         }
     }
+
     /// Add a processor with a given id to the graph.
     pub fn insert(mut self, processor: Processor) -> Result<Self> {
         if self.nodes.iter().all(|x| x.id != processor.id) {
@@ -58,44 +60,48 @@ impl Graph {
     }
 
     /// Connects a output data to an input one.
-    pub fn connect(&mut self, src: (NodeId, ParamId), dst: (NodeId, ParamId)) -> Result<()> {
+    pub fn connect(
+        &mut self,
+        (src_node_id, src_param_id): (NodeId, ParamId),
+        (dst_node_id, dst_param_id): (NodeId, ParamId),
+    ) -> Result<()> {
         let output = self
             .nodes
             .iter()
-            .find(|p| p.id == src.0)
+            .find(|p| p.id == src_node_id)
             .ok_or("cannot find source")?
             .transformer
-            .output(src.1)
+            .output(src_param_id)
             .ok_or("cannot find param")?;
 
         self.nodes
             .iter_mut()
-            .find(|p| p.id == dst.0)
+            .find(|p| p.id == dst_node_id)
             .ok_or("cannot find dest")?
             .transformer
-            .link(dst.1, output)?;
+            .link(dst_param_id, output)?;
 
         Ok(())
     }
 
-    pub fn load(&mut self, src: (NodeId, ParamId), value: Value) -> Result<()> {
+    pub fn load(&mut self, (node_id, param_id): (NodeId, ParamId), value: Value) -> Result<()> {
         self.nodes
             .iter_mut()
-            .find(|p| p.id == src.0)
+            .find(|p| p.id == node_id)
             .ok_or("cannot find node")?
             .transformer
-            .load(src.1, value)?;
+            .load(param_id, value)?;
 
         Ok(())
     }
 
-    pub fn dumper_for(&self, src: (NodeId, ParamId)) -> Result<Value> {
+    pub fn dumper_for(&self, (node_id, param_id): (NodeId, ParamId)) -> Result<Value> {
         self.nodes
             .iter()
-            .find(|p| p.id == src.0)
+            .find(|p| p.id == node_id)
             .ok_or("cannot find node")?
             .transformer
-            .dump(src.1)
+            .dump(param_id)
     }
 
     /// Initialize the nodes
