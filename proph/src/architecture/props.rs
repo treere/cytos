@@ -4,6 +4,7 @@ use std::{any::Any, cell::UnsafeCell, rc::Rc};
 
 use super::{Result, Value};
 
+#[derive(Default)]
 struct Prop<T>(Rc<UnsafeCell<T>>);
 
 impl<T: 'static> Prop<T> {
@@ -47,13 +48,8 @@ impl<T: 'static + Serialize> Prop<T> {
     }
 }
 
-impl<T: Default + 'static> Default for Prop<T> {
-    fn default() -> Self {
-        Self::new(T::default())
-    }
-}
-
 /// A property
+#[derive(Default)]
 pub struct InputProp<T>(Prop<T>);
 
 impl<T: 'static> InputProp<T> {
@@ -82,12 +78,6 @@ impl<T: 'static + Serialize> InputProp<T> {
     }
 }
 
-impl<T: Default + 'static> Default for InputProp<T> {
-    fn default() -> Self {
-        Self::new(T::default())
-    }
-}
-
 impl<T: 'static> std::ops::Deref for InputProp<T> {
     type Target = T;
 
@@ -96,6 +86,7 @@ impl<T: 'static> std::ops::Deref for InputProp<T> {
     }
 }
 
+#[derive(Default)]
 pub struct OutputProp<T>(Prop<T>);
 
 impl<T: 'static> OutputProp<T> {
@@ -111,12 +102,6 @@ impl<T: 'static> OutputProp<T> {
 impl<T: 'static + Serialize> OutputProp<T> {
     pub fn dump(&self) -> Result<Value> {
         self.0.dump()
-    }
-}
-
-impl<T: Default + 'static> Default for OutputProp<T> {
-    fn default() -> Self {
-        Self::new(T::default())
     }
 }
 
