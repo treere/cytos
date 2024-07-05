@@ -21,19 +21,8 @@ pub enum Command {
     Load(NodeId, ParamId, Value),
 }
 
-pub enum Response {
-    Data(Value),
-}
-
-impl std::fmt::Debug for Response {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Response::Data(data) => {
-                write!(f, "*  {data:?}")
-            }
-        }
-    }
-}
+#[derive(Debug)]
+pub struct Response(pub Value);
 
 struct Message {
     sender: Sender<Result<Response>>,
@@ -42,14 +31,14 @@ struct Message {
 
 impl Message {
     fn set_resp<T: Serialize>(&mut self, resp: Result<T>) {
-        self.resp = Some(resp.and_then(|v| Value::from_t(&v).map(Response::Data)));
+        self.resp = Some(resp.and_then(|v| Value::from_t(&v).map(Response)));
     }
 }
 
 impl Drop for Message {
     fn drop(&mut self) {
         let null = Value::from_t(&()).unwrap();
-        let resp = self.resp.take().unwrap_or(Ok(Response::Data(null)));
+        let resp = self.resp.take().unwrap_or(Ok(Response(null)));
         self.sender.send(resp).expect("cannot send");
     }
 }
@@ -98,7 +87,7 @@ impl InternalRunner {
             Command::Dump(node, param) => message.set_resp(self.graph.dumper_for((node, param))),
             Command::Load(node, param, value) => {
                 message.set_resp(self.graph.load((node, param), value));
-            },
+            }
             Command::Name => message.set_resp(Ok(self.graph.id)),
             _ => (),
         }

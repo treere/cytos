@@ -2,7 +2,7 @@ use anyhow::anyhow;
 
 use easy_repl::{command, Command, CommandStatus, Repl};
 
-use proph::architecture::runner::{Command as RCommand, Response, Runner};
+use proph::architecture::runner::{Command as RCommand, Runner};
 use proph::architecture::{NodeId, ParamId, Value};
 use proph::loader::{GraphRepr, Registry};
 
@@ -65,17 +65,12 @@ fn graph_load(status: Rc<Mutex<Status>>) -> Command<'static> {
 
         let repr = GraphRepr::from_json(&configuration).map_err(|x| anyhow!(x))?;
         let mut runner = Runner::new(repr,registry);
-        let result =         runner.command(RCommand::Name);
+        let result = runner.command(RCommand::Name).and_then(|c|convert_val_to_graphid_string(c.0)).map_err(|x|anyhow!(x))?;
 
-        if let Ok(Response::Data(val))  = result {
-            let result  =  convert_val_to_graphid_string(val).map_err(|x|anyhow!(x))?;
-            status.graphs.insert(result, runner);
-            println!("loaded!");
+        status.graphs.insert(result, runner);
+        println!("loaded!");
             Ok(CommandStatus::Done)
-        }
-        else {
-            Err(anyhow!("Invalid response"))
-        }
+
     }}
 }
 
@@ -199,16 +194,10 @@ fn node_list(status: Rc<Mutex<Status>>) -> Command<'static> {
                 .graphs
                 .get_mut(&graph)
                 .ok_or(anyhow!("missing graph"))?
-            .command(RCommand::ListNodes);
+                .command(RCommand::ListNodes).and_then(|x|convert_val_to_nodeid_string(x.0)).map_err(|x|anyhow!(x))?;
 
-            if let Ok(Response::Data(val))  = result {
-                let result  = convert_val_to_nodeid_string(val).map_err(|x|anyhow!(x))?;
-                println!("{result:?}");
-                Ok(CommandStatus::Done)
-            }
-            else {
-                Err(anyhow!("Invalid response"))
-            }
+            println!("{result:?}");
+            Ok(CommandStatus::Done)
         }
     }
 }
@@ -220,19 +209,14 @@ fn node_inputs(status: Rc<Mutex<Status>>) -> Command<'static> {
             let node = NodeId::try_from(&node).map_err(|x| anyhow!(x))?;
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let result = status
-            .graphs
-            .get_mut(&graph)
-            .ok_or(anyhow!("missing graph"))?
-            .command(RCommand::ListInputs(node));
+                .graphs
+                .get_mut(&graph)
+                .ok_or(anyhow!("missing graph"))?
+                .command(RCommand::ListInputs(node))
+                .and_then(|val| convert_val_to_paramid_string(val.0)).map_err(|x| anyhow!(x))?;
 
-            if let Ok(Response::Data(val))  = result {
-                let result = convert_val_to_paramid_string(val).map_err(|x| anyhow!(x))?;
-                println!("{result:?}");
-                Ok(CommandStatus::Done)
-            }
-            else {
-                Err(anyhow!("Invalid response"))
-            }
+            println!("{result:?}");
+            Ok(CommandStatus::Done)
         }
     }
 }
@@ -244,19 +228,15 @@ fn node_outputs(status: Rc<Mutex<Status>>) -> Command<'static> {
             let node = NodeId::try_from(&node).map_err(|x| anyhow!(x))?;
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let result = status
-            .graphs
-            .get_mut(&graph)
-            .ok_or(anyhow!("missing graph"))?
-            .command(RCommand::ListOutputs(node));
+                .graphs
+                .get_mut(&graph)
+                .ok_or(anyhow!("missing graph"))?
+                .command(RCommand::ListOutputs(node))
+                .map_err(|x|anyhow!(x))?;
 
-            if let Ok(Response::Data(val))  = result {
-                let result  = convert_val_to_nodeid_string(val).map_err(|x|anyhow!(x))?;
-                println!("{result:?}");
-                Ok(CommandStatus::Done)
-            }
-            else {
-                Err(anyhow!("Invalid response"))
-            }
+            let result  = convert_val_to_nodeid_string(result.0).map_err(|x|anyhow!(x))?;
+            println!("{result:?}");
+            Ok(CommandStatus::Done)
         }
     }
 }
