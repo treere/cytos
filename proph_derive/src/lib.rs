@@ -217,11 +217,14 @@ fn is_of_type(ty: &Type, types: &[&str]) -> bool {
     }
 }
 
-fn ident_to_lit(ident: &'_ Option<Ident>) -> LitInt {
+fn ident_to_lit(ident: &'_ Option<Ident>) -> proc_macro2::TokenStream {
     let lit = format!("{}", ident.clone().expect("missing ident"));
     let lit = format!(
         "{}u64",
         u64::from_str_radix(&lit, 36).expect("cannot parse")
     );
-    LitInt::new(&lit, Span::call_site())
+    let l = LitInt::new(&lit, Span::call_site());
+    quote! {
+        proph::architecture::ParamId(#l)
+    }
 }

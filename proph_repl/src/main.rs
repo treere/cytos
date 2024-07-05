@@ -3,11 +3,11 @@ use anyhow::anyhow;
 use easy_repl::{command, Command, CommandStatus, Repl};
 
 use proph::architecture::runner::{Command as RCommand, Response, Runner};
-use proph::architecture::Value;
+use proph::architecture::{NodeId, ParamId, Value};
 use proph::loader::{GraphRepr, Registry};
 
 use proph::utils::{
-    convert_val_to_graphid_string, convert_val_to_nodeid_string, convert_val_to_paramid_string, string_to_nodeid, string_to_paramid
+    convert_val_to_graphid_string, convert_val_to_nodeid_string, convert_val_to_paramid_string,
 };
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
@@ -68,7 +68,7 @@ fn graph_load(status: Rc<Mutex<Status>>) -> Command<'static> {
         let result =         runner.command(RCommand::Name);
 
         if let Ok(Response::Data(val))  = result {
-            let result  = convert_val_to_graphid_string(val).map_err(|x|anyhow!(x))?;
+            let result  =  convert_val_to_graphid_string(val).map_err(|x|anyhow!(x))?;
             status.graphs.insert(result, runner);
             println!("loaded!");
             Ok(CommandStatus::Done)
@@ -216,8 +216,8 @@ fn node_list(status: Rc<Mutex<Status>>) -> Command<'static> {
 fn node_inputs(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List inputs of a graph node",
-        (graph: String, node: String) => |graph, node| {
-            let node = string_to_nodeid(node).map_err(|x| anyhow!(x))?;
+        (graph: String, node: String) => |graph:String, node: String| {
+            let node = NodeId::try_from(&node).map_err(|x| anyhow!(x))?;
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let result = status
             .graphs
@@ -240,8 +240,8 @@ fn node_inputs(status: Rc<Mutex<Status>>) -> Command<'static> {
 fn node_outputs(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List outputs of a graph node",
-        (graph: String, node: String) => |graph, node| {
-            let node = string_to_nodeid(node).map_err(|x| anyhow!(x))?;
+        (graph: String, node: String) => |graph:String, node:String| {
+            let node = NodeId::try_from(&node).map_err(|x| anyhow!(x))?;
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let result = status
             .graphs
@@ -264,9 +264,9 @@ fn node_outputs(status: Rc<Mutex<Status>>) -> Command<'static> {
 fn node_dump(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Dump a input/output of a graph node",
-        (graph: String, node: String, param: String) => |graph, node, param| {
-            let node = string_to_nodeid(node).map_err(|x| anyhow!(x))?;
-            let param = string_to_paramid(param).map_err(|x| anyhow!(x))?;
+        (graph: String, node: String, param: String) => |graph, node:String, param:String| {
+            let node = NodeId::try_from(&node).map_err(|x| anyhow!(x))?;
+            let param = ParamId::try_from(&param).map_err(|x| anyhow!(x))?;
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let result = status
             .graphs
@@ -284,9 +284,9 @@ fn node_dump(status: Rc<Mutex<Status>>) -> Command<'static> {
 fn node_load(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Load to an input/output of a graph node",
-        (graph: String, node: String, param: String, value: String) => |graph, node, param, value: String| {
-            let node = string_to_nodeid(node).map_err(|x| anyhow!(x))?;
-            let param = string_to_paramid(param).map_err(|x| anyhow!(x))?;
+        (graph: String, node: String, param: String, value: String) => |graph, node:String, param:String, value: String| {
+            let node = NodeId::try_from(&node).map_err(|x| anyhow!(x))?;
+            let param = ParamId::try_from(&param).map_err(|x| anyhow!(x))?;
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let value = Value::from_string(&value).map_err(|x| anyhow!(x))?;
 

@@ -1,9 +1,6 @@
-use crate::{
-    architecture::{
-        graph::{Graph, Processor},
-        Result, Transformer, Value,
-    },
-    utils::{string_to_graphid, string_to_nodeid, string_to_paramid},
+use crate::architecture::{
+    graph::{Graph, Processor},
+    GraphId, NodeId, ParamId, Result, Transformer, Value,
 };
 
 use libloading::{Library, Symbol};
@@ -29,14 +26,14 @@ impl GraphRepr {
     }
 
     pub fn build(self, loader: &Registry) -> Result<Graph> {
-        let mut graph = Graph::new(string_to_graphid(&self.name)?);
+        let mut graph = Graph::new(GraphId::try_from(self.name.as_str())?);
         for node in self.nodes {
             let processor = loader.load(node.name.as_str(), node.typ.as_str())?;
             graph = graph.insert(processor)?;
-            let nodeid = string_to_nodeid(&node.name)?;
+            let nodeid = NodeId::try_from(node.name.as_str())?;
 
             for (prop, value) in node.props {
-                let propid = string_to_paramid(&prop)?;
+                let propid = ParamId::try_from(&prop)?;
                 graph.load((nodeid, propid), value)?;
             }
         }
@@ -46,10 +43,10 @@ impl GraphRepr {
             dst: (d0, d1),
         } in self.links
         {
-            let s0 = string_to_nodeid(&s0)?;
-            let s1 = string_to_paramid(&s1)?;
-            let d0 = string_to_nodeid(&d0)?;
-            let d1 = string_to_paramid(&d1)?;
+            let s0 = NodeId::try_from(s0.as_str())?;
+            let s1 = ParamId::try_from(&s1)?;
+            let d0 = NodeId::try_from(d0.as_str())?;
+            let d1 = ParamId::try_from(&d1)?;
 
             graph.connect((s0, s1), (d0, d1))?;
         }
@@ -109,7 +106,7 @@ impl Registry {
     /// Load a Processor
     pub fn load(&self, name: &str, typ: &str) -> Result<Processor> {
         let factory = self.factories.get(typ).ok_or("missing type")?;
-        let name = string_to_nodeid(name)?;
+        let name = NodeId::try_from(name)?;
         Ok(Processor::new(name, factory()))
     }
 

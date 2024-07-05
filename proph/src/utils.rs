@@ -14,27 +14,11 @@ pub fn execution_time<T: FnMut()>(mut f: T) -> f64 {
     elapsed_time.as_secs_f64()
 }
 
-pub fn string_to_graphid(s: impl AsRef<str>) -> Result<u64> {
+pub fn string_to_u64(s: impl AsRef<str>) -> Result<u64> {
     u64::from_str_radix(s.as_ref(), 36).or(Err("invalid string"))
 }
 
-pub fn string_to_nodeid(s: impl AsRef<str>) -> Result<u64> {
-    u64::from_str_radix(s.as_ref(), 36).or(Err("invalid string"))
-}
-
-pub fn string_to_paramid(s: impl AsRef<str>) -> Result<u64> {
-    u64::from_str_radix(s.as_ref(), 36).or(Err("invalid string"))
-}
-
-pub fn graphid_to_string(val: u64) -> String {
-    format_radix(val, 36)
-}
-
-pub fn nodeid_to_string(val: u64) -> String {
-    format_radix(val, 36)
-}
-
-pub fn paramid_to_string(val: u64) -> String {
+pub fn u64_to_string(val: u64) -> String {
     format_radix(val, 36)
 }
 
@@ -56,15 +40,15 @@ fn format_radix(mut x: u64, radix: u64) -> String {
 
 pub fn convert_val_to_graphid_string(val: Value) -> Result<String> {
     let graph: GraphId = val.convert()?;
-    Ok(graphid_to_string(graph))
+    Ok(format!("{graph}"))
 }
 
 pub fn convert_val_to_nodeid_string(val: Value) -> Result<Vec<String>> {
     let nodes: Vec<NodeId> = val.convert()?;
-    Ok(nodes.into_iter().map(nodeid_to_string).collect())
+    Ok(nodes.into_iter().map(|n| format!("{n}")).collect())
 }
 
 pub fn convert_val_to_paramid_string(val: Value) -> Result<Vec<String>> {
     let nodes: Vec<ParamId> = val.convert()?;
-    Ok(nodes.into_iter().map(paramid_to_string).collect())
+    Ok(nodes.into_iter().map(|n| format!("{n}")).collect())
 }
