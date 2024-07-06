@@ -46,27 +46,29 @@ impl GraphRepr {
     pub fn build(self, loader: &Registry) -> Result<Graph> {
         let mut graph = Graph::new(GraphId::try_from(self.name.as_str())?);
         for node in self.nodes {
-            let processor = loader.load(node.name.as_str(), node.typ.as_str())?;
+            let processor = node.build(loader)?;
             graph = graph.insert(processor)?;
-            let nodeid = NodeId::try_from(node.name.as_str())?;
-
-            for (prop, value) in node.props {
-                let propid = ParamId::try_from(&prop)?;
-                graph.load((nodeid, propid), value)?;
-            }
         }
 
         for Link { src, dst: (d0, d1) } in self.links {
+            let d0 = NodeId::try_from(&d0)?;
+            let d1 = ParamId::try_from(&d1)?;
+
             match src {
                 LinkSource::InternalLinkSource(s0, s1) => {
-                    let s0 = NodeId::try_from(s0.as_str())?;
+                    let s0 = NodeId::try_from(&s0)?;
                     let s1 = ParamId::try_from(&s1)?;
-                    let d0 = NodeId::try_from(d0.as_str())?;
-                    let d1 = ParamId::try_from(&d1)?;
 
                     graph.internal_link((s0, s1), (d0, d1))?;
                 }
-                LinkSource::ExternalLinkSource(_g0, _s0, _s1) => {}
+                LinkSource::ExternalLinkSource(g0, s0, s1) => {
+                    let g0 = GraphId::try_from(&g0)?;
+                    let s0 = NodeId::try_from(&s0)?;
+                    let s1 = ParamId::try_from(&s1)?;
+
+                    println!("{g0} {s0} {s1}");
+                    todo!("I need a way to take the command of the other graph");
+                }
             }
         }
         Ok(graph)
@@ -85,6 +87,19 @@ struct Node {
     /// Properties
     #[serde(default)]
     props: HashMap<String, Value>,
+}
+
+impl Node {
+    fn build(self, loader: &Registry) -> Result<Processor> {
+        let mut transformer = loader.load(self.typ.as_str())?;
+        let nodeid = NodeId::try_from(self.name.as_str())?;
+        for (prop, value) in self.props {
+            let propid = ParamId::try_from(&prop)?;
+            transformer.load(propid, value)?;
+        }
+
+        Ok(Processor::new(nodeid, transformer))
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -129,10 +144,9 @@ impl Registry {
     }
 
     /// Load a Processor
-    pub fn load(&self, name: &str, typ: &str) -> Result<Processor> {
+    pub fn load(&self, typ: &str) -> Result<Box<dyn Transformer>> {
         let factory = self.factories.get(typ).ok_or("missing type")?;
-        let name = NodeId::try_from(name)?;
-        Ok(Processor::new(name, factory()))
+        Ok(factory())
     }
 
     pub fn list_factories(&self) -> impl Iterator<Item = &String> {
