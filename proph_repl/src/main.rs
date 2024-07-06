@@ -69,8 +69,7 @@ fn graph_load(status: Rc<Mutex<Status>>) -> Command<'static> {
 
         status.graphs.insert(result, runner);
         println!("loaded!");
-            Ok(CommandStatus::Done)
-
+        Ok(CommandStatus::Done)
     }}
 }
 
