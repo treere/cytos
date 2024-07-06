@@ -56,17 +56,18 @@ impl GraphRepr {
             }
         }
 
-        for Link {
-            src: LinkSource::InternalLinkSource(s0, s1),
-            dst: (d0, d1),
-        } in self.links
-        {
-            let s0 = NodeId::try_from(s0.as_str())?;
-            let s1 = ParamId::try_from(&s1)?;
-            let d0 = NodeId::try_from(d0.as_str())?;
-            let d1 = ParamId::try_from(&d1)?;
+        for Link { src, dst: (d0, d1) } in self.links {
+            match src {
+                LinkSource::InternalLinkSource(s0, s1) => {
+                    let s0 = NodeId::try_from(s0.as_str())?;
+                    let s1 = ParamId::try_from(&s1)?;
+                    let d0 = NodeId::try_from(d0.as_str())?;
+                    let d1 = ParamId::try_from(&d1)?;
 
-            graph.internal_link((s0, s1), (d0, d1))?;
+                    graph.internal_link((s0, s1), (d0, d1))?;
+                }
+                LinkSource::ExternalLinkSource(_g0, _s0, _s1) => {}
+            }
         }
         Ok(graph)
     }
@@ -88,7 +89,8 @@ struct Node {
 
 #[derive(Deserialize, Debug)]
 enum LinkSource {
-    InternalLinkSource(String, String)
+    InternalLinkSource(String, String),
+    ExternalLinkSource(String, String, String),
 }
 
 /// Link between nodes
