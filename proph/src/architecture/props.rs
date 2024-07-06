@@ -12,7 +12,7 @@ impl<T: 'static> Prop<T> {
         Self(Rc::new(UnsafeCell::new(val)))
     }
 
-    pub fn change_value(&mut self, val: GenericOutputProp) -> Result<()> {
+    pub fn link_value(&mut self, val: GenericOutputProp) -> Result<()> {
         if let Ok(v) = val.0 .0.downcast::<UnsafeCell<T>>() {
             self.0 = v;
             Ok(())
@@ -54,8 +54,14 @@ impl<T: 'static + Serialize> Prop<T> {
     }
 }
 
+impl<T: Clone> Clone for Prop<T> {
+    fn clone(&self) -> Self {
+        Self(Rc::new(UnsafeCell::new(self.deref().clone())))
+    }
+}
+
 /// A property
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct InputProp<T>(Prop<T>);
 
 impl<T: 'static> InputProp<T> {
@@ -63,8 +69,8 @@ impl<T: 'static> InputProp<T> {
         Self(Prop::new(val))
     }
 
-    pub fn change_value(&mut self, val: GenericOutputProp) -> Result<()> {
-        self.0.change_value(val)
+    pub fn link_value(&mut self, val: GenericOutputProp) -> Result<()> {
+        self.0.link_value(val)
     }
 
     pub fn as_generic(&self) -> GenericInputProp {
@@ -88,11 +94,11 @@ impl<T: 'static> std::ops::Deref for InputProp<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &*self.0
+        &self.0
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct OutputProp<T>(Prop<T>);
 
 impl<T: 'static> OutputProp<T> {
@@ -115,13 +121,13 @@ impl<T: 'static> std::ops::Deref for OutputProp<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &*self.0
+        &self.0
     }
 }
 
 impl<T: 'static> std::ops::DerefMut for OutputProp<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut *self.0
+        &mut self.0
     }
 }
 

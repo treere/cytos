@@ -54,7 +54,7 @@ fn create_link(fields: &Fields) -> proc_macro2::TokenStream {
         .map(|field| {
             let ident = &field.ident;
             let lit = ident_to_lit(ident);
-            quote! {#lit => self.#ident.change_value(val),}
+            quote! {#lit => self.#ident.link_value(val),}
         })
         .collect::<Vec<_>>();
 
