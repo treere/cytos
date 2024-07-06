@@ -1,6 +1,6 @@
 //! Properties
 use serde::{de::DeserializeOwned, Serialize};
-use std::{any::Any, cell::UnsafeCell, rc::Rc};
+use std::{any::Any, cell::UnsafeCell, ops::Deref, rc::Rc};
 
 use super::{Result, Value};
 
@@ -10,14 +10,6 @@ struct Prop<T>(Rc<UnsafeCell<T>>);
 impl<T: 'static> Prop<T> {
     pub fn new(val: T) -> Self {
         Self(Rc::new(UnsafeCell::new(val)))
-    }
-
-    pub fn get(&self) -> &T {
-        unsafe { &*self.0.get() }
-    }
-
-    pub fn set(&mut self) -> &mut T {
-        unsafe { &mut *self.0.get() }
     }
 
     pub fn change_value(&mut self, val: GenericOutputProp) -> Result<()> {
@@ -34,6 +26,20 @@ impl<T: 'static> Prop<T> {
     }
 }
 
+impl<T> std::ops::Deref for Prop<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*self.0.get() }
+    }
+}
+
+impl<T> std::ops::DerefMut for Prop<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { &mut *self.0.get() }
+    }
+}
+
 impl<T: 'static + DeserializeOwned> Prop<T> {
     pub fn load(&mut self, val: Value) -> Result<()> {
         let value = val.convert()?;
@@ -44,7 +50,7 @@ impl<T: 'static + DeserializeOwned> Prop<T> {
 
 impl<T: 'static + Serialize> Prop<T> {
     fn dump(&self) -> Result<Value> {
-        Value::from_t(self.get())
+        Value::from_t(self.deref())
     }
 }
 
@@ -82,7 +88,7 @@ impl<T: 'static> std::ops::Deref for InputProp<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        self.0.get()
+        &*self.0
     }
 }
 
@@ -109,13 +115,13 @@ impl<T: 'static> std::ops::Deref for OutputProp<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        self.0.get()
+        &*self.0
     }
 }
 
 impl<T: 'static> std::ops::DerefMut for OutputProp<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.0.set()
+        &mut *self.0
     }
 }
 
