@@ -68,7 +68,6 @@ impl<T: 'static + Serialize> Prop<T> {
     }
 }
 
-
 /// A property
 #[derive(Default)]
 pub struct InputProp<T>(Prop<T>);
