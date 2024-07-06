@@ -30,7 +30,7 @@ struct Message {
 }
 
 impl Message {
-    fn set_resp<T: Serialize>(&mut self, resp: Result<T>) {
+    fn set<T: Serialize>(&mut self, resp: Result<T>) {
         self.resp = Some(resp.and_then(|v| Value::from_t(&v).map(Response)));
     }
 }
@@ -55,7 +55,7 @@ impl InternalRunner {
                 match command {
                     Command::Kill => break 'main,
                     Command::Start => break,
-                    Command::Status => message.set_resp(Ok("Idle")),
+                    Command::Status => message.set(Ok("Idle")),
                     _ => self.dispatch_command(command, &mut message),
                 }
             }
@@ -66,7 +66,7 @@ impl InternalRunner {
                     match command {
                         Command::Kill => break 'main,
                         Command::Stop => break 'outer,
-                        Command::Status => message.set_resp(Ok("Running")),
+                        Command::Status => message.set(Ok("Running")),
                         _ => self.dispatch_command(command, &mut message),
                     }
                 }
@@ -81,14 +81,14 @@ impl InternalRunner {
 
     fn dispatch_command(&mut self, command: Command, message: &mut Message) {
         match command {
-            Command::ListNodes => message.set_resp(Ok(self.graph.list_nodes())),
-            Command::ListInputs(node) => message.set_resp(self.graph.list_node_inputs(node)),
-            Command::ListOutputs(node) => message.set_resp(self.graph.list_node_outputs(node)),
-            Command::Dump(node, param) => message.set_resp(self.graph.dumper_for((node, param))),
+            Command::ListNodes => message.set(Ok(self.graph.list_nodes())),
+            Command::ListInputs(node) => message.set(self.graph.list_node_inputs(node)),
+            Command::ListOutputs(node) => message.set(self.graph.list_node_outputs(node)),
+            Command::Dump(node, param) => message.set(self.graph.dumper_for((node, param))),
             Command::Load(node, param, value) => {
-                message.set_resp(self.graph.load((node, param), value));
+                message.set(self.graph.load((node, param), value));
             }
-            Command::Name => message.set_resp(Ok(self.graph.id)),
+            Command::Name => message.set(Ok(self.graph.id)),
             _ => (),
         }
     }
