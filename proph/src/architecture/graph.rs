@@ -60,7 +60,7 @@ impl Graph {
     }
 
     /// Connects a output data to an input one.
-    pub fn connect(
+    pub fn internal_link(
         &mut self,
         (src_node_id, src_param_id): (NodeId, ParamId),
         (dst_node_id, dst_param_id): (NodeId, ParamId),

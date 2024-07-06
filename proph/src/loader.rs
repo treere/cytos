@@ -57,7 +57,7 @@ impl GraphRepr {
         }
 
         for Link {
-            src: (s0, s1),
+            src: LinkSource::InternalLinkSource(s0, s1),
             dst: (d0, d1),
         } in self.links
         {
@@ -66,7 +66,7 @@ impl GraphRepr {
             let d0 = NodeId::try_from(d0.as_str())?;
             let d1 = ParamId::try_from(&d1)?;
 
-            graph.connect((s0, s1), (d0, d1))?;
+            graph.internal_link((s0, s1), (d0, d1))?;
         }
         Ok(graph)
     }
@@ -86,11 +86,16 @@ struct Node {
     props: HashMap<String, Value>,
 }
 
+#[derive(Deserialize, Debug)]
+enum LinkSource {
+    InternalLinkSource(String, String)
+}
+
 /// Link between nodes
 #[derive(Deserialize, Debug)]
 struct Link {
     /// Source node param
-    src: (String, String),
+    src: LinkSource,
 
     /// Destination node param
     dst: (String, String),
