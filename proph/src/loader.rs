@@ -8,11 +8,11 @@ use serde::Deserialize;
 use std::{collections::HashMap, sync::Arc};
 
 #[derive(Deserialize, Debug)]
-pub struct SystemReps {
+pub struct SystemRepr {
     graphs: Vec<GraphRepr>,
 }
 
-impl SystemReps {
+impl SystemRepr {
     pub fn from_json(file: &str) -> Result<Self> {
         serde_json::from_str(file).or(Err("cannot load file"))
     }
@@ -118,10 +118,10 @@ struct Link {
     dst: (String, String),
 }
 
-type Factory = Box<dyn Fn() -> Box<dyn Transformer> + Send>;
+type Factory = Arc<dyn Fn() -> Box<dyn Transformer> + Send + Sync>;
 
 /// Registry of transformers
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Registry {
     /// Factories
     factories: HashMap<String, Factory>,
@@ -135,11 +135,11 @@ impl Registry {
     pub fn add<K: Transformer + 'static>(
         &mut self,
         name: impl AsRef<str>,
-        factory: impl (Fn() -> K) + 'static + Send,
+        factory: impl (Fn() -> K) + 'static + Send + Sync,
     ) -> &mut Self {
         self.factories
             .entry(name.as_ref().to_owned())
-            .or_insert(Box::new(move || Box::new(factory())));
+            .or_insert(Arc::new(move || Box::new(factory())));
         self
     }
 
