@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::loader::GraphRepr;
+use crate::loader::{GraphRepr, Registry};
 
 use super::graph::Graph;
 use super::{NodeId, ParamId, Result, Value};
@@ -100,7 +100,7 @@ pub struct Runner {
 }
 
 impl Runner {
-    pub fn new(repr: GraphRepr, reg: crate::loader::Registry) -> Self {
+    pub fn new(repr: GraphRepr, reg: Registry) -> Self {
         let (sender, receiver) = channel::<(Command, Message)>();
         Self {
             thread: Some(thread::spawn(move || {
