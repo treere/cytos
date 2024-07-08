@@ -66,8 +66,7 @@ impl GraphRepr {
                     let s0 = NodeId::try_from(&s0)?;
                     let s1 = ParamId::try_from(&s1)?;
 
-                    println!("{g0} {s0} {s1}");
-                    todo!("I need a way to take the command of the other graph");
+                    graph.external_link((g0, s0, s1), (d0, d1))?;
                 }
             }
         }

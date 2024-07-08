@@ -37,6 +37,9 @@ pub struct Graph {
 
     /// Processors
     nodes: Vec<Processor>,
+
+    /// External links
+    external: Vec<((GraphId, NodeId, ParamId),(NodeId, ParamId))>
 }
 
 impl Graph {
@@ -45,6 +48,7 @@ impl Graph {
         Self {
             id,
             nodes: Vec::default(),
+            external: Vec::default()
         }
     }
 
@@ -81,6 +85,15 @@ impl Graph {
             .transformer
             .link(dst_param_id, output)?;
 
+        Ok(())
+    }
+
+    pub fn external_link(
+        &mut self,
+        src: (GraphId, NodeId, ParamId),
+        dst: (NodeId, ParamId),
+    ) -> Result<()> {
+        self.external.push((src, dst));
         Ok(())
     }
 
