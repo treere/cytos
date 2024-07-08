@@ -39,7 +39,7 @@ pub struct Graph {
     nodes: Vec<Processor>,
 
     /// External links
-    external: Vec<((GraphId, NodeId, ParamId),(NodeId, ParamId))>
+    external: Vec<((GraphId, NodeId, ParamId), (NodeId, ParamId))>,
 }
 
 impl Graph {
@@ -48,7 +48,7 @@ impl Graph {
         Self {
             id,
             nodes: Vec::default(),
-            external: Vec::default()
+            external: Vec::default(),
         }
     }
 

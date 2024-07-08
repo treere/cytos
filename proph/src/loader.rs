@@ -9,7 +9,7 @@ use std::{collections::HashMap, sync::Arc};
 
 #[derive(Deserialize, Debug)]
 pub struct SystemRepr {
-    graphs: Vec<GraphRepr>,
+    pub graphs: Vec<GraphRepr>,
 }
 
 impl SystemRepr {
