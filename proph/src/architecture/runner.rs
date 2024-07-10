@@ -93,23 +93,23 @@ impl InternalRunner {
 }
 
 pub struct Runner {
-    pub id: GraphId,
     thread: Option<JoinHandle<()>>,
     sender: Sender<(Command, Message)>,
 }
 
 impl Runner {
-    pub fn new(repr: GraphRepr, reg: Registry) -> Self {
+    pub fn new(repr: GraphRepr, reg: Registry) -> (GraphId, Self) {
         let (sender, receiver) = channel::<(Command, Message)>();
-        let id = repr.id().unwrap();
-        Self {
-            id,
-            thread: Some(thread::spawn(move || {
-                let graph = repr.build(&reg).expect("Cannot build graph");
-                InternalRunner { graph, receiver }.run();
-            })),
-            sender,
-        }
+        (
+            repr.id().unwrap(),
+            Self {
+                thread: Some(thread::spawn(move || {
+                    let graph = repr.build(&reg).expect("Cannot build graph");
+                    InternalRunner { graph, receiver }.run();
+                })),
+                sender,
+            },
+        )
     }
 
     pub fn command(&mut self, command: Command) -> Result<Response> {

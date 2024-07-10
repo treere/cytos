@@ -1,9 +1,9 @@
 use crate::loader::{Registry, SystemRepr};
 
-use super::runner::Runner;
+use super::{runner::Runner, GraphId};
 
 struct System {
-    _runners: Vec<Runner>,
+    _runners: Vec<(GraphId,Runner)>,
 }
 
 impl System {
