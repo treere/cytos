@@ -98,7 +98,7 @@ pub struct Runner {
 }
 
 impl Runner {
-    pub fn new(repr: GraphRepr, reg: Registry) -> (GraphId, Self) {
+    pub fn from_repr(repr: GraphRepr, reg: Registry) -> (GraphId, Self) {
         let (sender, receiver) = channel::<(Command, Message)>();
         (
             repr.id().unwrap(),

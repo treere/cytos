@@ -62,7 +62,7 @@ fn graph_load(status: Rc<Mutex<Status>>) -> Command<'static> {
         }
 
         let repr = GraphRepr::from_json(&configuration).map_err(|x| anyhow!(x))?;
-        let (id, mut runner) = Runner::new(repr,registry);
+        let (id, mut runner) = Runner::from_repr(repr,registry);
 
         status.graphs.insert(format!("{}", id), runner);
         println!("loaded!");

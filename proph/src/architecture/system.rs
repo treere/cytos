@@ -3,7 +3,7 @@ use crate::loader::{Registry, SystemRepr};
 use super::{runner::Runner, GraphId};
 
 struct System {
-    _runners: Vec<(GraphId,Runner)>,
+    _runners: Vec<(GraphId, Runner)>,
 }
 
 impl System {
@@ -12,7 +12,7 @@ impl System {
             _runners: repr
                 .graphs
                 .into_iter()
-                .map(|g| Runner::new(g, reg.clone()))
+                .map(|g| Runner::from_repr(g, reg.clone()))
                 .collect(),
         }
     }
