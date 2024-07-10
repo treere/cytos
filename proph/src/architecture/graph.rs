@@ -40,7 +40,6 @@ impl Graph {
     /// Create a graph
     pub fn new() -> Self {
         Self {
-
             nodes: Vec::default(),
             external: Vec::default(),
         }

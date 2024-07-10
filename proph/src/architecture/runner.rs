@@ -105,7 +105,7 @@ impl Runner {
         let (sender, receiver) = channel::<(Command, Message)>();
         Self {
             thread: Some(thread::spawn(move || {
-                let (id, graph) =                 repr.build(&reg).expect("Cannot build graph");
+                let (id, graph) = repr.build(&reg).expect("Cannot build graph");
                 InternalRunner {
                     id,
                     graph,
