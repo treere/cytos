@@ -2,17 +2,14 @@ use super::{GraphId, NodeId, ParamId, Result, Stepper, Transformer, Value};
 
 /// A wrapper around a [`Transformer`] keeping trace of the node id.
 pub struct Processor {
-    /// Node identifier.
-    id: NodeId,
-
     /// Wrapped transformer.
     transformer: Box<dyn Transformer>,
 }
 
 impl Processor {
     /// Create a new Processor.
-    pub fn new(id: NodeId, transformer: Box<dyn Transformer>) -> Self {
-        Self { id, transformer }
+    pub fn new(transformer: Box<dyn Transformer>) -> Self {
+        Self { transformer }
     }
 }
 
@@ -36,7 +33,7 @@ pub struct Graph {
     pub id: GraphId,
 
     /// Processors
-    nodes: Vec<Processor>,
+    nodes: Vec<(NodeId, Processor)>,
 
     /// External links
     external: Vec<((GraphId, NodeId, ParamId), (NodeId, ParamId))>,
@@ -53,9 +50,9 @@ impl Graph {
     }
 
     /// Add a processor with a given id to the graph.
-    pub fn insert(mut self, processor: Processor) -> Result<Self> {
-        if self.nodes.iter().all(|x| x.id != processor.id) {
-            self.nodes.push(processor);
+    pub fn insert(mut self, id: NodeId, processor: Processor) -> Result<Self> {
+        if self.nodes.iter().all(|x| x.0 != id) {
+            self.nodes.push((id, processor));
 
             Ok(self)
         } else {
@@ -72,16 +69,18 @@ impl Graph {
         let output = self
             .nodes
             .iter()
-            .find(|p| p.id == src_node_id)
+            .find(|p| p.0 == src_node_id)
             .ok_or("cannot find source")?
+            .1
             .transformer
             .output(src_param_id)
             .ok_or("cannot find param")?;
 
         self.nodes
             .iter_mut()
-            .find(|p| p.id == dst_node_id)
+            .find(|p| p.0 == dst_node_id)
             .ok_or("cannot find dest")?
+            .1
             .transformer
             .link(dst_param_id, output)?;
 
@@ -100,8 +99,9 @@ impl Graph {
     pub fn load(&mut self, (node_id, param_id): (NodeId, ParamId), value: Value) -> Result<()> {
         self.nodes
             .iter_mut()
-            .find(|p| p.id == node_id)
+            .find(|p| p.0 == node_id)
             .ok_or("cannot find node")?
+            .1
             .transformer
             .load(param_id, value)?;
 
@@ -111,8 +111,9 @@ impl Graph {
     pub fn dumper_for(&self, (node_id, param_id): (NodeId, ParamId)) -> Result<Value> {
         self.nodes
             .iter()
-            .find(|p| p.id == node_id)
+            .find(|p| p.0 == node_id)
             .ok_or("cannot find node")?
+            .1
             .transformer
             .dump(param_id)
     }
@@ -120,7 +121,7 @@ impl Graph {
     /// Initialize the nodes
     pub fn initialize(&mut self) -> Result<()> {
         for node in &mut self.nodes {
-            node.initialize()?;
+            node.1.initialize()?;
         }
         Ok(())
     }
@@ -128,7 +129,7 @@ impl Graph {
     /// Terminate the nodes
     pub fn terminate(&mut self) -> Result<()> {
         for node in &mut self.nodes {
-            node.terminate()?;
+            node.1.terminate()?;
         }
         Ok(())
     }
@@ -136,7 +137,7 @@ impl Graph {
     /// Compute one step of processing
     pub fn step(&mut self) -> Result<()> {
         for node in &mut self.nodes {
-            node.step()?;
+            node.1.step()?;
         }
 
         Ok(())
@@ -144,15 +145,15 @@ impl Graph {
 
     /// List nodes
     pub fn list_nodes(&self) -> Vec<NodeId> {
-        self.nodes.iter().map(|x| x.id).collect()
+        self.nodes.iter().map(|x| x.0).collect()
     }
 
     /// List node inputs
     pub fn list_node_inputs(&self, node: NodeId) -> Result<Vec<ParamId>> {
         self.nodes
             .iter()
-            .find(|n| n.id == node)
-            .map(|n| n.transformer.input_names())
+            .find(|n| n.0 == node)
+            .map(|n| n.1.transformer.input_names())
             .ok_or("missing node")
     }
 
@@ -160,8 +161,8 @@ impl Graph {
     pub fn list_node_outputs(&self, node: NodeId) -> Result<Vec<ParamId>> {
         self.nodes
             .iter()
-            .find(|n| n.id == node)
-            .map(|n| n.transformer.output_names())
+            .find(|n| n.0 == node)
+            .map(|n| n.1.transformer.output_names())
             .ok_or("missing node")
     }
 }

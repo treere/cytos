@@ -24,7 +24,7 @@ pub enum Command {
 #[derive(Debug)]
 pub struct Response(pub Value);
 
-struct Message {
+pub struct Message {
     sender: Sender<Result<Response>>,
     resp: Option<Result<Response>>,
 }

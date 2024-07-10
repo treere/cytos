@@ -46,8 +46,8 @@ impl GraphRepr {
     pub fn build(self, loader: &Registry) -> Result<Graph> {
         let mut graph = Graph::new(GraphId::try_from(self.name.as_str())?);
         for node in self.nodes {
-            let processor = node.build(loader)?;
-            graph = graph.insert(processor)?;
+            let (id, processor) = node.build(loader)?;
+            graph = graph.insert(id, processor)?;
         }
 
         for Link { src, dst: (d0, d1) } in self.links {
@@ -89,7 +89,7 @@ struct Node {
 }
 
 impl Node {
-    fn build(self, loader: &Registry) -> Result<Processor> {
+    fn build(self, loader: &Registry) -> Result<(NodeId, Processor)> {
         let mut transformer = loader.load(self.typ.as_str())?;
         let nodeid = NodeId::try_from(self.name.as_str())?;
         for (prop, value) in self.props {
@@ -97,7 +97,7 @@ impl Node {
             transformer.load(propid, value)?;
         }
 
-        Ok(Processor::new(nodeid, transformer))
+        Ok((nodeid, Processor::new(transformer)))
     }
 }
 
