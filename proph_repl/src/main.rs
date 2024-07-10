@@ -6,9 +6,7 @@ use proph::architecture::runner::{Command as RCommand, Runner};
 use proph::architecture::{NodeId, ParamId, Value};
 use proph::loader::{GraphRepr, Registry};
 
-use proph::utils::{
-    convert_val_to_graphid_string, convert_val_to_nodeid_string, convert_val_to_paramid_string,
-};
+use proph::utils::{convert_val_to_nodeid_string, convert_val_to_paramid_string};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
@@ -65,9 +63,8 @@ fn graph_load(status: Rc<Mutex<Status>>) -> Command<'static> {
 
         let repr = GraphRepr::from_json(&configuration).map_err(|x| anyhow!(x))?;
         let mut runner = Runner::new(repr,registry);
-        let result = runner.command(RCommand::Name).and_then(|c|convert_val_to_graphid_string(c.0)).map_err(|x|anyhow!(x))?;
 
-        status.graphs.insert(result, runner);
+        status.graphs.insert(format!("{}", runner.id), runner);
         println!("loaded!");
         Ok(CommandStatus::Done)
     }}

@@ -20,7 +20,7 @@ impl SystemRepr {
     pub fn build(self, loader: &Registry) -> Result<Vec<(GraphId, Graph)>> {
         self.graphs
             .into_iter()
-            .map(|x| x.build(&loader))
+            .map(|x| Ok((x.id().unwrap(), x.build(&loader).unwrap())))
             .collect::<Result<Vec<_>>>()
     }
 }
@@ -43,8 +43,11 @@ impl GraphRepr {
         serde_json::from_str(file).or(Err("cannot load file"))
     }
 
-    pub fn build(self, loader: &Registry) -> Result<(GraphId, Graph)> {
-        let id = GraphId::try_from(self.name.as_str())?;
+    pub fn id(&self) -> Result<GraphId> {
+        GraphId::try_from(self.name.as_str())
+    }
+
+    pub fn build(self, loader: &Registry) -> Result<Graph> {
         let mut graph = Graph::new();
         for node in self.nodes {
             let (id, processor) = node.build(loader)?;
@@ -71,7 +74,7 @@ impl GraphRepr {
                 }
             }
         }
-        Ok((id, graph))
+        Ok(graph)
     }
 }
 

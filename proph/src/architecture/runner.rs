@@ -15,7 +15,6 @@ pub enum Command {
     Status,
     ListNodes,
     ListInputs(NodeId),
-    Name,
     ListOutputs(NodeId),
     Dump(NodeId, ParamId),
     Load(NodeId, ParamId, Value),
@@ -44,7 +43,6 @@ impl Drop for Message {
 }
 
 struct InternalRunner {
-    id: GraphId,
     graph: Graph,
     receiver: Receiver<(Command, Message)>,
 }
@@ -89,13 +87,13 @@ impl InternalRunner {
             Command::Load(node, param, value) => {
                 message.set(self.graph.load((node, param), value));
             }
-            Command::Name => message.set(Ok(self.id)),
             _ => (),
         }
     }
 }
 
 pub struct Runner {
+    pub id: GraphId,
     thread: Option<JoinHandle<()>>,
     sender: Sender<(Command, Message)>,
 }
@@ -103,15 +101,12 @@ pub struct Runner {
 impl Runner {
     pub fn new(repr: GraphRepr, reg: Registry) -> Self {
         let (sender, receiver) = channel::<(Command, Message)>();
+        let id = repr.id().unwrap();
         Self {
+            id,
             thread: Some(thread::spawn(move || {
-                let (id, graph) = repr.build(&reg).expect("Cannot build graph");
-                InternalRunner {
-                    id,
-                    graph,
-                    receiver,
-                }
-                .run();
+                let graph = repr.build(&reg).expect("Cannot build graph");
+                InternalRunner { graph, receiver }.run();
             })),
             sender,
         }
