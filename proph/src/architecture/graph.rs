@@ -29,9 +29,6 @@ impl Stepper for Processor {
 
 /// Graph.
 pub struct Graph {
-    /// Name
-    pub id: GraphId,
-
     /// Processors
     nodes: Vec<(NodeId, Processor)>,
 
@@ -41,9 +38,9 @@ pub struct Graph {
 
 impl Graph {
     /// Create a graph
-    pub fn new(id: GraphId) -> Self {
+    pub fn new() -> Self {
         Self {
-            id,
+
             nodes: Vec::default(),
             external: Vec::default(),
         }

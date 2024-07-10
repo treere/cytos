@@ -17,7 +17,7 @@ impl SystemRepr {
         serde_json::from_str(file).or(Err("cannot load file"))
     }
 
-    pub fn build(self, loader: &Registry) -> Result<Vec<Graph>> {
+    pub fn build(self, loader: &Registry) -> Result<Vec<(GraphId,Graph)>> {
         self.graphs
             .into_iter()
             .map(|x| x.build(&loader))
@@ -43,8 +43,9 @@ impl GraphRepr {
         serde_json::from_str(file).or(Err("cannot load file"))
     }
 
-    pub fn build(self, loader: &Registry) -> Result<Graph> {
-        let mut graph = Graph::new(GraphId::try_from(self.name.as_str())?);
+    pub fn build(self, loader: &Registry) -> Result<(GraphId,Graph)> {
+        let id = GraphId::try_from(self.name.as_str())?;
+        let mut graph = Graph::new();
         for node in self.nodes {
             let (id, processor) = node.build(loader)?;
             graph = graph.insert(id, processor)?;
@@ -70,7 +71,7 @@ impl GraphRepr {
                 }
             }
         }
-        Ok(graph)
+        Ok((id, graph))
     }
 }
 

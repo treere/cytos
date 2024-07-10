@@ -3,7 +3,7 @@ use serde::Serialize;
 use crate::loader::{GraphRepr, Registry};
 
 use super::graph::Graph;
-use super::{NodeId, ParamId, Result, Value};
+use super::{GraphId, NodeId, ParamId, Result, Value};
 
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::{self, JoinHandle};
@@ -44,6 +44,7 @@ impl Drop for Message {
 }
 
 struct InternalRunner {
+    id: GraphId,
     graph: Graph,
     receiver: Receiver<(Command, Message)>,
 }
@@ -88,7 +89,7 @@ impl InternalRunner {
             Command::Load(node, param, value) => {
                 message.set(self.graph.load((node, param), value));
             }
-            Command::Name => message.set(Ok(self.graph.id)),
+            Command::Name => message.set(Ok(self.id)),
             _ => (),
         }
     }
@@ -104,8 +105,10 @@ impl Runner {
         let (sender, receiver) = channel::<(Command, Message)>();
         Self {
             thread: Some(thread::spawn(move || {
+                let (id, graph) =                 repr.build(&reg).expect("Cannot build graph");
                 InternalRunner {
-                    graph: repr.build(&reg).expect("Cannot build graph"),
+                    id,
+                    graph,
                     receiver,
                 }
                 .run();
