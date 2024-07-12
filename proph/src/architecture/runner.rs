@@ -98,10 +98,10 @@ pub struct Runner {
 }
 
 impl Runner {
-    pub fn from_repr(repr: GraphRepr, reg: Registry) -> (GraphId, Self) {
+    pub fn from_repr(repr: GraphRepr, reg: Registry) -> Result<(GraphId, Self)> {
         let (sender, receiver) = channel::<(Command, Message)>();
-        (
-            repr.id().unwrap(),
+        Ok((
+            repr.id()?,
             Self {
                 thread: Some(thread::spawn(move || {
                     let graph = repr.build(&reg).expect("Cannot build graph");
@@ -109,7 +109,7 @@ impl Runner {
                 })),
                 sender,
             },
-        )
+        ))
     }
 
     pub fn command(&mut self, command: Command) -> Result<Response> {
