@@ -48,8 +48,10 @@ fn graph_list(status: Rc<Mutex<Status>>) -> Command<'static> {
         "List graphs",
         () => ||{
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
-            let names :Vec<_>= status.system.keys().collect();
-            println!("{names:?}");
+
+            for name in status.system.keys() {
+                println!("-> {name:}");
+            }
             Ok(CommandStatus::Done)
         }
     }

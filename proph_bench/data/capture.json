@@ -1,35 +1,57 @@
 {
-  "name": "capture",
-  "nodes": [
+  "graphs": [
     {
-      "name": "SOURCE",
-      "type": "Rscam"
-    },
-    {
-      "name": "DECODER",
-      "type": "ZuneImageDecoder"
-    },
-    {
-      "name": "GRAY",
-      "type": "ImageGrayScale"
-    },
-    {
-      "name": "MEAN",
-      "type": "ImageMean"
-    }
-  ],
-  "links": [
-    {
-      "src": ["SOURCE", "frame"],
-      "dst": ["DECODER", "frame"]
-    },
-    {
-      "src": ["DECODER", "decoded"],
-      "dst": ["GRAY", "input"]
-    },
-    {
-      "src": ["GRAY", "output"],
-      "dst": ["MEAN", "input"]
+      "name": "capture",
+      "nodes": [
+        {
+          "name": "SOURCE",
+          "type": "Rscam"
+        },
+        {
+          "name": "DECODER",
+          "type": "ZuneImageDecoder"
+        },
+        {
+          "name": "GRAY",
+          "type": "ImageGrayScale"
+        },
+        {
+          "name": "MEAN",
+          "type": "ImageMean"
+        }
+      ],
+      "links": [
+        {
+          "src": [
+            "SOURCE",
+            "frame"
+          ],
+          "dst": [
+            "DECODER",
+            "frame"
+          ]
+        },
+        {
+          "src": [
+            "DECODER",
+            "decoded"
+          ],
+          "dst": [
+            "GRAY",
+            "input"
+          ]
+        },
+        {
+          "src": [
+            "GRAY",
+            "output"
+          ],
+          "dst": [
+            "MEAN",
+            "input"
+          ]
+        }
+      ]
     }
   ]
 }
