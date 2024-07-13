@@ -1,31 +1,14 @@
 use crate::architecture::{
     graph::{Graph, Processor},
-    GraphId, NodeId, ParamId, Result, Transformer, Value,
+    repr::{GraphRepr, Link, LinkSource, ProcessorRepr},
+    GraphId, NodeId, ParamId, Result, Transformer,
 };
 
 use libloading::{Library, Symbol};
-use serde::Deserialize;
+
 use std::{collections::HashMap, sync::Arc};
 
-
-/// Graph representatio to be loaded
-#[derive(Deserialize, Debug)]
-pub struct GraphRepr {
-    /// Graph name
-    name: String,
-
-    /// List of nodes
-    nodes: Vec<Node>,
-
-    /// List of links between nodes
-    links: Vec<Link>,
-}
-
 impl GraphRepr {
-    pub fn from_json(file: &str) -> Result<Self> {
-        serde_json::from_str(file).or(Err("cannot load file"))
-    }
-
     pub fn id(&self) -> Result<GraphId> {
         GraphId::try_from(self.name.as_str())
     }
@@ -62,21 +45,7 @@ impl GraphRepr {
     }
 }
 
-#[derive(Deserialize, Debug)]
-struct Node {
-    /// Name of the node
-    name: String,
-
-    /// Type of the node
-    #[serde(rename = "type")]
-    typ: String,
-
-    /// Properties
-    #[serde(default)]
-    props: HashMap<String, Value>,
-}
-
-impl Node {
+impl ProcessorRepr {
     fn build(self, loader: &Registry) -> Result<(NodeId, Processor)> {
         let mut transformer = loader.load(self.typ.as_str())?;
         let nodeid = NodeId::try_from(self.name.as_str())?;
@@ -87,23 +56,6 @@ impl Node {
 
         Ok((nodeid, Processor::new(transformer)))
     }
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(untagged)]
-enum LinkSource {
-    InternalLinkSource(String, String),
-    ExternalLinkSource(String, String, String),
-}
-
-/// Link between nodes
-#[derive(Deserialize, Debug)]
-struct Link {
-    /// Source node param
-    src: LinkSource,
-
-    /// Destination node param
-    dst: (String, String),
 }
 
 type Factory = Arc<dyn Fn() -> Box<dyn Transformer> + Send + Sync>;

@@ -1,5 +1,6 @@
 use clap::{value_parser, Arg, Command};
-use proph::loader::{GraphRepr, Registry};
+use proph::architecture::repr::GraphRepr;
+use proph::loader::Registry;
 use proph::utils::execution_time;
 use std::fs::File;
 use std::io::Read;

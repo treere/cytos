@@ -27,14 +27,11 @@ impl Stepper for Processor {
     }
 }
 
-
 /// Graph.
 #[derive(Default)]
 pub struct Graph {
     /// Processors
     nodes: Vec<(NodeId, Processor)>,
-
-
 }
 
 impl Graph {

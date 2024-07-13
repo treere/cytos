@@ -2,9 +2,9 @@
 
 pub mod graph;
 pub mod props;
+pub mod repr;
 pub mod runner;
 mod system;
-pub mod repr;
 mod traits;
 pub mod value;
 

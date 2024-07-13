@@ -1,8 +1,9 @@
 use serde::Serialize;
 
-use crate::loader::{GraphRepr, Registry};
+use crate::loader::Registry;
 
 use super::graph::Graph;
+use super::repr::GraphRepr;
 use super::{GraphId, NodeId, ParamId, Result, Value};
 
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -111,7 +112,12 @@ impl Runner {
             Self {
                 thread: Some(thread::spawn(move || {
                     let graph = repr.build(&reg).expect("Cannot build graph");
-                    InternalRunner { graph, receiver, _external: Vec::new() }.run();
+                    InternalRunner {
+                        graph,
+                        receiver,
+                        _external: Vec::new(),
+                    }
+                    .run();
                 })),
                 sender,
             },
