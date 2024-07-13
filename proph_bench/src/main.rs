@@ -1,4 +1,5 @@
 use clap::{value_parser, Arg, Command};
+use proph::architecture::graph::Graph;
 use proph::architecture::repr::GraphRepr;
 use proph::loader::Registry;
 use proph::utils::execution_time;
@@ -38,7 +39,8 @@ fn main() -> Result<(), String> {
         configuration
     };
 
-    let mut graph = GraphRepr::from_json(&configuration)?.build(&loader)?;
+    let graph = GraphRepr::from_json(&configuration)?;
+    let mut graph = Graph::try_from_repr(graph, &loader)?;
 
     graph.initialize().expect("cannot initialize");
 

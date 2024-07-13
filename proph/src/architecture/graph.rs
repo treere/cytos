@@ -1,4 +1,9 @@
-use super::{NodeId, ParamId, Result, Stepper, Transformer, Value};
+use crate::loader::Registry;
+
+use super::{
+    repr::{GraphRepr, Link, LinkSource, ProcessorRepr},
+    NodeId, ParamId, Result, Stepper, Transformer, Value,
+};
 
 /// A wrapper around a [`Transformer`] keeping trace of the node id.
 pub struct Processor {
@@ -10,6 +15,17 @@ impl Processor {
     /// Create a new Processor.
     pub fn new(transformer: Box<dyn Transformer>) -> Self {
         Self { transformer }
+    }
+
+    pub fn try_from_repr(repr: ProcessorRepr, loader: &Registry) -> Result<(NodeId, Processor)> {
+        let mut transformer = loader.load(repr.typ.as_str())?;
+        let nodeid = NodeId::try_from(repr.name.as_str())?;
+        for (prop, value) in repr.props {
+            let propid = ParamId::try_from(&prop)?;
+            transformer.load(propid, value)?;
+        }
+
+        Ok((nodeid, Processor::new(transformer)))
     }
 }
 
@@ -141,5 +157,36 @@ impl Graph {
             .find(|n| n.0 == node)
             .map(|n| n.1.transformer.output_names())
             .ok_or("missing node")
+    }
+
+    pub fn try_from_repr(repr: GraphRepr, loader: &Registry) -> Result<Graph> {
+        let mut graph = Graph::default();
+        for node in repr.nodes {
+            let (id, processor) = Processor::try_from_repr(node, loader)?;
+            graph = graph.insert(id, processor)?;
+        }
+
+        for Link { src, dst: (d0, d1) } in repr.links {
+            let d0 = NodeId::try_from(&d0)?;
+            let d1 = ParamId::try_from(&d1)?;
+
+            match src {
+                LinkSource::InternalLinkSource(s0, s1) => {
+                    let s0 = NodeId::try_from(&s0)?;
+                    let s1 = ParamId::try_from(&s1)?;
+
+                    graph.internal_link((s0, s1), (d0, d1))?;
+                }
+                LinkSource::ExternalLinkSource(_g0, _s0, _s1) => {
+                    // let g0 = GraphId::try_from(&g0)?;
+                    // let s0 = NodeId::try_from(&s0)?;
+                    // let s1 = ParamId::try_from(&s1)?;
+
+                    // graph.external_link((g0, s0, s1), (d0, d1))?;
+                    todo!();
+                }
+            }
+        }
+        Ok(graph)
     }
 }

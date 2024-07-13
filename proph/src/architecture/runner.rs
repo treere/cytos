@@ -108,10 +108,10 @@ impl Runner {
     pub fn from_repr(repr: GraphRepr, reg: Registry) -> Result<(GraphId, Self)> {
         let (sender, receiver) = channel::<(Command, Message)>();
         Ok((
-            repr.id()?,
+            GraphId::try_from(&repr.name)?,
             Self {
                 thread: Some(thread::spawn(move || {
-                    let graph = repr.build(&reg).expect("Cannot build graph");
+                    let graph = Graph::try_from_repr(repr, &reg).expect("Cannot build graph");
                     InternalRunner {
                         graph,
                         receiver,
