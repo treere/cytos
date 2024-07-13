@@ -4,7 +4,6 @@ pub mod graph;
 pub mod props;
 pub mod repr;
 pub mod runner;
-mod system;
 mod traits;
 pub mod value;
 
@@ -15,7 +14,7 @@ use crate::utils::{string_to_u64, u64_to_string};
 pub use self::props::{InputProp, OutputProp};
 pub use self::traits::{Stepper, Transformer};
 use serde::{Deserialize, Serialize};
-pub use system::System;
+pub use runner::System;
 pub use value::Value;
 
 pub type Result<T> = std::result::Result<T, &'static str>;
