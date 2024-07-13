@@ -7,24 +7,6 @@ use libloading::{Library, Symbol};
 use serde::Deserialize;
 use std::{collections::HashMap, sync::Arc};
 
-#[derive(Deserialize, Debug)]
-pub struct SystemRepr {
-    pub graphs: Vec<GraphRepr>,
-}
-
-impl SystemRepr {
-    pub fn from_json(file: &str) -> Result<Self> {
-        let v = serde_json::from_str(file).unwrap();
-        Ok(v)
-    }
-
-    pub fn build(self, loader: &Registry) -> Result<Vec<(GraphId, Graph)>> {
-        self.graphs
-            .into_iter()
-            .map(|x| Ok((x.id().unwrap(), x.build(loader).unwrap())))
-            .collect::<Result<Vec<_>>>()
-    }
-}
 
 /// Graph representatio to be loaded
 #[derive(Deserialize, Debug)]

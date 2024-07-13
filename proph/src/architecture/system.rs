@@ -1,8 +1,7 @@
-use crate::loader::{Registry, SystemRepr};
+use crate::loader::Registry;
 
 use super::{
-    runner::{Command, Response, Runner},
-    GraphId, Result,
+    repr::SystemRepr, runner::{Command, Response, Runner}, GraphId, Result
 };
 
 #[derive(Default)]

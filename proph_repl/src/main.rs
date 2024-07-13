@@ -2,9 +2,10 @@ use anyhow::anyhow;
 
 use easy_repl::{command, Command, CommandStatus, Repl};
 
+use proph::architecture::repr::SystemRepr;
 use proph::architecture::runner::Command as RCommand;
 use proph::architecture::{GraphId, NodeId, ParamId, System, Value};
-use proph::loader::{Registry, SystemRepr};
+use proph::loader::Registry;
 
 use proph::utils::{convert_val_to_nodeid_string, convert_val_to_paramid_string};
 use std::collections::HashSet;
