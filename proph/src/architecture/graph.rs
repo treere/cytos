@@ -1,4 +1,4 @@
-use super::{GraphId, NodeId, ParamId, Result, Stepper, Transformer, Value};
+use super::{NodeId, ParamId, Result, Stepper, Transformer, Value};
 
 /// A wrapper around a [`Transformer`] keeping trace of the node id.
 pub struct Processor {
@@ -27,9 +27,6 @@ impl Stepper for Processor {
     }
 }
 
-type ExternalReference = (GraphId, NodeId, ParamId);
-
-type InternalReference = (NodeId, ParamId);
 
 /// Graph.
 #[derive(Default)]
@@ -37,8 +34,7 @@ pub struct Graph {
     /// Processors
     nodes: Vec<(NodeId, Processor)>,
 
-    /// External links
-    external: Vec<(ExternalReference, InternalReference)>,
+
 }
 
 impl Graph {
@@ -77,15 +73,6 @@ impl Graph {
             .transformer
             .link(dst_param_id, output)?;
 
-        Ok(())
-    }
-
-    pub fn external_link(
-        &mut self,
-        src: (GraphId, NodeId, ParamId),
-        dst: (NodeId, ParamId),
-    ) -> Result<()> {
-        self.external.push((src, dst));
         Ok(())
     }
 

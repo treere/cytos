@@ -42,9 +42,15 @@ impl Drop for Message {
     }
 }
 
+type ExternalReference = (GraphId, NodeId, ParamId);
+
+type InternalReference = (NodeId, ParamId);
+
 struct InternalRunner {
     graph: Graph,
     receiver: Receiver<(Command, Message)>,
+
+    _external: Vec<(ExternalReference, InternalReference)>,
 }
 
 impl InternalRunner {
@@ -105,7 +111,7 @@ impl Runner {
             Self {
                 thread: Some(thread::spawn(move || {
                     let graph = repr.build(&reg).expect("Cannot build graph");
-                    InternalRunner { graph, receiver }.run();
+                    InternalRunner { graph, receiver, _external: Vec::new() }.run();
                 })),
                 sender,
             },
