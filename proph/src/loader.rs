@@ -14,15 +14,14 @@ pub struct SystemRepr {
 
 impl SystemRepr {
     pub fn from_json(file: &str) -> Result<Self> {
-        let v =         serde_json::from_str(file).unwrap();
+        let v = serde_json::from_str(file).unwrap();
         Ok(v)
-//or(Err("cannot load file"));
     }
 
     pub fn build(self, loader: &Registry) -> Result<Vec<(GraphId, Graph)>> {
         self.graphs
             .into_iter()
-            .map(|x| Ok((x.id().unwrap(), x.build(&loader).unwrap())))
+            .map(|x| Ok((x.id().unwrap(), x.build(loader).unwrap())))
             .collect::<Result<Vec<_>>>()
     }
 }
@@ -50,7 +49,7 @@ impl GraphRepr {
     }
 
     pub fn build(self, loader: &Registry) -> Result<Graph> {
-        let mut graph = Graph::new();
+        let mut graph = Graph::default();
         for node in self.nodes {
             let (id, processor) = node.build(loader)?;
             graph = graph.insert(id, processor)?;

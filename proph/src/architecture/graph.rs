@@ -27,24 +27,21 @@ impl Stepper for Processor {
     }
 }
 
+type ExternalReference = (GraphId, NodeId, ParamId);
+
+type InternalReference = (NodeId, ParamId);
+
 /// Graph.
+#[derive(Default)]
 pub struct Graph {
     /// Processors
     nodes: Vec<(NodeId, Processor)>,
 
     /// External links
-    external: Vec<((GraphId, NodeId, ParamId), (NodeId, ParamId))>,
+    external: Vec<(ExternalReference, InternalReference)>,
 }
 
 impl Graph {
-    /// Create a graph
-    pub fn new() -> Self {
-        Self {
-            nodes: Vec::default(),
-            external: Vec::default(),
-        }
-    }
-
     /// Add a processor with a given id to the graph.
     pub fn insert(mut self, id: NodeId, processor: Processor) -> Result<Self> {
         if self.nodes.iter().all(|x| x.0 != id) {
