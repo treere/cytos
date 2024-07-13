@@ -6,6 +6,7 @@ use super::graph::Graph;
 use super::repr::{GraphRepr, SystemRepr};
 use super::{GraphId, NodeId, ParamId, Result, Value};
 
+use std::collections::HashMap;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 
@@ -25,10 +26,37 @@ impl System {
     }
 
     pub fn from_repr(repr: SystemRepr, loader: &Registry) -> Result<Self> {
+        let mut channels: HashMap<_, _> = repr
+            .graphs
+            .iter()
+            .map(|x| {
+                let id = GraphId::try_from(&x.name).unwrap();
+                let (sender, receiver) = channel::<(Command, Message)>();
+                (id, (sender, Some(receiver)))
+            })
+            .collect();
+
+        let senders: HashMap<_, _> = channels.iter().map(|(k, (s, _))| (*k, s.clone())).collect();
+
         let v = repr
             .graphs
             .into_iter()
-            .map(|x| Runner::from_repr(x, loader.clone()))
+            .map(|x| {
+                let id = GraphId::try_from(&x.name).unwrap();
+
+                let (sender, receiver) = channels.get_mut(&id).unwrap();
+
+                let receiver = receiver.take().unwrap();
+
+                let runner = Runner::try_from_repr(
+                    x,
+                    loader.clone(),
+                    (sender.clone(), receiver),
+                    senders.clone(),
+                )
+                .unwrap();
+                Ok((id, runner))
+            })
             .collect::<Result<Vec<_>>>()?;
 
         Ok(Self { runners: v })
@@ -38,7 +66,6 @@ impl System {
         self.runners.iter().map(|(v, _)| v)
     }
 }
-
 
 pub enum Command {
     Kill,
@@ -130,29 +157,31 @@ impl InternalRunner {
     }
 }
 
-pub struct Runner {
+struct Runner {
     thread: Option<JoinHandle<()>>,
     sender: Sender<(Command, Message)>,
 }
 
 impl Runner {
-    pub fn from_repr(repr: GraphRepr, reg: Registry) -> Result<(GraphId, Self)> {
-        let (sender, receiver) = channel::<(Command, Message)>();
-        Ok((
-            GraphId::try_from(&repr.name)?,
-            Self {
-                thread: Some(thread::spawn(move || {
-                    let graph = Graph::try_from_repr(repr, &reg).expect("Cannot build graph");
-                    InternalRunner {
-                        graph,
-                        receiver,
-                        _external: Vec::new(),
-                    }
-                    .run();
-                })),
-                sender,
-            },
-        ))
+    pub fn try_from_repr(
+        repr: GraphRepr,
+        reg: Registry,
+        (sender, receiver): (Sender<(Command, Message)>, Receiver<(Command, Message)>),
+        _senders: HashMap<GraphId, Sender<(Command, Message)>>,
+    ) -> Result<Self> {
+        Ok(Self {
+            thread: Some(thread::spawn(move || {
+                let graph = Graph::try_from_repr(repr, &reg).expect("Cannot build graph");
+
+                InternalRunner {
+                    graph,
+                    receiver,
+                    _external: Vec::new(),
+                }
+                .run();
+            })),
+            sender,
+        })
     }
 
     pub fn command(&mut self, command: Command) -> Result<Response> {

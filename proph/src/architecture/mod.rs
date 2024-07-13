@@ -13,13 +13,13 @@ use crate::utils::{string_to_u64, u64_to_string};
 
 pub use self::props::{InputProp, OutputProp};
 pub use self::traits::{Stepper, Transformer};
-use serde::{Deserialize, Serialize};
 pub use runner::System;
+use serde::{Deserialize, Serialize};
 pub use value::Value;
 
 pub type Result<T> = std::result::Result<T, &'static str>;
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct GraphId(pub u64);
 
 impl From<u64> for GraphId {

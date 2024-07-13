@@ -17,15 +17,15 @@ impl Node {
         Self { transformer }
     }
 
-    pub fn try_from_repr(repr: NodeRepr, loader: &Registry) -> Result<(NodeId, Node)> {
+    pub fn try_from_repr(repr: NodeRepr, loader: &Registry) -> Result<Node> {
         let mut transformer = loader.load(repr.typ.as_str())?;
-        let nodeid = NodeId::try_from(repr.name.as_str())?;
+
         for (prop, value) in repr.props {
             let propid = ParamId::try_from(&prop)?;
             transformer.load(propid, value)?;
         }
 
-        Ok((nodeid, Node::new(transformer)))
+        Ok(Node::new(transformer))
     }
 }
 
@@ -162,7 +162,8 @@ impl Graph {
     pub fn try_from_repr(repr: GraphRepr, loader: &Registry) -> Result<Graph> {
         let mut graph = Graph::default();
         for node in repr.nodes {
-            let (id, processor) = Node::try_from_repr(node, loader)?;
+            let id = NodeId::try_from(node.name.as_str())?;
+            let processor = Node::try_from_repr(node, loader)?;
             graph = graph.insert(id, processor)?;
         }
 
