@@ -39,8 +39,8 @@ impl GraphRepr {
 #[derive(Deserialize, Debug)]
 #[serde(untagged)]
 pub enum LinkSource {
-    InternalLinkSource(String, String),
-    ExternalLinkSource(String, String, String),
+    Internal(String, String),
+    External(String, String, String),
 }
 
 /// Link between nodes

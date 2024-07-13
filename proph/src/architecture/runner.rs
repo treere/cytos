@@ -3,7 +3,7 @@ use serde::Serialize;
 use crate::loader::Registry;
 
 use super::graph::Graph;
-use super::repr::{GraphRepr, SystemRepr};
+use super::repr::{GraphRepr, LinkSource, SystemRepr};
 use super::{GraphId, NodeId, ParamId, Result, Value};
 
 use std::collections::HashMap;
@@ -101,15 +101,14 @@ impl Drop for Message {
     }
 }
 
-type ExternalReference = (GraphId, NodeId, ParamId);
+type ExternalReference = (Sender<(Command, Message)>, NodeId, ParamId);
 
 type InternalReference = (NodeId, ParamId);
 
 struct InternalRunner {
     graph: Graph,
     receiver: Receiver<(Command, Message)>,
-
-    _external: Vec<(ExternalReference, InternalReference)>,
+    external: Vec<(ExternalReference, InternalReference)>,
 }
 
 impl InternalRunner {
@@ -164,19 +163,42 @@ struct Runner {
 
 impl Runner {
     pub fn try_from_repr(
-        repr: GraphRepr,
+        mut        repr: GraphRepr,
         reg: Registry,
         (sender, receiver): (Sender<(Command, Message)>, Receiver<(Command, Message)>),
-        _senders: HashMap<GraphId, Sender<(Command, Message)>>,
+        senders: HashMap<GraphId, Sender<(Command, Message)>>,
     ) -> Result<Self> {
         Ok(Self {
             thread: Some(thread::spawn(move || {
+                let external = repr
+                    .links
+                    .iter()
+                    .filter(|x| matches!(x.src, LinkSource::External(_, _, _)))
+                    .map(|x| match &x.src {
+                        LinkSource::Internal(_, _) => unreachable!(),
+                        LinkSource::External(g,n,p) => {
+                            
+
+                            let g = GraphId::try_from(g.as_str()).unwrap();
+                            let n = NodeId::try_from(n.as_str()).unwrap();
+                            let p = ParamId::try_from(p.as_str()).unwrap();
+
+                            let d0 = NodeId::try_from(&x.dst.0).unwrap();
+                            let d1 = ParamId::try_from(&x.dst.1).unwrap();
+
+
+                            ((senders[&g].clone(),n,p), (d0,d1))
+                        }
+                    })
+                    .collect::<Vec<_>>();
+
+                repr.links.retain(|x| matches!(x.src, LinkSource::External(_, _, _)));
                 let graph = Graph::try_from_repr(repr, &reg).expect("Cannot build graph");
 
                 InternalRunner {
                     graph,
                     receiver,
-                    _external: Vec::new(),
+                    external
                 }
                 .run();
             })),

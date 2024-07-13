@@ -172,13 +172,13 @@ impl Graph {
             let d1 = ParamId::try_from(&d1)?;
 
             match src {
-                LinkSource::InternalLinkSource(s0, s1) => {
+                LinkSource::Internal(s0, s1) => {
                     let s0 = NodeId::try_from(&s0)?;
                     let s1 = ParamId::try_from(&s1)?;
 
                     graph.internal_link((s0, s1), (d0, d1))?;
                 }
-                LinkSource::ExternalLinkSource(_g0, _s0, _s1) => {
+                LinkSource::External(_g0, _s0, _s1) => {
                     // let g0 = GraphId::try_from(&g0)?;
                     // let s0 = NodeId::try_from(&s0)?;
                     // let s1 = ParamId::try_from(&s1)?;
