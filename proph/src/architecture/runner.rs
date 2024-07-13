@@ -134,6 +134,18 @@ impl InternalRunner {
                     }
                 }
 
+                self.external.iter().for_each(|((s, n0, p0), (n1, p1))| {
+                    let (sender, receiver) = channel::<Result<Response>>();
+
+                    let r = match s.send((Command::Dump(*n0, *p0), Message { sender, resp: None }))
+                    {
+                        Ok(()) => receiver.recv().unwrap_or(Err("Error unwrapping")),
+                        Err(_) => Err("Cannot send"),
+                    };
+                    let r = r.unwrap();
+                    self.graph.load((*n1, *p1), r.0).unwrap();
+                });
+
                 if self.graph.step().is_err() {
                     break 'outer;
                 }
@@ -163,7 +175,7 @@ struct Runner {
 
 impl Runner {
     pub fn try_from_repr(
-        mut        repr: GraphRepr,
+        mut repr: GraphRepr,
         reg: Registry,
         (sender, receiver): (Sender<(Command, Message)>, Receiver<(Command, Message)>),
         senders: HashMap<GraphId, Sender<(Command, Message)>>,
@@ -176,9 +188,7 @@ impl Runner {
                     .filter(|x| matches!(x.src, LinkSource::External(_, _, _)))
                     .map(|x| match &x.src {
                         LinkSource::Internal(_, _) => unreachable!(),
-                        LinkSource::External(g,n,p) => {
-                            
-
+                        LinkSource::External(g, n, p) => {
                             let g = GraphId::try_from(g.as_str()).unwrap();
                             let n = NodeId::try_from(n.as_str()).unwrap();
                             let p = ParamId::try_from(p.as_str()).unwrap();
@@ -186,19 +196,19 @@ impl Runner {
                             let d0 = NodeId::try_from(&x.dst.0).unwrap();
                             let d1 = ParamId::try_from(&x.dst.1).unwrap();
 
-
-                            ((senders[&g].clone(),n,p), (d0,d1))
+                            ((senders[&g].clone(), n, p), (d0, d1))
                         }
                     })
                     .collect::<Vec<_>>();
 
-                repr.links.retain(|x| matches!(x.src, LinkSource::External(_, _, _)));
+                repr.links
+                    .retain(|x| matches!(x.src, LinkSource::External(_, _, _)));
                 let graph = Graph::try_from_repr(repr, &reg).expect("Cannot build graph");
 
                 InternalRunner {
                     graph,
                     receiver,
-                    external
+                    external,
                 }
                 .run();
             })),
