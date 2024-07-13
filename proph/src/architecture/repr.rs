@@ -24,7 +24,7 @@ pub struct GraphRepr {
     pub name: String,
 
     /// List of nodes
-    pub nodes: Vec<ProcessorRepr>,
+    pub nodes: Vec<NodeRepr>,
 
     /// List of links between nodes
     pub links: Vec<Link>,
@@ -54,7 +54,7 @@ pub struct Link {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct ProcessorRepr {
+pub struct NodeRepr {
     /// Name of the node
     pub name: String,
 

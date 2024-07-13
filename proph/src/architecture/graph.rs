@@ -1,23 +1,23 @@
 use crate::loader::Registry;
 
 use super::{
-    repr::{GraphRepr, Link, LinkSource, ProcessorRepr},
+    repr::{GraphRepr, Link, LinkSource, NodeRepr},
     NodeId, ParamId, Result, Stepper, Transformer, Value,
 };
 
 /// A wrapper around a [`Transformer`] keeping trace of the node id.
-pub struct Processor {
+pub struct Node {
     /// Wrapped transformer.
     transformer: Box<dyn Transformer>,
 }
 
-impl Processor {
+impl Node {
     /// Create a new Processor.
     pub fn new(transformer: Box<dyn Transformer>) -> Self {
         Self { transformer }
     }
 
-    pub fn try_from_repr(repr: ProcessorRepr, loader: &Registry) -> Result<(NodeId, Processor)> {
+    pub fn try_from_repr(repr: NodeRepr, loader: &Registry) -> Result<(NodeId, Node)> {
         let mut transformer = loader.load(repr.typ.as_str())?;
         let nodeid = NodeId::try_from(repr.name.as_str())?;
         for (prop, value) in repr.props {
@@ -25,11 +25,11 @@ impl Processor {
             transformer.load(propid, value)?;
         }
 
-        Ok((nodeid, Processor::new(transformer)))
+        Ok((nodeid, Node::new(transformer)))
     }
 }
 
-impl Stepper for Processor {
+impl Stepper for Node {
     fn initialize(&mut self) -> Result<()> {
         self.transformer.initialize()
     }
@@ -47,12 +47,12 @@ impl Stepper for Processor {
 #[derive(Default)]
 pub struct Graph {
     /// Processors
-    nodes: Vec<(NodeId, Processor)>,
+    nodes: Vec<(NodeId, Node)>,
 }
 
 impl Graph {
     /// Add a processor with a given id to the graph.
-    pub fn insert(mut self, id: NodeId, processor: Processor) -> Result<Self> {
+    pub fn insert(mut self, id: NodeId, processor: Node) -> Result<Self> {
         if self.nodes.iter().all(|x| x.0 != id) {
             self.nodes.push((id, processor));
 
@@ -162,7 +162,7 @@ impl Graph {
     pub fn try_from_repr(repr: GraphRepr, loader: &Registry) -> Result<Graph> {
         let mut graph = Graph::default();
         for node in repr.nodes {
-            let (id, processor) = Processor::try_from_repr(node, loader)?;
+            let (id, processor) = Node::try_from_repr(node, loader)?;
             graph = graph.insert(id, processor)?;
         }
 
