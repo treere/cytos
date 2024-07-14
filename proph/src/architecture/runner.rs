@@ -173,11 +173,13 @@ struct Runner {
     sender: Sender<(Command, Message)>,
 }
 
+type ChannelTuple = (Sender<(Command, Message)>, Receiver<(Command, Message)>);
+
 impl Runner {
     pub fn try_from_repr(
         mut repr: GraphRepr,
         reg: Registry,
-        (sender, receiver): (Sender<(Command, Message)>, Receiver<(Command, Message)>),
+        (sender, receiver): ChannelTuple,
         senders: HashMap<GraphId, Sender<(Command, Message)>>,
     ) -> Result<Self> {
         Ok(Self {
