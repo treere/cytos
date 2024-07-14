@@ -1,29 +1,26 @@
 {
-  "graphs": [
+  "name": "listfiles",
+  "nodes": [
     {
-      "name": "listfiles",
-      "nodes": [
-        {
-          "name": "lister",
-          "type": "ListFiles"
-        },
-        {
-          "name": "printer",
-          "type": "PrintString"
-        }
+      "name": "lister",
+      "type": "ListFiles"
+    },
+    {
+      "name": "printer",
+      "type": "PrintString"
+    }
+  ],
+  "links": [
+    {
+      "src": [
+        "lister",
+        "output"
       ],
-      "links": [
-        {
-          "src": [
-            "lister",
-            "output"
-          ],
-          "dst": [
-            "printer",
-            "input"
-          ]
-        }
+      "dst": [
+        "printer",
+        "input"
       ]
     }
   ]
 }
+
