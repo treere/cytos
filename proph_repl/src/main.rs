@@ -32,7 +32,7 @@ fn system_load(status: Rc<Mutex<Status>>) -> Command<'static> {
 
         let mut registry = Registry::default();
         for lib in &status.libraries {
-            registry.load_library(lib).or(Err(anyhow!("cannot load library")))?;
+            registry.load_library(lib).map_err(|x| anyhow!(x))?;
         }
 
         let repr = SystemRepr::from_json(&configuration).map_err(|x| anyhow!(x))?;

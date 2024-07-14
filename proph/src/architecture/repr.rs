@@ -8,6 +8,7 @@ use super::Value;
 
 #[derive(Deserialize, Debug)]
 pub struct SystemRepr {
+    #[serde(default)]
     pub graphs: Vec<GraphRepr>,
 }
 
@@ -27,6 +28,7 @@ pub struct GraphRepr {
     pub nodes: Vec<NodeRepr>,
 
     /// List of links between nodes
+    #[serde(default)]
     pub links: Vec<Link>,
 }
 

@@ -202,7 +202,7 @@ impl Runner {
                     .collect::<Vec<_>>();
 
                 repr.links
-                    .retain(|x| matches!(x.src, LinkSource::External(_, _, _)));
+                    .retain(|x| matches!(x.src, LinkSource::Internal(_, _)));
                 let graph = Graph::try_from_repr(repr, &reg).expect("Cannot build graph");
 
                 InternalRunner {
