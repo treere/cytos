@@ -4,20 +4,6 @@ use std::{any::Any, cell::UnsafeCell, ops::Deref, rc::Rc};
 
 use super::{Result, Value};
 
-struct OwnedProp<T>(T);
-
-impl<T: Clone + 'static> From<InputProp<T>> for OwnedProp<T> {
-    fn from(value: InputProp<T>) -> Self {
-        Self(value.deref().clone())
-    }
-}
-
-impl<T: Clone + 'static> From<OutputProp<T>> for OwnedProp<T> {
-    fn from(value: OutputProp<T>) -> Self {
-        Self(value.deref().clone())
-    }
-}
-
 #[derive(Default)]
 struct Prop<T>(Rc<UnsafeCell<T>>);
 
