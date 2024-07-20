@@ -23,6 +23,14 @@ impl SystemRepr {
     }
 }
 
+type AllChannels = HashMap<
+            GraphId,
+            (
+                Sender<(Command, Message)>,
+                Option<Receiver<(Command, Message)>>,
+            ),
+    >;
+
 #[derive(Default)]
 pub struct System {
     runners: Vec<(GraphId, Runner)>,
@@ -30,22 +38,16 @@ pub struct System {
 
 impl System {
     pub fn command(&mut self, graph: GraphId, command: Command) -> Result<Response> {
-        let v = self
+        let (_, g) = self
             .runners
             .iter_mut()
             .find(|x| x.0 == graph)
             .ok_or("not found")?;
-        v.1.command(command)
+        g.command(command)
     }
 
     pub fn from_repr(repr: SystemRepr, loader: &Registry) -> Result<Self> {
-        let mut channels: HashMap<
-            GraphId,
-            (
-                Sender<(Command, Message)>,
-                Option<Receiver<(Command, Message)>>,
-            ),
-        > = repr
+        let mut channels: AllChannels = repr
             .graphs
             .iter()
             .map(|x| {
@@ -76,13 +78,7 @@ impl System {
 
 fn load_runner(
     graph_repr: GraphRepr,
-    channels: &mut HashMap<
-        GraphId,
-        (
-            Sender<(Command, Message)>,
-            Option<Receiver<(Command, Message)>>,
-        ),
-    >,
+    channels: &mut AllChannels,
     loader: Registry,
     senders: HashMap<GraphId, Sender<(Command, Message)>>,
 ) -> Result<(GraphId, Runner)> {
