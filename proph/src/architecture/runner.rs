@@ -1,14 +1,27 @@
+use serde::Deserialize;
 use serde::Serialize;
 
 use crate::loader::Registry;
 
-use super::graph::Graph;
-use super::repr::{GraphRepr, LinkSource, SystemRepr};
+use super::graph::{Graph, GraphRepr, LinkSource};
+
 use super::{GraphId, NodeId, ParamId, Result, Value};
 
 use std::collections::HashMap;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::{self, JoinHandle};
+
+#[derive(Deserialize, Debug)]
+pub struct SystemRepr {
+    #[serde(default)]
+    pub graphs: Vec<GraphRepr>,
+}
+
+impl SystemRepr {
+    pub fn from_json(file: &str) -> Result<Self> {
+        serde_json::from_str(file).or(Err("cannot read file"))
+    }
+}
 
 #[derive(Default)]
 pub struct System {

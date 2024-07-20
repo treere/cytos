@@ -1,6 +1,22 @@
-use crate::loader::Registry;
+use std::collections::HashMap;
 
-use super::{repr::NodeRepr, ParamId, Result, Stepper, Transformer};
+use super::{ParamId, Result, Stepper, Transformer, Value};
+use crate::loader::Registry;
+use serde::Deserialize;
+
+#[derive(Deserialize, Debug)]
+pub struct NodeRepr {
+    /// Name of the node
+    pub name: String,
+
+    /// Type of the node
+    #[serde(rename = "type")]
+    pub typ: String,
+
+    /// Properties
+    #[serde(default)]
+    pub props: HashMap<String, Value>,
+}
 
 /// A wrapper around a [`Transformer`] keeping trace of the node id.
 pub struct Node {
