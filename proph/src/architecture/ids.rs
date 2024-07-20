@@ -1,6 +1,6 @@
+use super::Result;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use super::Result;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct GraphId(pub u64);

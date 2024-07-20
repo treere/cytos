@@ -190,7 +190,6 @@ fn node_inputs(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-
 fn node_outputs(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List outputs of a graph node",
@@ -271,4 +270,3 @@ fn main() -> Result<(), &'static str> {
         .or(Err("Failed to create repl"))
         .and_then(|mut repl| repl.run().or(Err("Critical REPL error")))
 }
-
