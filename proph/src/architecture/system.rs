@@ -39,7 +39,13 @@ impl System {
     }
 
     pub fn from_repr(repr: SystemRepr, loader: &Registry) -> Result<Self> {
-        let mut channels: HashMap<_, _> = repr
+        let mut channels: HashMap<
+            GraphId,
+            (
+                Sender<(Command, Message)>,
+                Option<Receiver<(Command, Message)>>,
+            ),
+        > = repr
             .graphs
             .iter()
             .map(|x| {
@@ -49,28 +55,14 @@ impl System {
             })
             .collect();
 
-        let senders: HashMap<_, _> = channels.iter().map(|(k, (s, _))| (*k, s.clone())).collect();
+        let senders: HashMap<GraphId, Sender<(Command, Message)>> =
+            channels.iter().map(|(k, (s, _))| (*k, s.clone())).collect();
 
         let v = repr
             .graphs
             .into_iter()
             .map(|graph_repr| {
-                let id = GraphId::try_from(&graph_repr.name).unwrap();
-
-                let (sender, receiver) = channels.get_mut(&id).unwrap();
-
-                let receiver = receiver.take().unwrap();
-
-                let runner = Runner::try_from_repr(
-                    graph_repr.name.clone(),
-                    graph_repr,
-                    loader.clone(),
-                    (sender.clone(), receiver),
-                    senders.clone(),
-                )
-                .unwrap();
-
-                Ok((id, runner))
+                load_runner(graph_repr, &mut channels, loader.clone(), senders.clone())
             })
             .collect::<Result<Vec<_>>>()?;
 
@@ -80,6 +72,36 @@ impl System {
     pub fn keys(&self) -> impl Iterator<Item = &GraphId> {
         self.runners.iter().map(|(v, _)| v)
     }
+}
+
+fn load_runner(
+    graph_repr: GraphRepr,
+    channels: &mut HashMap<
+        GraphId,
+        (
+            Sender<(Command, Message)>,
+            Option<Receiver<(Command, Message)>>,
+        ),
+    >,
+    loader: Registry,
+    senders: HashMap<GraphId, Sender<(Command, Message)>>,
+) -> Result<(GraphId, Runner)> {
+    let id = GraphId::try_from(&graph_repr.name).or(Err("cannot load id"))?;
+
+    let (sender, receiver) = channels.get_mut(&id).ok_or("missing channel")?;
+
+    let receiver = receiver.take().ok_or("missing receiver")?;
+
+    let runner = Runner::try_from_repr(
+        graph_repr.name.clone(),
+        graph_repr,
+        loader,
+        (sender.clone(), receiver),
+        senders,
+    )
+    .or(Err("cannot create runner"))?;
+
+    Ok((id, runner))
 }
 
 pub enum Command {
