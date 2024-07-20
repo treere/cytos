@@ -2,7 +2,7 @@ use anyhow::anyhow;
 
 use easy_repl::{command, Command, CommandStatus, Repl};
 
-use proph::architecture::runner::{Command as RCommand, SystemRepr};
+use proph::architecture::system::{Command as RCommand, SystemRepr};
 use proph::architecture::{GraphId, NodeId, ParamId, System, Value};
 use proph::loader::Registry;
 
