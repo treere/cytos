@@ -7,7 +7,6 @@ use proph::architecture::runner::Command as RCommand;
 use proph::architecture::{GraphId, NodeId, ParamId, System, Value};
 use proph::loader::Registry;
 
-use proph::utils::{convert_val_to_nodeid_string, convert_val_to_paramid_string};
 use std::collections::HashSet;
 
 use std::fs::File;
@@ -167,7 +166,7 @@ fn node_list(status: Rc<Mutex<Status>>) -> Command<'static> {
         (graph: String) => |graph: String| {
             let graph_id = GraphId::try_from(&graph).map_err(|x| anyhow!(x))?;
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
-            let result = status.system.command(graph_id, RCommand::ListNodes).and_then(|x|convert_val_to_nodeid_string(x.0)).map_err(|x|anyhow!(x))?;
+            let result = status.system.command(graph_id, RCommand::ListNodes).and_then(|x| x.0.convert::<Vec<NodeId>>()).map_err(|x|anyhow!(x))?;
 
             println!("{result:?}");
             Ok(CommandStatus::Done)
@@ -183,13 +182,14 @@ fn node_inputs(status: Rc<Mutex<Status>>) -> Command<'static> {
             let graph_id = GraphId::try_from(&graph).map_err(|x| anyhow!(x))?;
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let result = status.system.command(graph_id, RCommand::ListInputs(node))
-                .and_then(|val| convert_val_to_paramid_string(val.0)).map_err(|x| anyhow!(x))?;
+            .and_then(|val| val.0.convert::<Vec<ParamId>>()).map_err(|x| anyhow!(x))?;
 
             println!("{result:?}");
             Ok(CommandStatus::Done)
         }
     }
 }
+
 
 fn node_outputs(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
@@ -199,9 +199,9 @@ fn node_outputs(status: Rc<Mutex<Status>>) -> Command<'static> {
             let graph_id = GraphId::try_from(&graph).map_err(|x| anyhow!(x))?;
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let result = status.system.command(graph_id, RCommand::ListOutputs(node))
+                .and_then(|val| val.0.convert::<Vec<NodeId>>())
                 .map_err(|x|anyhow!(x))?;
 
-            let result  = convert_val_to_nodeid_string(result.0).map_err(|x|anyhow!(x))?;
             println!("{result:?}");
             Ok(CommandStatus::Done)
         }
@@ -271,3 +271,4 @@ fn main() -> Result<(), &'static str> {
         .or(Err("Failed to create repl"))
         .and_then(|mut repl| repl.run().or(Err("Critical REPL error")))
 }
+
