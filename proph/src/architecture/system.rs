@@ -23,13 +23,6 @@ impl SystemRepr {
     }
 }
 
-type AllChannels = HashMap<
-            GraphId,
-            (
-                Sender<(Command, Message)>,
-                Option<Receiver<(Command, Message)>>,
-            ),
-    >;
 
 #[derive(Default)]
 pub struct System {
@@ -47,7 +40,7 @@ impl System {
     }
 
     pub fn from_repr(repr: SystemRepr, loader: &Registry) -> Result<Self> {
-        let mut channels: AllChannels = repr
+        let  channels: HashMap<_,_> = repr
             .graphs
             .iter()
             .map(|x| {
@@ -57,14 +50,18 @@ impl System {
             })
             .collect();
 
+
+
         let senders: HashMap<GraphId, Sender<(Command, Message)>> =
             channels.iter().map(|(k, (s, _))| (*k, s.clone())).collect();
+
+        let mut receivers: HashMap<GraphId, Option<Receiver<(Command, Message)>>> = channels.into_iter().map(|(k, (_, r))| (k, r)).collect();
 
         let v = repr
             .graphs
             .into_iter()
             .map(|graph_repr| {
-                load_runner(graph_repr, &mut channels, loader.clone(), senders.clone())
+                load_runner(graph_repr, &mut receivers, loader.clone(), senders.clone())
             })
             .collect::<Result<Vec<_>>>()?;
 
@@ -78,21 +75,23 @@ impl System {
 
 fn load_runner(
     graph_repr: GraphRepr,
-    channels: &mut AllChannels,
+    receivers: &mut HashMap<GraphId, Option<Receiver<(Command, Message)>>>    ,
     loader: Registry,
     senders: HashMap<GraphId, Sender<(Command, Message)>>,
 ) -> Result<(GraphId, Runner)> {
     let id = GraphId::try_from(&graph_repr.name).or(Err("cannot load id"))?;
 
-    let (sender, receiver) = channels.get_mut(&id).ok_or("missing channel")?;
+    let receiver = receivers.get_mut(&id).ok_or("missing channel")?;
 
     let receiver = receiver.take().ok_or("missing receiver")?;
+
+    let sender  = senders.get(&id).ok_or("missing sender")?.clone();
 
     let runner = Runner::try_from_repr(
         graph_repr.name.clone(),
         graph_repr,
         loader,
-        (sender.clone(), receiver),
+        (sender, receiver),
         senders,
     )
     .or(Err("cannot create runner"))?;
