@@ -9,7 +9,7 @@ use super::{GraphId, NodeId, ParamId, Result, Value};
 
 use std::collections::HashMap;
 use std::sync::mpsc::{channel, Receiver, Sender};
-use std::thread::{self, JoinHandle};
+use std::thread::{Builder, JoinHandle};
 
 #[derive(Deserialize, Debug)]
 pub struct SystemRepr {
@@ -54,20 +54,22 @@ impl System {
         let v = repr
             .graphs
             .into_iter()
-            .map(|x| {
-                let id = GraphId::try_from(&x.name).unwrap();
+            .map(|graph_repr| {
+                let id = GraphId::try_from(&graph_repr.name).unwrap();
 
                 let (sender, receiver) = channels.get_mut(&id).unwrap();
 
                 let receiver = receiver.take().unwrap();
 
                 let runner = Runner::try_from_repr(
-                    x,
+                    graph_repr.name.clone(),
+                    graph_repr,
                     loader.clone(),
                     (sender.clone(), receiver),
                     senders.clone(),
                 )
                 .unwrap();
+
                 Ok((id, runner))
             })
             .collect::<Result<Vec<_>>>()?;
@@ -189,14 +191,16 @@ struct Runner {
 type ChannelTuple = (Sender<(Command, Message)>, Receiver<(Command, Message)>);
 
 impl Runner {
-    pub fn try_from_repr(
+    fn try_from_repr(
+        name: String,
         mut repr: GraphRepr,
         reg: Registry,
         (sender, receiver): ChannelTuple,
         senders: HashMap<GraphId, Sender<(Command, Message)>>,
     ) -> Result<Self> {
-        Ok(Self {
-            thread: Some(thread::spawn(move || {
+        let thread = Builder::new()
+            .name(name)
+            .spawn(move || {
                 let external = repr
                     .links
                     .iter()
@@ -226,7 +230,11 @@ impl Runner {
                     external,
                 }
                 .run();
-            })),
+            })
+            .or(Err("cannot run thread"))?;
+
+        Ok(Self {
+            thread: Some(thread),
             sender,
         })
     }
