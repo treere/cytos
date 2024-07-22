@@ -1,4 +1,5 @@
 use super::Result;
+use serde::de::Error;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
@@ -10,6 +11,7 @@ macro_rules! serde_u64 {
                 S: serde::Serializer,
             {
                 let value = u64_to_string(self.0);
+
                 serializer.serialize_str(&value)
             }
         }
@@ -20,7 +22,9 @@ macro_rules! serde_u64 {
                 D: serde::Deserializer<'de>,
             {
                 let value = String::deserialize(deserializer)?;
-                let value = string_to_u64(&value).unwrap();
+
+                let value = string_to_u64(&value)
+                    .map_err(|v| <D as serde::Deserializer<'de>>::Error::custom(v))?;
                 Ok($struct_name(value))
             }
         }
