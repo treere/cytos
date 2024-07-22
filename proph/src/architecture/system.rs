@@ -84,14 +84,8 @@ fn load_runner(
 
     let sender = senders.get(&id).ok_or("missing sender")?.clone();
 
-    let runner = Runner::try_from_repr(
-        graph_repr.name.clone(),
-        graph_repr,
-        loader,
-        (sender, receiver),
-        senders,
-    )
-    .or(Err("cannot create runner"))?;
+    let runner = Runner::try_from_repr(id, graph_repr, loader, (sender, receiver), senders)
+        .or(Err("cannot create runner"))?;
 
     Ok((id, runner))
 }
@@ -221,9 +215,7 @@ impl Runner {
                     .filter(|x| matches!(x.src, LinkSource::External(_, _, _)))
                     .map(|x| match &x.src {
                         LinkSource::Internal(_, _) => unreachable!(),
-                        LinkSource::External(g, n, p) => {
-                            ((senders[&g].clone(), n.clone(), p.clone()), x.dst)
-                        }
+                        LinkSource::External(g, n, p) => ((senders[g].clone(), *n, *p), x.dst),
                     })
                     .collect::<Vec<_>>();
 
