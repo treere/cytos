@@ -167,9 +167,7 @@ fn node_list(status: Rc<Mutex<Status>>) -> Command<'static> {
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let result = status.system.command(graph_id, RCommand::ListNodes).and_then(|x| x.0.convert::<Vec<NodeId>>()).map_err(|x|anyhow!(x))?;
 
-            for node in result {
-                println!("{node}");
-            }
+            println!("{result:?}");
             Ok(CommandStatus::Done)
         }
     }
@@ -185,9 +183,7 @@ fn node_inputs(status: Rc<Mutex<Status>>) -> Command<'static> {
             let result = status.system.command(graph_id, RCommand::ListInputs(node))
             .and_then(|val| val.0.convert::<Vec<ParamId>>()).map_err(|x| anyhow!(x))?;
 
-            for node in result {
-                println!("{node}");
-            }
+            println!("{result:?}");
             Ok(CommandStatus::Done)
         }
     }
@@ -204,9 +200,7 @@ fn node_outputs(status: Rc<Mutex<Status>>) -> Command<'static> {
                 .and_then(|val| val.0.convert::<Vec<NodeId>>())
                 .map_err(|x|anyhow!(x))?;
 
-            for v in result {
-                println!("{v}");
-            }
+            println!("{result:?}");
             Ok(CommandStatus::Done)
         }
     }
