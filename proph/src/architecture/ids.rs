@@ -27,8 +27,14 @@ macro_rules! serde_u64 {
     };
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+#[derive(PartialEq, Eq, Clone, Copy, Hash)]
 pub struct GraphId(pub u64);
+
+impl std::fmt::Debug for GraphId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", u64_to_string(self.0))
+    }
+}
 
 impl From<u64> for GraphId {
     fn from(value: u64) -> Self {
@@ -58,8 +64,14 @@ impl Display for GraphId {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+#[derive(PartialEq, Eq, Clone, Copy, Hash)]
 pub struct NodeId(pub u64);
+
+impl std::fmt::Debug for NodeId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", u64_to_string(self.0))
+    }
+}
 
 impl From<u64> for NodeId {
     fn from(value: u64) -> Self {
@@ -89,8 +101,14 @@ impl Display for NodeId {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+#[derive(PartialEq, Eq, Clone, Copy, Hash)]
 pub struct ParamId(pub u64);
+
+impl std::fmt::Debug for ParamId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", u64_to_string(self.0))
+    }
+}
 
 impl From<u64> for ParamId {
     fn from(value: u64) -> Self {

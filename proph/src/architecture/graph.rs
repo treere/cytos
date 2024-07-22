@@ -163,7 +163,7 @@ impl Graph {
     pub fn try_from_repr(repr: GraphRepr, loader: &Registry) -> Result<Graph> {
         let mut graph = Graph::default();
         for node in repr.nodes {
-            let id  = node.name;
+            let id = node.name;
             let processor = Node::try_from_repr(node, loader)?;
             graph = graph.insert(id, processor)?;
         }
