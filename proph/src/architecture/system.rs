@@ -23,7 +23,6 @@ impl SystemRepr {
     }
 }
 
-
 #[derive(Default)]
 pub struct System {
     runners: Vec<(GraphId, Runner)>,
@@ -40,22 +39,20 @@ impl System {
     }
 
     pub fn from_repr(repr: SystemRepr, loader: &Registry) -> Result<Self> {
-        let  channels: HashMap<_,_> = repr
+        let channels: HashMap<_, _> = repr
             .graphs
             .iter()
             .map(|x| {
-                let id = GraphId::try_from(&x.name).unwrap();
                 let (sender, receiver) = channel::<(Command, Message)>();
-                (id, (sender, Some(receiver)))
+                (x.name, (sender, Some(receiver)))
             })
             .collect();
-
-
 
         let senders: HashMap<GraphId, Sender<(Command, Message)>> =
             channels.iter().map(|(k, (s, _))| (*k, s.clone())).collect();
 
-        let mut receivers: HashMap<GraphId, Option<Receiver<(Command, Message)>>> = channels.into_iter().map(|(k, (_, r))| (k, r)).collect();
+        let mut receivers: HashMap<GraphId, Option<Receiver<(Command, Message)>>> =
+            channels.into_iter().map(|(k, (_, r))| (k, r)).collect();
 
         let v = repr
             .graphs
@@ -75,17 +72,17 @@ impl System {
 
 fn load_runner(
     graph_repr: GraphRepr,
-    receivers: &mut HashMap<GraphId, Option<Receiver<(Command, Message)>>>    ,
+    receivers: &mut HashMap<GraphId, Option<Receiver<(Command, Message)>>>,
     loader: Registry,
     senders: HashMap<GraphId, Sender<(Command, Message)>>,
 ) -> Result<(GraphId, Runner)> {
-    let id = GraphId::try_from(&graph_repr.name).or(Err("cannot load id"))?;
+    let id = graph_repr.name;
 
     let receiver = receivers.get_mut(&id).ok_or("missing channel")?;
 
     let receiver = receiver.take().ok_or("missing receiver")?;
 
-    let sender  = senders.get(&id).ok_or("missing sender")?.clone();
+    let sender = senders.get(&id).ok_or("missing sender")?.clone();
 
     let runner = Runner::try_from_repr(
         graph_repr.name.clone(),
@@ -209,14 +206,14 @@ type ChannelTuple = (Sender<(Command, Message)>, Receiver<(Command, Message)>);
 
 impl Runner {
     fn try_from_repr(
-        name: String,
+        name: GraphId,
         mut repr: GraphRepr,
         reg: Registry,
         (sender, receiver): ChannelTuple,
         senders: HashMap<GraphId, Sender<(Command, Message)>>,
     ) -> Result<Self> {
         let thread = Builder::new()
-            .name(name)
+            .name(name.to_string())
             .spawn(move || {
                 let external = repr
                     .links
@@ -225,14 +222,7 @@ impl Runner {
                     .map(|x| match &x.src {
                         LinkSource::Internal(_, _) => unreachable!(),
                         LinkSource::External(g, n, p) => {
-                            let g = GraphId::try_from(g.as_str()).unwrap();
-                            let n = NodeId::try_from(n.as_str()).unwrap();
-                            let p = ParamId::try_from(p.as_str()).unwrap();
-
-                            let d0 = NodeId::try_from(&x.dst.0).unwrap();
-                            let d1 = ParamId::try_from(&x.dst.1).unwrap();
-
-                            ((senders[&g].clone(), n, p), (d0, d1))
+                            ((senders[&g].clone(), n.clone(), p.clone()), x.dst)
                         }
                     })
                     .collect::<Vec<_>>();

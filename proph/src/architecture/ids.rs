@@ -2,7 +2,32 @@ use super::Result;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy, Hash)]
+macro_rules! serde_u64 {
+    ($struct_name:ident) => {
+        impl Serialize for $struct_name {
+            fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                let value = u64_to_string(self.0);
+                serializer.serialize_str(&value)
+            }
+        }
+
+        impl<'de> Deserialize<'de> for $struct_name {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                let value = String::deserialize(deserializer)?;
+                let value = string_to_u64(&value).unwrap();
+                Ok($struct_name(value))
+            }
+        }
+    };
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct GraphId(pub u64);
 
 impl From<u64> for GraphId {
@@ -33,7 +58,7 @@ impl Display for GraphId {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct NodeId(pub u64);
 
 impl From<u64> for NodeId {
@@ -64,7 +89,7 @@ impl Display for NodeId {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct ParamId(pub u64);
 
 impl From<u64> for ParamId {
@@ -118,3 +143,7 @@ fn format_radix(mut x: u64, radix: u64) -> String {
     }
     result.into_iter().rev().collect()
 }
+
+serde_u64!(GraphId);
+serde_u64!(NodeId);
+serde_u64!(ParamId);

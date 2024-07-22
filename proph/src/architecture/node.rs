@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
-use super::{ParamId, Result, Stepper, Transformer, Value};
+use super::{NodeId, ParamId, Result, Stepper, Transformer, Value};
 use crate::loader::Registry;
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
 pub struct NodeRepr {
     /// Name of the node
-    pub name: String,
+    pub name: NodeId,
 
     /// Type of the node
     #[serde(rename = "type")]
@@ -15,7 +15,7 @@ pub struct NodeRepr {
 
     /// Properties
     #[serde(default)]
-    pub props: HashMap<String, Value>,
+    pub props: HashMap<ParamId, Value>,
 }
 
 /// A wrapper around a [`Transformer`] keeping trace of the node id.
@@ -34,8 +34,7 @@ impl Node {
         let mut transformer = loader.load(repr.typ.as_str())?;
 
         for (prop, value) in repr.props {
-            let propid = ParamId::try_from(&prop)?;
-            transformer.load(propid, value)?;
+            transformer.load(prop, value)?;
         }
 
         Ok(Node::new(transformer))

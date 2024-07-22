@@ -2,7 +2,7 @@ use crate::loader::Registry;
 
 use super::{
     node::{Node, NodeRepr},
-    NodeId, ParamId, Result, Stepper, Value,
+    GraphId, NodeId, ParamId, Result, Stepper, Value,
 };
 
 use serde::Deserialize;
@@ -11,7 +11,7 @@ use serde::Deserialize;
 #[derive(Deserialize, Debug)]
 pub struct GraphRepr {
     /// Graph name
-    pub name: String,
+    pub name: GraphId,
 
     /// List of nodes
     pub nodes: Vec<NodeRepr>,
@@ -30,8 +30,8 @@ impl GraphRepr {
 #[derive(Deserialize, Debug)]
 #[serde(untagged)]
 pub enum LinkSource {
-    Internal(String, String),
-    External(String, String, String),
+    Internal(NodeId, ParamId),
+    External(GraphId, NodeId, ParamId),
 }
 
 /// Link between nodes
@@ -41,7 +41,7 @@ pub struct Link {
     pub src: LinkSource,
 
     /// Destination node param
-    pub dst: (String, String),
+    pub dst: (NodeId, ParamId),
 }
 
 /// Graph.
@@ -163,20 +163,14 @@ impl Graph {
     pub fn try_from_repr(repr: GraphRepr, loader: &Registry) -> Result<Graph> {
         let mut graph = Graph::default();
         for node in repr.nodes {
-            let id = NodeId::try_from(node.name.as_str())?;
+            let id  = node.name;
             let processor = Node::try_from_repr(node, loader)?;
             graph = graph.insert(id, processor)?;
         }
 
         for Link { src, dst: (d0, d1) } in repr.links {
-            let d0 = NodeId::try_from(&d0)?;
-            let d1 = ParamId::try_from(&d1)?;
-
             match src {
                 LinkSource::Internal(s0, s1) => {
-                    let s0 = NodeId::try_from(&s0)?;
-                    let s1 = ParamId::try_from(&s1)?;
-
                     graph.internal_link((s0, s1), (d0, d1))?;
                 }
                 LinkSource::External(_g0, _s0, _s1) => {
