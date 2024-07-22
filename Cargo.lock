@@ -884,6 +884,7 @@ dependencies = [
  "anyhow",
  "easy-repl",
  "proph",
+ "serde_json",
 ]
 
 [[package]]
