@@ -110,23 +110,17 @@ pub struct Response(pub Value);
 
 pub struct Message {
     sender: Sender<Result<Response>>,
-    resp: Option<Result<Response>>,
 }
 
 impl Message {
-    fn new(sender: Sender<Result<Response>>) -> Self {
-        Self { sender, resp: None }
+    fn new() -> (Self, Receiver<Result<Response>>) {
+        let (sender, receiver) = bounded::<Result<Response>>(0);
+
+        (Self { sender }, receiver)
     }
 
-    fn set<T: Serialize>(&mut self, resp: Result<T>) {
-        self.resp = Some(resp.and_then(|v| Value::from_t(&v).map(Response)));
-    }
-}
-
-impl Drop for Message {
-    fn drop(&mut self) {
-        let null = Value::from_t(&()).unwrap();
-        let resp = self.resp.take().unwrap_or(Ok(Response(null)));
+    fn set<T: Serialize>(self, resp: Result<T>) {
+        let resp = resp.and_then(|v| Value::from_t(&v).map(Response));
         self.sender.send(resp).expect("cannot send");
     }
 }
@@ -144,31 +138,33 @@ struct InternalRunner {
 impl InternalRunner {
     fn run(mut self) {
         'main: loop {
-            while let Ok((command, mut message)) = self.receiver.recv() {
+            while let Ok((command, message)) = self.receiver.recv() {
                 match command {
                     Command::Kill => break 'main,
                     Command::Start => break,
                     Command::Status => message.set(Ok("Idle")),
-                    _ => self.dispatch_command(command, &mut message),
+                    _ => self.dispatch_command(command, message),
                 }
             }
 
             self.graph.initialize().expect("cannot initialize");
             'outer: loop {
-                while let Ok((command, mut message)) = self.receiver.try_recv() {
+                while let Ok((command, message)) = self.receiver.try_recv() {
                     match command {
                         Command::Kill => break 'main,
                         Command::Stop => break 'outer,
                         Command::Status => message.set(Ok("Running")),
-                        _ => self.dispatch_command(command, &mut message),
+                        _ => self.dispatch_command(command, message),
                     }
                 }
 
                 self.external.iter().for_each(|((s, n0, p0), (n1, p1))| {
-                    let (sender, receiver) = bounded::<Result<Response>>(0);
+                    let (message, receiver) = Message::new();
 
-                    let r = match s.send((Command::Dump(*n0, *p0), Message::new(sender))) {
-                        Ok(()) => receiver.recv().unwrap_or(Err("Error unwrapping")),
+                    let r = match s.send((Command::Dump(*n0, *p0), message)) {
+                        Ok(()) => receiver
+                            .recv()
+                            .unwrap_or(Ok(Response(Value::from_t(&()).unwrap()))),
                         Err(_) => Err("Cannot send"),
                     };
                     let r = r.unwrap();
@@ -183,7 +179,7 @@ impl InternalRunner {
         }
     }
 
-    fn dispatch_command(&mut self, command: Command, message: &mut Message) {
+    fn dispatch_command(&mut self, command: Command, message: Message) {
         match command {
             Command::ListNodes => message.set(Ok(self.graph.list_nodes())),
             Command::ListInputs(node) => message.set(self.graph.list_node_inputs(node)),
@@ -245,10 +241,12 @@ impl Runner {
     }
 
     pub fn command(&mut self, command: Command) -> Result<Response> {
-        let (sender, receiver) = bounded::<Result<Response>>(0);
+        let (message, receiver) = Message::new();
 
-        match self.sender.send((command, Message::new(sender))) {
-            Ok(()) => receiver.recv().unwrap_or(Err("Error unwrapping")),
+        match self.sender.send((command, message)) {
+            Ok(()) => receiver
+                .recv()
+                .unwrap_or(Ok(Response(Value::from_t(&()).unwrap()))),
             Err(_) => Err("Cannot send"),
         }
     }
@@ -257,10 +255,9 @@ impl Runner {
 impl Drop for Runner {
     fn drop(&mut self) {
         if let Some(t) = self.thread.take() {
-            let (sender, _receiver) = bounded::<Result<Response>>(0);
-
+            let (message, _receiver) = Message::new();
             self.sender
-                .send((Command::Kill, Message::new(sender)))
+                .send((Command::Kill, message))
                 .expect("cannot send");
 
             t.join().expect("cannot join");
