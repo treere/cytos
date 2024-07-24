@@ -42,7 +42,7 @@ impl<T> std::ops::DerefMut for Prop<T> {
 
 impl<T: 'static + DeserializeOwned> Prop<T> {
     pub fn load(&mut self, val: Value) -> Result<()> {
-        let value = val.convert()?;
+        let value = val.dump()?;
         self.0 = Rc::new(UnsafeCell::new(value));
         Ok(())
     }
@@ -50,7 +50,7 @@ impl<T: 'static + DeserializeOwned> Prop<T> {
 
 impl<T: 'static + Serialize> Prop<T> {
     fn dump(&self) -> Result<Value> {
-        Value::from_t(self.deref())
+        Value::load(self.deref())
     }
 }
 

@@ -120,7 +120,7 @@ impl Message {
     }
 
     fn set<T: Serialize>(self, resp: Result<T>) {
-        let resp = resp.and_then(|v| Value::from_t(&v).map(Response));
+        let resp = resp.and_then(|v| Value::load(&v).map(Response));
         self.sender.send(resp).expect("cannot send");
     }
 }
@@ -164,7 +164,7 @@ impl InternalRunner {
                     let r = match s.send((Command::Dump(*n0, *p0), message)) {
                         Ok(()) => receiver
                             .recv()
-                            .unwrap_or(Ok(Response(Value::from_t(&()).unwrap()))),
+                            .unwrap_or(Ok(Response(Value::load(&()).unwrap()))),
                         Err(_) => Err("Cannot send"),
                     };
                     let r = r.unwrap();
@@ -246,7 +246,7 @@ impl Runner {
         match self.sender.send((command, message)) {
             Ok(()) => receiver
                 .recv()
-                .unwrap_or(Ok(Response(Value::from_t(&()).unwrap()))),
+                .unwrap_or(Ok(Response(Value::load(&()).unwrap()))),
             Err(_) => Err("Cannot send"),
         }
     }

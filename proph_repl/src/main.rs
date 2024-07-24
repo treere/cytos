@@ -173,7 +173,7 @@ fn node_list(status: Rc<Mutex<Status>>) -> Command<'static> {
             let graph = serde_json::to_string(&graph).map_err(|x| anyhow!(x))?;
             let graph_id : GraphId = serde_json::from_str(&graph).map_err(|x| anyhow!(x))?;
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
-            let result = status.system.command(graph_id, RCommand::ListNodes).and_then(|x| x.0.convert::<Vec<NodeId>>()).map_err(|x|anyhow!(x))?;
+            let result = status.system.command(graph_id, RCommand::ListNodes).and_then(|x| x.0.dump::<Vec<NodeId>>()).map_err(|x|anyhow!(x))?;
 
             println!("{result:?}");
             Ok(CommandStatus::Done)
@@ -191,7 +191,7 @@ fn node_inputs(status: Rc<Mutex<Status>>) -> Command<'static> {
             let graph_id : GraphId = serde_json::from_str(&graph).map_err(|x| anyhow!(x))?;
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let result = status.system.command(graph_id, RCommand::ListInputs(node_id))
-            .and_then(|val| val.0.convert::<Vec<ParamId>>()).map_err(|x| anyhow!(x))?;
+            .and_then(|val| val.0.dump::<Vec<ParamId>>()).map_err(|x| anyhow!(x))?;
 
             println!("{result:?}");
             Ok(CommandStatus::Done)
@@ -209,7 +209,7 @@ fn node_outputs(status: Rc<Mutex<Status>>) -> Command<'static> {
             let graph_id : GraphId = serde_json::from_str(&graph).map_err(|x| anyhow!(x))?;
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let result = status.system.command(graph_id, RCommand::ListOutputs(node_id))
-                .and_then(|val| val.0.convert::<Vec<NodeId>>())
+                .and_then(|val| val.0.dump::<Vec<NodeId>>())
                 .map_err(|x|anyhow!(x))?;
 
             println!("{result:?}");
@@ -245,12 +245,12 @@ fn node_load(status: Rc<Mutex<Status>>) -> Command<'static> {
         "Load to an input/output of a graph node",
         (graph: String, node: String, param: String, value: String) => |graph: String, node:String, param:String, value: String| {
             let node = serde_json::to_string(&node).map_err(|x| anyhow!(x))?;
-            let node :  NodeId = serde_json::from_str(&node).map_err(|x| anyhow!(x))?;
+            let node:  NodeId = serde_json::from_str(&node).map_err(|x| anyhow!(x))?;
             let param = serde_json::to_string(&param).map_err(|x| anyhow!(x))?;
-            let param : ParamId = serde_json::from_str(&param).map_err(|x| anyhow!(x))?;
+            let param: ParamId = serde_json::from_str(&param).map_err(|x| anyhow!(x))?;
             let graph = serde_json::to_string(&graph).map_err(|x| anyhow!(x))?;
-            let graph_id : GraphId = serde_json::from_str(&graph).map_err(|x| anyhow!(x))?;
-            let value = Value::from_string(&value).map_err(|x| anyhow!(x))?;
+            let graph_id: GraphId = serde_json::from_str(&graph).map_err(|x| anyhow!(x))?;
+            let value: Value = serde_json::from_str(&value).map_err(|x| anyhow!(x))?;
 
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let result = status.system.command(graph_id, RCommand::Load(node,param, value));
