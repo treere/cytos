@@ -165,7 +165,7 @@ impl InternalRunner {
                 }
 
                 self.external.iter().for_each(|((s, n0, p0), (n1, p1))| {
-                    let (sender, receiver) = unbounded::<Result<Response>>();
+                    let (sender, receiver) = bounded::<Result<Response>>(0);
 
                     let r = match s.send((Command::Dump(*n0, *p0), Message::new(sender))) {
                         Ok(()) => receiver.recv().unwrap_or(Err("Error unwrapping")),
@@ -257,7 +257,7 @@ impl Runner {
 impl Drop for Runner {
     fn drop(&mut self) {
         if let Some(t) = self.thread.take() {
-            let (sender, _receiver) = unbounded::<Result<Response>>();
+            let (sender, _receiver) = bounded::<Result<Response>>(0);
 
             self.sender
                 .send((Command::Kill, Message::new(sender)))
