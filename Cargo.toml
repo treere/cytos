@@ -3,7 +3,7 @@ members = ["proph","proph_bench","proph_derive","proph_repl","proph_transformers
 resolver = "2"
 
 [profile.release]
-debug = 1
+debug = false
 opt-level = 3
 panic = "abort"
-lto = "thin"
+lto = true
