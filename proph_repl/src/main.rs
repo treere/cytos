@@ -37,7 +37,11 @@ fn system_load(status: Rc<Mutex<Status>>) -> Command<'static> {
         let system = System::from_repr(repr, &registry).map_err(|x| anyhow!(x))?;
 
         status.system = system;
-        println!("loaded!");
+        println!("loaded:");
+        for name in status.system.keys() {
+            println!("-> {name:}");
+        }
+
         Ok(CommandStatus::Done)
     }}
 }
