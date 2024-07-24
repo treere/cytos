@@ -4,8 +4,12 @@
       "name": "source",
       "nodes": [
         {
-          "name": "node",
+          "name": "time",
           "type": "IncrementalGenerator"
+        },
+        {
+          "name": "timers",
+          "type": "Timer"
         }
       ],
       "links": []
@@ -19,13 +23,17 @@
           "props": {
             "increment": 1
           }
+        },
+        {
+          "name": "timers",
+          "type": "Timer"
         }
       ],
       "links": [
         {
           "src": [
             "source",
-            "node",
+            "time",
             "output"
           ],
           "dst": [
@@ -44,6 +52,10 @@
           "props": {
             "increment": 1
           }
+        },
+        {
+          "name": "timers",
+          "type": "Timer"
         }
       ],
       "links": [

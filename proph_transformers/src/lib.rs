@@ -7,6 +7,7 @@ mod list_files;
 mod mean;
 mod print;
 mod source;
+mod timer;
 mod transform;
 
 use add_one::AddValue;
@@ -17,6 +18,7 @@ use mean::Mean;
 use print::Print;
 use proph::loader::Registry;
 use source::Rscam;
+use timer::Timer;
 use transform::GrayScale;
 
 #[no_mangle]
@@ -31,5 +33,6 @@ pub extern "C" fn load_registry(registry: &mut Registry) {
         .add("PrintU64", Print::<u64>::default)
         .add("PrintF64", Print::<f64>::default)
         .add("PrintString", Print::<String>::default)
-        .add("ListFiles", ListFiles::default);
+        .add("ListFiles", ListFiles::default)
+        .add("Timer", Timer::default);
 }

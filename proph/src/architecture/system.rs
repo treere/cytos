@@ -1,3 +1,4 @@
+use crossbeam::channel::bounded;
 use crossbeam::channel::unbounded;
 use crossbeam::channel::Receiver;
 use crossbeam::channel::Sender;
@@ -244,7 +245,7 @@ impl Runner {
     }
 
     pub fn command(&mut self, command: Command) -> Result<Response> {
-        let (sender, receiver) = unbounded::<Result<Response>>();
+        let (sender, receiver) = bounded::<Result<Response>>(0);
 
         match self.sender.send((command, Message::new(sender))) {
             Ok(()) => receiver.recv().unwrap_or(Err("Error unwrapping")),

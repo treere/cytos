@@ -131,7 +131,7 @@ fn library_add(status: Rc<Mutex<Status>>) -> Command<'static> {
             }
 
             status.libraries.insert(library);
-            println!("added");
+
             Ok(CommandStatus::Done)
         }
     }
