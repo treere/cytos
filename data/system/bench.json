@@ -1,84 +1,60 @@
 {
   "graphs": [
     {
-      "name": "bench",
+      "name": "source",
       "nodes": [
         {
-          "name": "SOURCE",
+          "name": "node",
           "type": "IncrementalGenerator"
-        },
+        }
+      ],
+      "links": []
+    },
+    {
+      "name": "doubler0",
+      "nodes": [
         {
-          "name": "DOUBLER0",
+          "name": "node",
           "type": "AddValue",
           "props": {
             "increment": 1
           }
-        },
-        {
-          "name": "DOUBLER1",
-          "type": "AddValue"
-        },
-        {
-          "name": "DOUBLER2",
-          "type": "AddValue"
-        },
-        {
-          "name": "DOUBLER3",
-          "type": "AddValue"
-        },
-        {
-          "name": "DOUBLER4",
-          "type": "AddValue"
         }
       ],
       "links": [
         {
           "src": [
-            "SOURCE",
+            "source",
+            "node",
             "output"
           ],
           "dst": [
-            "DOUBLER0",
+            "node",
             "input"
           ]
-        },
+        }
+      ]
+    },
+    {
+      "name": "doubler1",
+      "nodes": [
+        {
+          "name": "node",
+          "type": "AddValue",
+          "props": {
+            "increment": 1
+          }
+        }
+      ],
+      "links": [
         {
           "src": [
-            "DOUBLER0",
+            "doubler0",
+            "node",
             "output"
           ],
           "dst": [
-            "DOUBLER1",
-            "input"
-          ]
-        },
-        {
-          "src": [
-            "DOUBLER1",
-            "output"
-          ],
-          "dst": [
-            "DOUBLER2",
-            "input"
-          ]
-        },
-        {
-          "src": [
-            "DOUBLER2",
-            "output"
-          ],
-          "dst": [
-            "DOUBLER3",
-            "input"
-          ]
-        },
-        {
-          "src": [
-            "DOUBLER3",
-            "output"
-          ],
-          "dst": [
-            "DOUBLER4",
+            "node",
             "input"
           ]
         }

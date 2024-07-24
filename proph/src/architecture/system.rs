@@ -1,3 +1,6 @@
+use crossbeam::channel::unbounded;
+use crossbeam::channel::Receiver;
+use crossbeam::channel::Sender;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -8,7 +11,6 @@ use super::graph::{Graph, GraphRepr, LinkSource};
 use super::{GraphId, NodeId, ParamId, Result, Value};
 
 use std::collections::HashMap;
-use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::{Builder, JoinHandle};
 
 #[derive(Deserialize, Debug)]
@@ -43,7 +45,7 @@ impl System {
             .graphs
             .iter()
             .map(|x| {
-                let (sender, receiver) = channel::<(Command, Message)>();
+                let (sender, receiver) = unbounded::<(Command, Message)>();
                 (x.name, (sender, Some(receiver)))
             })
             .collect();
@@ -111,6 +113,10 @@ pub struct Message {
 }
 
 impl Message {
+    fn new(sender: Sender<Result<Response>>) -> Self {
+        Self { sender, resp: None }
+    }
+
     fn set<T: Serialize>(&mut self, resp: Result<T>) {
         self.resp = Some(resp.and_then(|v| Value::from_t(&v).map(Response)));
     }
@@ -158,10 +164,9 @@ impl InternalRunner {
                 }
 
                 self.external.iter().for_each(|((s, n0, p0), (n1, p1))| {
-                    let (sender, receiver) = channel::<Result<Response>>();
+                    let (sender, receiver) = unbounded::<Result<Response>>();
 
-                    let r = match s.send((Command::Dump(*n0, *p0), Message { sender, resp: None }))
-                    {
+                    let r = match s.send((Command::Dump(*n0, *p0), Message::new(sender))) {
                         Ok(()) => receiver.recv().unwrap_or(Err("Error unwrapping")),
                         Err(_) => Err("Cannot send"),
                     };
@@ -239,9 +244,9 @@ impl Runner {
     }
 
     pub fn command(&mut self, command: Command) -> Result<Response> {
-        let (sender, receiver) = channel::<Result<Response>>();
+        let (sender, receiver) = unbounded::<Result<Response>>();
 
-        match self.sender.send((command, Message { sender, resp: None })) {
+        match self.sender.send((command, Message::new(sender))) {
             Ok(()) => receiver.recv().unwrap_or(Err("Error unwrapping")),
             Err(_) => Err("Cannot send"),
         }
@@ -251,10 +256,10 @@ impl Runner {
 impl Drop for Runner {
     fn drop(&mut self) {
         if let Some(t) = self.thread.take() {
-            let (sender, _receiver) = channel::<Result<Response>>();
+            let (sender, _receiver) = unbounded::<Result<Response>>();
 
             self.sender
-                .send((Command::Kill, Message { sender, resp: None }))
+                .send((Command::Kill, Message::new(sender)))
                 .expect("cannot send");
 
             t.join().expect("cannot join");
