@@ -6,7 +6,12 @@
         {
           "name": "SOURCE",
           "type": "Rscam"
-        },
+        }
+      ]
+    },
+    {
+      "name": "process",
+      "nodes": [
         {
           "name": "DECODER",
           "type": "ImageDecoder"
@@ -16,13 +21,14 @@
           "type": "ImageMean"
         },
         {
-          "name": "PrintU64",
-          "type": "PrintU64"
+          "name": "PrintF64",
+          "type": "PrintF64"
         }
       ],
       "links": [
         {
           "src": [
+            "capture",
             "SOURCE",
             "frame"
           ],
@@ -47,7 +53,7 @@
             "output"
           ],
           "dst": [
-            "PrintU64",
+            "PrintF64",
             "input"
           ]
         }
