@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::{NodeId, ParamId, Result, Stepper, Transformer, Value};
+use super::{NodeId, ParamId, Result, Transformer, Value};
 use crate::loader::Registry;
 use serde::Deserialize;
 
@@ -21,7 +21,21 @@ pub struct NodeRepr {
 /// A wrapper around a [`Transformer`] keeping trace of the node id.
 pub struct Node {
     /// Wrapped transformer.
-    pub transformer: Box<dyn Transformer>,
+    transformer: Box<dyn Transformer>,
+}
+
+impl std::ops::Deref for Node {
+    type Target = dyn Transformer;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.transformer
+    }
+}
+
+impl std::ops::DerefMut for Node {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut *self.transformer
+    }
 }
 
 impl Node {
@@ -38,19 +52,5 @@ impl Node {
         }
 
         Ok(Node::new(transformer))
-    }
-}
-
-impl Stepper for Node {
-    fn initialize(&mut self) -> Result<()> {
-        self.transformer.initialize()
-    }
-
-    fn step(&mut self) -> Result<()> {
-        self.transformer.step()
-    }
-
-    fn terminate(&mut self) -> Result<()> {
-        self.transformer.terminate()
     }
 }

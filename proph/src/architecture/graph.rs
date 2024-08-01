@@ -2,7 +2,7 @@ use crate::loader::Registry;
 
 use super::{
     node::{Node, NodeRepr},
-    GraphId, NodeId, ParamId, Result, Stepper, Value,
+    GraphId, NodeId, ParamId, Result, Value,
 };
 
 use indexmap::IndexMap;
@@ -75,14 +75,12 @@ impl Graph {
             .nodes
             .get(&src_node_id)
             .ok_or("cannot find source")?
-            .transformer
             .output(src_param_id)
             .ok_or("cannot find param")?;
 
         self.nodes
             .get_mut(&dst_node_id)
             .ok_or("cannot find dest")?
-            .transformer
             .link(dst_param_id, output)?;
 
         Ok(())
@@ -92,7 +90,6 @@ impl Graph {
         self.nodes
             .get_mut(&node_id)
             .ok_or("cannot find node")?
-            .transformer
             .load(param_id, value)?;
 
         Ok(())
@@ -102,7 +99,6 @@ impl Graph {
         self.nodes
             .get(&node_id)
             .ok_or("cannot find node")?
-            .transformer
             .dump(param_id)
     }
 
@@ -140,7 +136,7 @@ impl Graph {
     pub fn list_node_inputs(&self, node: NodeId) -> Result<Vec<ParamId>> {
         self.nodes
             .get(&node)
-            .map(|n| n.transformer.input_names())
+            .map(|n| n.input_names())
             .ok_or("missing node".into())
     }
 
@@ -148,7 +144,7 @@ impl Graph {
     pub fn list_node_outputs(&self, node: NodeId) -> Result<Vec<ParamId>> {
         self.nodes
             .get(&node)
-            .map(|n| n.transformer.output_names())
+            .map(|n| n.output_names())
             .ok_or("missing node".into())
     }
 
