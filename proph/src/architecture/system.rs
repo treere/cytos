@@ -22,7 +22,7 @@ pub struct SystemRepr {
 
 impl SystemRepr {
     pub fn from_json(file: &str) -> Result<Self> {
-        serde_json::from_str(file).or(Err("cannot read file"))
+        serde_json::from_str(file).or(Err("cannot read file".into()))
     }
 }
 
@@ -38,7 +38,7 @@ impl System {
             .iter_mut()
             .find(|x| x.0 == graph)
             .ok_or("not found")?;
-        g.command(command)
+        g.command(command).map_err(|x| x.into())
     }
 
     pub fn from_repr(repr: SystemRepr, loader: &Registry) -> Result<Self> {
@@ -105,22 +105,26 @@ pub enum Command {
     Load(NodeId, ParamId, Value),
 }
 
+type ResponseResult = std::result::Result<Response, String>;
+
 #[derive(Debug)]
 pub struct Response(pub Value);
 
 pub struct Message {
-    sender: Sender<Result<Response>>,
+    sender: Sender<ResponseResult>,
 }
 
 impl Message {
-    fn new() -> (Self, Receiver<Result<Response>>) {
-        let (sender, receiver) = bounded::<Result<Response>>(0);
+    fn new() -> (Self, Receiver<ResponseResult>) {
+        let (sender, receiver) = bounded::<ResponseResult>(0);
 
         (Self { sender }, receiver)
     }
 
     fn set<T: Serialize>(self, resp: Result<T>) {
-        let resp = resp.and_then(|v| Value::load(&v).map(Response));
+        let resp = resp
+            .and_then(|v| Value::load(&v).map(Response))
+            .map_err(|r| r.to_string());
         self.sender.send(resp).expect("cannot send");
     }
 }
@@ -165,7 +169,7 @@ impl InternalRunner {
                         Ok(()) => receiver
                             .recv()
                             .unwrap_or(Ok(Response(Value::load(&()).unwrap()))),
-                        Err(_) => Err("Cannot send"),
+                        Err(_) => Err("Cannot send".into()),
                     };
                     let r = r.unwrap();
                     self.graph.load((*n1, *p1), r.0).unwrap();
@@ -246,8 +250,9 @@ impl Runner {
         match self.sender.send((command, message)) {
             Ok(()) => receiver
                 .recv()
-                .unwrap_or(Ok(Response(Value::load(&()).unwrap()))),
-            Err(_) => Err("Cannot send"),
+                .unwrap_or(Ok(Response(Value::load(&()).unwrap())))
+                .map_err(|r| r.into()),
+            Err(_) => Err("Cannot send".into()),
         }
     }
 }

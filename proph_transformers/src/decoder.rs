@@ -30,7 +30,7 @@ impl Stepper for ImageDecoder {
             };
             Ok(())
         } else {
-            Err("cannot decode image")
+            Err("cannot decode image".into())
         }
     }
 }

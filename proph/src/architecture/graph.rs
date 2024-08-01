@@ -23,7 +23,8 @@ pub struct GraphRepr {
 
 impl GraphRepr {
     pub fn from_json(file: &str) -> Result<Self> {
-        serde_json::from_str(file).or(Err("cannot load file"))
+        let v = serde_json::from_str(file).or(Err("cannot load file"))?;
+        Ok(v)
     }
 }
 
@@ -59,7 +60,7 @@ impl Graph {
 
             Ok(self)
         } else {
-            Err("already exist")
+            Err("already exist".into())
         }
     }
 
@@ -148,7 +149,7 @@ impl Graph {
             .iter()
             .find(|n| n.0 == node)
             .map(|n| n.1.transformer.input_names())
-            .ok_or("missing node")
+            .ok_or("missing node".into())
     }
 
     /// List node outputs
@@ -157,7 +158,7 @@ impl Graph {
             .iter()
             .find(|n| n.0 == node)
             .map(|n| n.1.transformer.output_names())
-            .ok_or("missing node")
+            .ok_or("missing node".into())
     }
 
     pub fn try_from_repr(repr: GraphRepr, loader: &Registry) -> Result<Graph> {

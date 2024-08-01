@@ -30,11 +30,11 @@ fn system_load(status: Rc<Mutex<Status>>) -> Command<'static> {
 
         let mut registry = Registry::default();
         for lib in &status.libraries {
-            registry.load_library(lib).map_err(|x| anyhow!(x))?;
+            registry.load_library(lib).map_err(|x| anyhow!(x.to_string()))?;
         }
 
-        let repr = SystemRepr::from_json(&configuration).map_err(|x| anyhow!(x))?;
-        let system = System::from_repr(repr, &registry).map_err(|x| anyhow!(x))?;
+        let repr = SystemRepr::from_json(&configuration).map_err(|x| anyhow!(x.to_string()))?;
+        let system = System::from_repr(repr, &registry).map_err(|x| anyhow!(x.to_string()))?;
 
         status.system = system;
         println!("loaded:");
@@ -173,7 +173,7 @@ fn node_list(status: Rc<Mutex<Status>>) -> Command<'static> {
             let graph = serde_json::to_string(&graph).map_err(|x| anyhow!(x))?;
             let graph_id : GraphId = serde_json::from_str(&graph).map_err(|x| anyhow!(x))?;
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
-            let result = status.system.command(graph_id, RCommand::ListNodes).and_then(|x| x.0.dump::<Vec<NodeId>>()).map_err(|x|anyhow!(x))?;
+            let result = status.system.command(graph_id, RCommand::ListNodes).and_then(|x| x.0.dump::<Vec<NodeId>>()).map_err(|x|anyhow!(x.to_string()))?;
 
             println!("{result:?}");
             Ok(CommandStatus::Done)
@@ -191,7 +191,7 @@ fn node_inputs(status: Rc<Mutex<Status>>) -> Command<'static> {
             let graph_id : GraphId = serde_json::from_str(&graph).map_err(|x| anyhow!(x))?;
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let result = status.system.command(graph_id, RCommand::ListInputs(node_id))
-            .and_then(|val| val.0.dump::<Vec<ParamId>>()).map_err(|x| anyhow!(x))?;
+            .and_then(|val| val.0.dump::<Vec<ParamId>>()).map_err(|x| anyhow!(x.to_string()))?;
 
             println!("{result:?}");
             Ok(CommandStatus::Done)
@@ -210,7 +210,7 @@ fn node_outputs(status: Rc<Mutex<Status>>) -> Command<'static> {
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
             let result = status.system.command(graph_id, RCommand::ListOutputs(node_id))
                 .and_then(|val| val.0.dump::<Vec<NodeId>>())
-                .map_err(|x|anyhow!(x))?;
+            .map_err(|x|anyhow!(x.to_string()))?;
 
             println!("{result:?}");
             Ok(CommandStatus::Done)

@@ -10,10 +10,10 @@ impl Value {
     pub fn load<T: Serialize>(val: &T) -> Result<Self> {
         serde_json::to_value(val)
             .map(Self)
-            .or(Err("cannot dump value"))
+            .or(Err("cannot dump value".into()))
     }
 
     pub fn dump<T: DeserializeOwned>(self) -> Result<T> {
-        serde_json::from_value(self.0).or(Err("cannot load value"))
+        serde_json::from_value(self.0).or(Err("cannot load value".into()))
     }
 }

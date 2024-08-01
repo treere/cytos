@@ -63,7 +63,7 @@ fn create_link(fields: &Fields) -> proc_macro2::TokenStream {
                 -> proph::architecture::Result<()> {
             match name {
                 #(#inputs)*
-                _ => Err("missing input link data"),
+                _ => Err("missing input link data".into()),
             }
         }
     }
@@ -87,7 +87,7 @@ fn create_load(fields: &Fields) -> proc_macro2::TokenStream {
             ) -> proph::architecture::Result<()> {
                 match name {
                     #(#inputs)*
-                    _ => Err("parameter not found"),
+                    _ => Err("parameter not found".into()),
                 }
 
             }
@@ -113,7 +113,7 @@ fn create_dump(fields: &Fields) -> proc_macro2::TokenStream {
             ) -> proph::architecture::Result<proph::architecture::Value> {
                 match name {
                     #(#inputs)*
-                    _ => Err("parameter not found"),
+                    _ => Err("parameter not found".into()),
                 }
 
             }

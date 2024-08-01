@@ -18,7 +18,7 @@ impl Stepper for ListFiles {
             file_name.to_str().unwrap().clone_into(&mut self.output);
             Ok(())
         } else {
-            Err("cannot list dir")
+            Err("cannot list dir".into())
         }
     }
 

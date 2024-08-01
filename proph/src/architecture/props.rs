@@ -17,7 +17,7 @@ impl<T: 'static> Prop<T> {
             self.0 = v;
             Ok(())
         } else {
-            Err("invalid type")
+            Err("invalid type".into())
         }
     }
 
@@ -133,7 +133,7 @@ impl GenericProp {
             f(unsafe { &*v.get() });
             Ok(())
         } else {
-            Err("wrong type")
+            Err("wrong type".into())
         }
     }
 

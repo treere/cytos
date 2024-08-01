@@ -38,8 +38,8 @@ fn main() -> Result<(), String> {
         configuration
     };
 
-    let graph = GraphRepr::from_json(&configuration)?;
-    let mut graph = Graph::try_from_repr(graph, &loader)?;
+    let graph = GraphRepr::from_json(&configuration).map_err(|r| r.to_string())?;
+    let mut graph = Graph::try_from_repr(graph, &loader).map_err(|r| r.to_string())?;
 
     graph.initialize().expect("cannot initialize");
 

@@ -77,7 +77,7 @@ impl Display for ParamId {
 }
 
 fn string_to_u64(s: impl AsRef<str>) -> Result<u64> {
-    u64::from_str_radix(s.as_ref(), 36).or(Err("invalid string"))
+    u64::from_str_radix(s.as_ref(), 36).or(Err("invalid string".into()))
 }
 
 fn u64_to_string(val: u64) -> String {
