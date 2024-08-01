@@ -31,7 +31,10 @@ impl Registry {
 
     /// Load a Processor
     pub fn load(&self, typ: &str) -> Result<Box<dyn Transformer>> {
-        let factory = self.factories.get(typ).ok_or("missing type")?;
+        let factory = self
+            .factories
+            .get(typ)
+            .ok_or_else(|| format!("cannot find \"{}\"", typ))?;
         Ok(factory())
     }
 
@@ -40,9 +43,8 @@ impl Registry {
     }
 
     pub fn load_library(&mut self, file: &str) -> Result<()> {
-        let lib = unsafe {
-            Library::new(libloading::library_filename(file)).or(Err("cannot load library"))?
-        };
+        let lib = unsafe { Library::new(libloading::library_filename(file)) }
+            .or(Err("cannot load library"))?;
         let lib = Arc::new(lib);
 
         let load_registry: Symbol<fn(&mut Registry) -> ()> = unsafe {
