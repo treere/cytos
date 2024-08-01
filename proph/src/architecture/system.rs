@@ -2,6 +2,7 @@ use crossbeam::channel::bounded;
 use crossbeam::channel::unbounded;
 use crossbeam::channel::Receiver;
 use crossbeam::channel::Sender;
+use indexmap::IndexMap;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -28,17 +29,15 @@ impl SystemRepr {
 
 #[derive(Default)]
 pub struct System {
-    runners: Vec<(GraphId, Runner)>,
+    runners: IndexMap<GraphId, Runner>,
 }
 
 impl System {
     pub fn command(&mut self, graph: GraphId, command: Command) -> Result<Response> {
-        let (_, g) = self
-            .runners
-            .iter_mut()
-            .find(|x| x.0 == graph)
-            .ok_or("not found")?;
-        g.command(command)
+        self.runners
+            .get_mut(&graph)
+            .ok_or("not found")?
+            .command(command)
     }
 
     pub fn from_repr(repr: SystemRepr, loader: &Registry) -> Result<Self> {
@@ -63,13 +62,13 @@ impl System {
             .map(|graph_repr| {
                 load_runner(graph_repr, &mut receivers, loader.clone(), senders.clone())
             })
-            .collect::<Result<Vec<_>>>()?;
+            .collect::<Result<IndexMap<_, _>>>()?;
 
         Ok(Self { runners: v })
     }
 
     pub fn keys(&self) -> impl Iterator<Item = &GraphId> {
-        self.runners.iter().map(|(v, _)| v)
+        self.runners.keys()
     }
 }
 
