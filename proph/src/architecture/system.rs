@@ -22,7 +22,7 @@ pub struct SystemRepr {
 
 impl SystemRepr {
     pub fn from_json(file: &str) -> Result<Self> {
-        serde_json::from_str(file).or(Err("cannot read file".into()))
+        serde_json::from_str(file).map_err(|v| format!("cannot read file: {}", v).into())
     }
 }
 
