@@ -38,7 +38,7 @@ impl System {
             .iter_mut()
             .find(|x| x.0 == graph)
             .ok_or("not found")?;
-        g.command(command).map_err(|x| x.into())
+        g.command(command)
     }
 
     pub fn from_repr(repr: SystemRepr, loader: &Registry) -> Result<Self> {
