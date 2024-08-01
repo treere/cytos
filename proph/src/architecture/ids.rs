@@ -1,16 +1,18 @@
-use super::Result;
 use serde::de::Error;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
-macro_rules! serde_u64 {
+macro_rules! create_ids {
     ($struct_name:ident) => {
+        #[derive(PartialEq, Eq, Clone, Copy, Hash)]
+        pub struct $struct_name(pub u64);
+
         impl Serialize for $struct_name {
             fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
             where
                 S: serde::Serializer,
             {
-                let value = u64_to_string(self.0);
+                let value = format_radix(self.0, 36);
 
                 serializer.serialize_str(&value)
             }
@@ -23,65 +25,24 @@ macro_rules! serde_u64 {
             {
                 let value = String::deserialize(deserializer)?;
 
-                let value = string_to_u64(&value)
+                let value = u64::from_str_radix(&value, 36)
                     .map_err(|v| <D as serde::Deserializer<'de>>::Error::custom(v))?;
                 Ok($struct_name(value))
             }
         }
+
+        impl std::fmt::Debug for $struct_name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", format_radix(self.0, 36))
+            }
+        }
+
+        impl Display for $struct_name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", format_radix(self.0, 36))
+            }
+        }
     };
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Hash)]
-pub struct GraphId(pub u64);
-
-impl std::fmt::Debug for GraphId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", u64_to_string(self.0))
-    }
-}
-
-impl Display for GraphId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", u64_to_string(self.0))
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Hash)]
-pub struct NodeId(pub u64);
-
-impl std::fmt::Debug for NodeId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", u64_to_string(self.0))
-    }
-}
-
-impl Display for NodeId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", u64_to_string(self.0))
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Hash)]
-pub struct ParamId(pub u64);
-
-impl std::fmt::Debug for ParamId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", u64_to_string(self.0))
-    }
-}
-
-impl Display for ParamId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", u64_to_string(self.0))
-    }
-}
-
-fn string_to_u64(s: impl AsRef<str>) -> Result<u64> {
-    u64::from_str_radix(s.as_ref(), 36).or(Err("invalid string".into()))
-}
-
-fn u64_to_string(val: u64) -> String {
-    format_radix(val, 36)
 }
 
 fn format_radix(mut x: u64, radix: u64) -> String {
@@ -100,6 +61,6 @@ fn format_radix(mut x: u64, radix: u64) -> String {
     result.into_iter().rev().collect()
 }
 
-serde_u64!(GraphId);
-serde_u64!(NodeId);
-serde_u64!(ParamId);
+create_ids!(GraphId);
+create_ids!(NodeId);
+create_ids!(ParamId);
