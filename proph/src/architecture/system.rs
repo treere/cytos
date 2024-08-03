@@ -44,17 +44,21 @@ impl System {
         let channels: HashMap<_, _> = repr
             .graphs
             .iter()
-            .map(|x| {
+            .map(|graph| {
                 let (sender, receiver) = unbounded::<(Command, Message)>();
-                (x.name, (sender, Some(receiver)))
+                (graph.name, (sender, Some(receiver)))
             })
             .collect();
 
-        let senders: HashMap<GraphId, Sender<(Command, Message)>> =
-            channels.iter().map(|(k, (s, _))| (*k, s.clone())).collect();
+        let senders: HashMap<_, _> = channels
+            .iter()
+            .map(|(graph_id, (sender, _))| (*graph_id, sender.clone()))
+            .collect();
 
-        let mut receivers: HashMap<GraphId, Option<Receiver<(Command, Message)>>> =
-            channels.into_iter().map(|(k, (_, r))| (k, r)).collect();
+        let mut receivers: HashMap<_, _> = channels
+            .into_iter()
+            .map(|(graph_id, (_, receiver))| (graph_id, receiver))
+            .collect();
 
         let runners = repr
             .graphs
