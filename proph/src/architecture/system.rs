@@ -33,7 +33,7 @@ pub struct System {
 }
 
 impl System {
-    pub fn command(&mut self, graph: GraphId, command: Command) -> Result<Response> {
+    pub fn command(&mut self, graph: GraphId, command: Command) -> Result<Value> {
         self.runners
             .get_mut(&graph)
             .ok_or("not found")?
@@ -105,11 +105,9 @@ pub enum Command {
     Load(NodeId, ParamId, Value),
 }
 
-type ResponseResult = std::result::Result<Response, String>;
+type ResponseResult = std::result::Result<Value, String>;
 
-#[derive(Debug)]
-pub struct Response(pub Value);
-
+#[derive(Clone)]
 pub struct Message {
     sender: Sender<ResponseResult>,
 }
@@ -123,7 +121,7 @@ impl Message {
 
     fn set<T: Serialize>(self, resp: Result<T>) {
         let resp = resp
-            .and_then(|v| Value::load(&v).map(Response))
+            .and_then(|v| Value::load(&v))
             .map_err(|r| r.to_string());
         self.sender.send(resp).expect("cannot send");
     }
@@ -162,16 +160,17 @@ impl InternalRunner {
                     }
                 }
 
-                self.external.iter().for_each(|((s, command), (n1, p1))| {
-                    let (message, receiver) = Message::new();
-
-                    let r = match s.send((command.clone(), message)) {
-                        Ok(()) => receiver.recv().unwrap(),
-                        Err(_) => Err("Cannot send".into()),
-                    };
-                    let r = r.unwrap();
-                    self.graph.load((*n1, *p1), r.0).unwrap();
-                });
+                let (message, receiver) = Message::new();
+                self.external
+                    .iter()
+                    .for_each(|((sender, command), internal)| {
+                        let response = match sender.send((command.clone(), message.clone())) {
+                            Ok(()) => receiver.recv().unwrap(),
+                            Err(_) => Err("Cannot send".into()),
+                        };
+                        let response = response.unwrap();
+                        self.graph.load(*internal, response).unwrap();
+                    });
 
                 if self.graph.step().is_err() {
                     break 'outer;
@@ -244,13 +243,13 @@ impl Runner {
         })
     }
 
-    pub fn command(&mut self, command: Command) -> Result<Response> {
+    pub fn command(&mut self, command: Command) -> Result<Value> {
         let (message, receiver) = Message::new();
 
         match self.sender.send((command, message)) {
             Ok(()) => receiver
                 .recv()
-                .unwrap_or(Ok(Response(Value::load(&()).unwrap())))
+                .unwrap_or(Ok(Value::load(&()).unwrap()))
                 .map_err(Into::into),
             Err(_) => Err("Cannot send".into()),
         }
