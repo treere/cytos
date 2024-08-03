@@ -23,7 +23,7 @@ pub struct SystemRepr {
 
 impl SystemRepr {
     pub fn from_json(file: &str) -> Result<Self> {
-        serde_json::from_str(file).map_err(|v| format!("cannot read file: {}", v).into())
+        serde_json::from_str(file).map_err(|v| format!("cannot read file: {v}").into())
     }
 }
 
@@ -250,7 +250,7 @@ impl Runner {
             Ok(()) => receiver
                 .recv()
                 .unwrap_or(Ok(Response(Value::load(&()).unwrap())))
-                .map_err(|r| r.into()),
+                .map_err(Into::into),
             Err(_) => Err("Cannot send".into()),
         }
     }

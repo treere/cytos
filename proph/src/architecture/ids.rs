@@ -47,7 +47,7 @@ macro_rules! create_ids {
 
 fn format_radix(mut x: u64, radix: u32) -> String {
     let mut result = vec![];
-    let r = radix as u64;
+    let r = u64::from(radix);
     loop {
         let m = x % r;
         x /= r;
