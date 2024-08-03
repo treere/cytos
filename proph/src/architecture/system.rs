@@ -56,7 +56,7 @@ impl System {
         let mut receivers: HashMap<GraphId, Option<Receiver<(Command, Message)>>> =
             channels.into_iter().map(|(k, (_, r))| (k, r)).collect();
 
-        let v = repr
+        let runners = repr
             .graphs
             .into_iter()
             .map(|graph_repr| {
@@ -64,7 +64,7 @@ impl System {
             })
             .collect::<Result<IndexMap<_, _>>>()?;
 
-        Ok(Self { runners: v })
+        Ok(Self { runners })
     }
 
     pub fn keys(&self) -> impl Iterator<Item = &GraphId> {
@@ -161,16 +161,15 @@ impl InternalRunner {
                 }
 
                 let (message, receiver) = Message::new();
-                self.external
-                    .iter()
-                    .for_each(|((sender, command), internal)| {
-                        let response = match sender.send((command.clone(), message.clone())) {
-                            Ok(()) => receiver.recv().unwrap(),
-                            Err(_) => Err("Cannot send".into()),
-                        };
-                        let response = response.unwrap();
-                        self.graph.load(*internal, response).unwrap();
-                    });
+                for ((sender, command), internal) in &self.external {
+                    let response = match sender.send((command.clone(), message.clone())) {
+                        Ok(()) => receiver.recv().unwrap(),
+                        Err(_) => Err("Cannot send".into()),
+                    }
+                    .unwrap();
+
+                    self.graph.load(*internal, response).unwrap();
+                }
 
                 if self.graph.step().is_err() {
                     break 'outer;
