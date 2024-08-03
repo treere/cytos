@@ -92,6 +92,7 @@ fn load_runner(
     Ok((id, runner))
 }
 
+#[derive(Debug, Clone)]
 pub enum Command {
     Kill,
     Start,
@@ -128,7 +129,7 @@ impl Message {
     }
 }
 
-type ExternalReference = (Sender<(Command, Message)>, NodeId, ParamId);
+type ExternalReference = (Sender<(Command, Message)>, Command);
 
 type InternalReference = (NodeId, ParamId);
 
@@ -161,13 +162,11 @@ impl InternalRunner {
                     }
                 }
 
-                self.external.iter().for_each(|((s, n0, p0), (n1, p1))| {
+                self.external.iter().for_each(|((s, command), (n1, p1))| {
                     let (message, receiver) = Message::new();
 
-                    let r = match s.send((Command::Dump(*n0, *p0), message)) {
-                        Ok(()) => receiver
-                            .recv()
-                            .unwrap_or(Ok(Response(Value::load(&()).unwrap()))),
+                    let r = match s.send((command.clone(), message)) {
+                        Ok(()) => receiver.recv().unwrap(),
                         Err(_) => Err("Cannot send".into()),
                     };
                     let r = r.unwrap();
@@ -220,7 +219,9 @@ impl Runner {
                     .filter(|x| matches!(x.src, LinkSource::External(_, _, _)))
                     .map(|x| match &x.src {
                         LinkSource::Internal(_, _) => unreachable!(),
-                        LinkSource::External(g, n, p) => ((senders[g].clone(), *n, *p), x.dst),
+                        LinkSource::External(g, n, p) => {
+                            ((senders[g].clone(), Command::Dump(*n, *p)), x.dst)
+                        }
                     })
                     .collect::<Vec<_>>();
 
