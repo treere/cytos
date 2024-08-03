@@ -1,6 +1,6 @@
 //! Properties
 use serde::{de::DeserializeOwned, Serialize};
-use std::{any::Any, cell::UnsafeCell, ops::Deref, rc::Rc};
+use std::{any::Any, cell::UnsafeCell, rc::Rc};
 
 use super::{Result, Value};
 
@@ -50,7 +50,7 @@ impl<T: 'static + DeserializeOwned> Prop<T> {
 
 impl<T: 'static + Serialize> Prop<T> {
     fn dump(&self) -> Result<Value> {
-        Value::load(self.deref())
+        Value::load(&**self)
     }
 }
 

@@ -45,15 +45,15 @@ macro_rules! create_ids {
     };
 }
 
-fn format_radix(mut x: u64, radix: u64) -> String {
+fn format_radix(mut x: u64, radix: u32) -> String {
     let mut result = vec![];
-
+    let r = radix as u64;
     loop {
-        let m = x % radix;
-        x /= radix;
+        let m = x % r;
+        x /= r;
 
         // will panic if you use a bad radix (< 2 or > 36).
-        result.push(std::char::from_digit(m as u32, radix as u32).unwrap());
+        result.push(std::char::from_digit(u32::try_from(m).unwrap(), radix).unwrap());
         if x == 0 {
             break;
         }

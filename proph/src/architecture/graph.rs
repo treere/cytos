@@ -24,7 +24,7 @@ pub struct GraphRepr {
 
 impl GraphRepr {
     pub fn from_json(file: &str) -> Result<Self> {
-        serde_json::from_str(file).map_err(|v| format!("cannot read file: {}", v).into())
+        serde_json::from_str(file).map_err(|v| format!("cannot read file: {v}").into())
     }
 }
 
@@ -129,7 +129,7 @@ impl Graph {
 
     /// List nodes
     pub fn list_nodes(&self) -> Vec<NodeId> {
-        self.nodes.keys().cloned().collect()
+        self.nodes.keys().copied().collect()
     }
 
     /// List node inputs

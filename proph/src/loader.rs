@@ -34,7 +34,7 @@ impl Registry {
         let factory = self
             .factories
             .get(typ)
-            .ok_or_else(|| format!("cannot find \"{}\"", typ))?;
+            .ok_or_else(|| format!("cannot find \"{typ}\""))?;
         Ok(factory())
     }
 
