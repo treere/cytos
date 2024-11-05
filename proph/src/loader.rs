@@ -6,8 +6,57 @@ use libloading::{Library, Symbol};
 
 use std::{collections::HashMap, sync::Arc};
 
-/// A `Factory` is  function that returns a Box to a pointer
-type Factory = Arc<dyn Fn() -> Box<dyn Transformer> + Send + Sync>;
+#[derive(Clone)]
+/// A wrapper around a function that returns a transfomer
+struct FactoryContainer(Arc<dyn Fn() -> Box<dyn Transformer> + Send + Sync>);
+
+impl FactoryContainer {
+    /// Create a FactoryContaier from a generic factory
+    fn new<K: Transformer + 'static>(
+        factory: impl (Fn() -> K) + 'static + Send + Sync,
+    ) -> FactoryContainer {
+        Self(Arc::new(move || Box::new(factory())))
+    }
+
+    /// Get the transformer
+    fn get(&self) -> Box<dyn Transformer> {
+        (self.0)()
+    }
+}
+
+/// A wrapper to load factories from a dynamic library
+pub struct DynamicLoadingRegistryWrapper<'a> {
+    /// The registry reference
+    registry: &'a mut Registry,
+
+    /// The library
+    lib: Arc<Library>,
+}
+
+impl<'a> DynamicLoadingRegistryWrapper<'a> {
+    /// Add a dynamic factory by name removing the previous one.
+    pub fn add<K: Transformer + 'static>(
+        &mut self,
+        name: &str,
+        factory: impl (Fn() -> K) + 'static + Send + Sync,
+    ) -> &mut Self {
+        self.registry.add_by_type(
+            name,
+            FactoryType::Dynamic((FactoryContainer::new(factory), self.lib.clone())),
+        );
+        self
+    }
+}
+
+/// Type of loaded factories
+#[derive(Clone)]
+enum FactoryType {
+    /// A simple static factory
+    Plain(FactoryContainer),
+
+    /// A factory that is in a library
+    Dynamic((FactoryContainer, Arc<Library>)),
+}
 
 /// Registry of transformers
 ///
@@ -17,10 +66,7 @@ type Factory = Arc<dyn Fn() -> Box<dyn Transformer> + Send + Sync>;
 #[derive(Default, Clone)]
 pub struct Registry {
     /// Factories by name
-    factories: HashMap<String, Factory>,
-
-    /// Reference to libs
-    libs: Vec<Arc<Library>>,
+    factories: HashMap<String, FactoryType>,
 }
 
 impl Registry {
@@ -30,10 +76,12 @@ impl Registry {
         name: &str,
         factory: impl (Fn() -> K) + 'static + Send + Sync,
     ) -> &mut Self {
-        self.factories
-            .entry(name.to_owned())
-            .or_insert(Arc::new(move || Box::new(factory())));
+        self.add_by_type(name, FactoryType::Plain(FactoryContainer::new(factory)));
         self
+    }
+
+    fn add_by_type(&mut self, name: &str, factory: FactoryType) {
+        self.factories.entry(name.to_owned()).or_insert(factory);
     }
 
     /// Returns a factory by name
@@ -42,7 +90,11 @@ impl Registry {
             .factories
             .get(name)
             .ok_or_else(|| format!("cannot find \"{name}\""))?;
-        Ok(factory())
+
+        match factory {
+            FactoryType::Plain(factory) => Ok(factory.get()),
+            FactoryType::Dynamic((factory, _)) => Ok(factory.get()),
+        }
     }
 
     /// Return the list of afailable factories
@@ -56,13 +108,16 @@ impl Registry {
             .or(Err("cannot load library"))?;
         let lib = Arc::new(lib);
 
-        let load_registry_fun: Symbol<fn(&mut Registry) -> ()> = unsafe {
+        let load_registry_fun: Symbol<fn(&mut DynamicLoadingRegistryWrapper) -> ()> = unsafe {
             lib.get(b"load_registry")
                 .or(Err("missing load_registry function"))?
         };
 
-        load_registry_fun(self);
-        self.libs.push(lib);
+        load_registry_fun(&mut DynamicLoadingRegistryWrapper {
+            registry: self,
+            lib,
+        });
+
         Ok(())
     }
 }

@@ -15,12 +15,12 @@ use incremental::IncrementalGenerator;
 use list_files::ListFiles;
 use mean::Mean;
 use print::Print;
-use proph::loader::Registry;
+use proph::loader::DynamicLoadingRegistryWrapper;
 use source::Rscam;
 use timer::Timer;
 
 #[no_mangle]
-pub extern "C" fn load_registry(registry: &mut Registry) {
+pub extern "C" fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
     registry
         .add("IncrementalGenerator", IncrementalGenerator::default)
         .add("AddValue", AddValue::default)
