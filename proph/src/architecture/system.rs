@@ -229,7 +229,7 @@ impl Runner {
 
                 repr.links
                     .retain(|x| matches!(x.src, LinkSource::Internal(_, _)));
-                let graph = Graph::try_from_repr(repr, &reg).expect("Cannot build graph");
+                let (_, graph) = repr.to_graph(&reg).expect("Cannot build graph");
 
                 InternalRunner {
                     graph,

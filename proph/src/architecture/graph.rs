@@ -14,24 +14,55 @@ pub struct GraphRepr {
     /// Graph name
     pub name: GraphId,
 
-    /// List of nodes
-    pub nodes: Vec<NodeRepr>,
-
     /// List of links between nodes
     #[serde(default)]
     pub links: Vec<Link>,
+
+    /// List of nodes
+    nodes: Vec<NodeRepr>,
 }
 
 impl GraphRepr {
+    /// Load a graph from a file
     pub fn from_json(file: &str) -> Result<Self> {
         serde_json::from_str(file).map_err(Into::into)
     }
+
+    /// Convert a [`GraphRepr`] into a [`Graph`]
+    pub fn to_graph(self, loader: &Registry) -> Result<(GraphId, Graph)> {
+        let mut graph = Graph::default();
+        for node_repr in self.nodes {
+            let (id, node) = node_repr.to_node(loader)?;
+            graph = graph.insert(id, node)?;
+        }
+
+        for Link { src, dst: (d0, d1) } in self.links {
+            match src {
+                LinkSource::Internal(s0, s1) => {
+                    graph.internal_link((s0, s1), (d0, d1))?;
+                }
+                LinkSource::External(_g0, _s0, _s1) => {
+                    // let g0 = GraphId::try_from(&g0)?;
+                    // let s0 = NodeId::try_from(&s0)?;
+                    // let s1 = ParamId::try_from(&s1)?;
+
+                    // graph.external_link((g0, s0, s1), (d0, d1))?;
+                    todo!();
+                }
+            }
+        }
+        Ok((self.name, graph))
+    }
 }
 
+/// Source of a link
 #[derive(Deserialize, Debug)]
 #[serde(untagged)]
 pub enum LinkSource {
+    /// Source internal to the graph
     Internal(NodeId, ParamId),
+
+    /// Source external to the graph
     External(GraphId, NodeId, ParamId),
 }
 
@@ -86,6 +117,7 @@ impl Graph {
         Ok(())
     }
 
+    /// Load a value into the param of a node
     pub fn load(&mut self, (node_id, param_id): (NodeId, ParamId), value: Value) -> Result<()> {
         self.nodes
             .get_mut(&node_id)
@@ -95,6 +127,7 @@ impl Graph {
         Ok(())
     }
 
+    /// Dump the param of a node
     pub fn dumper_for(&self, (node_id, param_id): (NodeId, ParamId)) -> Result<Value> {
         self.nodes
             .get(&node_id)
@@ -146,30 +179,5 @@ impl Graph {
             .get(&node)
             .map(|n| n.output_names())
             .ok_or("missing node".into())
-    }
-
-    pub fn try_from_repr(repr: GraphRepr, loader: &Registry) -> Result<Graph> {
-        let mut graph = Graph::default();
-        for node_repr in repr.nodes {
-            let (id, node) = node_repr.to_node(loader)?;
-            graph = graph.insert(id, node)?;
-        }
-
-        for Link { src, dst: (d0, d1) } in repr.links {
-            match src {
-                LinkSource::Internal(s0, s1) => {
-                    graph.internal_link((s0, s1), (d0, d1))?;
-                }
-                LinkSource::External(_g0, _s0, _s1) => {
-                    // let g0 = GraphId::try_from(&g0)?;
-                    // let s0 = NodeId::try_from(&s0)?;
-                    // let s1 = ParamId::try_from(&s1)?;
-
-                    // graph.external_link((g0, s0, s1), (d0, d1))?;
-                    todo!();
-                }
-            }
-        }
-        Ok(graph)
     }
 }

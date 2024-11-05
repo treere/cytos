@@ -1,5 +1,5 @@
 use clap::{value_parser, Arg, Command};
-use proph::architecture::graph::{Graph, GraphRepr};
+use proph::architecture::graph::GraphRepr;
 use proph::loader::Registry;
 use proph::utils::execution_time;
 use std::fs::File;
@@ -39,7 +39,7 @@ fn main() -> Result<(), String> {
     };
 
     let graph = GraphRepr::from_json(&configuration).map_err(|r| r.to_string())?;
-    let mut graph = Graph::try_from_repr(graph, &loader).map_err(|r| r.to_string())?;
+    let (_, mut graph) = graph.to_graph(&loader).map_err(|r| r.to_string())?;
 
     graph.initialize().expect("cannot initialize");
 
