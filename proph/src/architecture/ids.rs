@@ -1,13 +1,14 @@
-use serde::de::Error;
-use serde::{Deserialize, Serialize};
-use std::fmt::Display;
+//! Index module
 
+use serde::de::Error;
+
+/// Macro to create an index struct
 macro_rules! create_ids {
     ($struct_name:ident) => {
         #[derive(PartialEq, Eq, Clone, Copy, Hash)]
         pub struct $struct_name(pub u64);
 
-        impl Serialize for $struct_name {
+        impl serde::Serialize for $struct_name {
             fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
             where
                 S: serde::Serializer,
@@ -18,7 +19,7 @@ macro_rules! create_ids {
             }
         }
 
-        impl<'de> Deserialize<'de> for $struct_name {
+        impl<'de> serde::Deserialize<'de> for $struct_name {
             fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
             where
                 D: serde::Deserializer<'de>,
@@ -37,7 +38,7 @@ macro_rules! create_ids {
             }
         }
 
-        impl Display for $struct_name {
+        impl std::fmt::Display for $struct_name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 write!(f, "{}", format_radix(self.0, 36))
             }
@@ -45,6 +46,7 @@ macro_rules! create_ids {
     };
 }
 
+/// Format an u64 using a given radix
 fn format_radix(mut x: u64, radix: u32) -> String {
     let mut result = vec![];
     let r = u64::from(radix);
