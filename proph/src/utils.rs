@@ -1,8 +1,10 @@
 //! Util fuctions
+//!
+//! Util functions to help in the developent
 
 use std::time::Instant;
 
-/// Returns the seconds needed to execute the given function
+/// Executes a function and returns the execution time
 pub fn execution_time<T: FnMut()>(mut f: T) -> f64 {
     let now = Instant::now();
 

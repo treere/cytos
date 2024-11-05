@@ -1,4 +1,4 @@
-//! Struct to manage graph architecture.
+//! Architecture module
 
 pub mod graph;
 mod ids;
@@ -16,4 +16,5 @@ pub use ids::{GraphId, NodeId, ParamId};
 pub use system::System;
 pub use value::Value;
 
+/// Result type
 pub type Result<T> = std::result::Result<T, Box<dyn Error + 'static>>;

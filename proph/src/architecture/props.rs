@@ -54,7 +54,9 @@ impl<T: 'static + Serialize> Prop<T> {
     }
 }
 
-/// A property
+/// An input property
+///
+/// This is a property that can be used for input
 #[derive(Default)]
 pub struct InputProp<T>(Prop<T>);
 
@@ -92,6 +94,9 @@ impl<T: 'static> std::ops::Deref for InputProp<T> {
     }
 }
 
+/// OutputProp
+///
+/// This is a property that can be used for input
 #[derive(Default)]
 pub struct OutputProp<T>(Prop<T>);
 
