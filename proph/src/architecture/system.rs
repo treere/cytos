@@ -12,12 +12,19 @@ use serde::Serialize;
 
 use crate::loader::Registry;
 
-use super::graph::{Graph, GraphRepr, LinkSource};
+use super::graph::{Graph, GraphRepr};
 
 use super::{GraphId, NodeId, ParamId, Result, Value};
 
 use std::collections::HashMap;
 use std::thread::{Builder, JoinHandle};
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct Link {
+    pub src: (GraphId, NodeId, ParamId),
+
+    pub dst: (GraphId, NodeId, ParamId),
+}
 
 /// SystemRepr
 ///
@@ -27,6 +34,9 @@ pub struct SystemRepr {
     /// Graphs by name
     #[serde(default)]
     graphs: HashMap<GraphId, GraphRepr>,
+
+    /// Links between graphs
+    links: Vec<Link>,
 }
 
 impl SystemRepr {
@@ -83,6 +93,7 @@ impl System {
                     &mut receivers,
                     loader.clone(),
                     senders.clone(),
+                    &repr.links,
                 )
             })
             .collect::<Result<IndexMap<_, _>>>()?;
@@ -102,6 +113,7 @@ fn load_runner(
     receivers: &mut HashMap<GraphId, Option<Receiver<(Command, Message)>>>,
     loader: Registry,
     senders: HashMap<GraphId, Sender<(Command, Message)>>,
+    links: &Vec<Link>,
 ) -> Result<(GraphId, Runner)> {
     let receiver = receivers.get_mut(&id).ok_or("missing channel")?;
 
@@ -109,7 +121,7 @@ fn load_runner(
 
     let sender = senders.get(&id).ok_or("missing sender")?.clone();
 
-    let runner = Runner::try_from_repr(id, graph_repr, loader, (sender, receiver), senders)
+    let runner = Runner::try_from_repr(id, graph_repr, loader, (sender, receiver), senders, links)
         .or(Err("cannot create runner"))?;
 
     Ok((id, runner))
@@ -251,28 +263,27 @@ impl Runner {
     /// Creates a runner from a graph repr
     fn try_from_repr(
         name: GraphId,
-        mut repr: GraphRepr,
+        repr: GraphRepr,
         reg: Registry,
         (sender, receiver): ChannelTuple,
         senders: HashMap<GraphId, Sender<(Command, Message)>>,
+        links: &Vec<Link>,
     ) -> Result<Self> {
+        let links: Vec<_> = links.iter().filter(|l| l.dst.0 == name).cloned().collect();
+
         let thread = Builder::new()
             .name(name.to_string())
             .spawn(move || {
-                let external = repr
-                    .links
-                    .iter()
-                    .filter(|x| matches!(x.src, LinkSource::External(_, _, _)))
-                    .map(|x| match &x.src {
-                        LinkSource::Internal(_, _) => unreachable!(),
-                        LinkSource::External(g, n, p) => {
-                            ((senders[g].clone(), Command::Dump(*n, *p)), x.dst)
-                        }
+                let external = links
+                    .into_iter()
+                    .map(|x| {
+                        let (g, n, p) = x.src;
+                        let (_, nd, pd) = x.dst;
+
+                        ((senders[&g].clone(), Command::Dump(n, p)), (nd, pd))
                     })
                     .collect::<Vec<_>>();
 
-                repr.links
-                    .retain(|x| matches!(x.src, LinkSource::Internal(_, _)));
                 let graph = repr.to_graph(&reg).expect("Cannot build graph");
 
                 InternalRunner {

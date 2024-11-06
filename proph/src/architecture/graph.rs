@@ -4,7 +4,7 @@ use crate::loader::Registry;
 
 use super::{
     node::{Node, NodeRepr},
-    GraphId, NodeId, ParamId, Result, Value,
+    NodeId, ParamId, Result, Value,
 };
 
 use indexmap::IndexMap;
@@ -35,41 +35,22 @@ impl GraphRepr {
             graph = graph.insert(node_id, node)?;
         }
 
-        for Link { src, dst: (d0, d1) } in self.links {
-            match src {
-                LinkSource::Internal(s0, s1) => {
-                    graph.internal_link((s0, s1), (d0, d1))?;
-                }
-                LinkSource::External(_g0, _s0, _s1) => {
-                    // let g0 = GraphId::try_from(&g0)?;
-                    // let s0 = NodeId::try_from(&s0)?;
-                    // let s1 = ParamId::try_from(&s1)?;
-
-                    // graph.external_link((g0, s0, s1), (d0, d1))?;
-                    todo!();
-                }
-            }
+        for Link {
+            src: (s0, s1),
+            dst: (d0, d1),
+        } in self.links
+        {
+            graph.internal_link((s0, s1), (d0, d1))?;
         }
         Ok(graph)
     }
-}
-
-/// Source of a link
-#[derive(Deserialize, Debug)]
-#[serde(untagged)]
-pub enum LinkSource {
-    /// Source internal to the graph
-    Internal(NodeId, ParamId),
-
-    /// Source external to the graph
-    External(GraphId, NodeId, ParamId),
 }
 
 /// Link between nodes
 #[derive(Deserialize, Debug)]
 pub struct Link {
     /// Source node param
-    pub src: LinkSource,
+    pub src: (NodeId, ParamId),
 
     /// Destination node param
     pub dst: (NodeId, ParamId),
