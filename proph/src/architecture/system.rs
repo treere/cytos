@@ -1,3 +1,7 @@
+//! System module
+//!
+//! A system is a set of graph linked together
+
 use crossbeam::channel::bounded;
 use crossbeam::channel::unbounded;
 use crossbeam::channel::Receiver;
@@ -15,24 +19,32 @@ use super::{GraphId, NodeId, ParamId, Result, Value};
 use std::collections::HashMap;
 use std::thread::{Builder, JoinHandle};
 
+/// SystemRepr
+///
+/// Deserializable System Representation
 #[derive(Deserialize, Debug)]
 pub struct SystemRepr {
+    /// Graphs in the repr
     #[serde(default)]
-    pub graphs: Vec<GraphRepr>,
+    graphs: Vec<GraphRepr>,
 }
 
 impl SystemRepr {
+    /// Create a SystemRepr loading a file
     pub fn from_json(file: &str) -> Result<Self> {
         serde_json::from_str(file).map_err(|v| format!("cannot read file: {v}").into())
     }
 }
 
+/// System
 #[derive(Default)]
 pub struct System {
+    /// Runners where there is a runner per graph
     runners: IndexMap<GraphId, Runner>,
 }
 
 impl System {
+    /// Send a command to a runner
     pub fn command(&mut self, graph: GraphId, command: Command) -> Result<Value> {
         self.runners
             .get_mut(&graph)
@@ -40,6 +52,7 @@ impl System {
             .command(command)
     }
 
+    /// Convert a system representation into a System
     pub fn from_repr(repr: SystemRepr, loader: &Registry) -> Result<Self> {
         let channels: HashMap<_, _> = repr
             .graphs
@@ -71,6 +84,7 @@ impl System {
         Ok(Self { runners })
     }
 
+    /// Iterator on graph names
     pub fn keys(&self) -> impl Iterator<Item = &GraphId> {
         self.runners.keys()
     }
@@ -96,16 +110,26 @@ fn load_runner(
     Ok((id, runner))
 }
 
+/// Commands that a runner can send
 #[derive(Debug, Clone)]
 pub enum Command {
+    /// Kill the runner
     Kill,
+    /// Start the runner
     Start,
+    /// Stop the runner
     Stop,
+    /// Receive the runner status
     Status,
+    /// List the nodes of the graph inside the runner
     ListNodes,
+    /// List the inputs of a node
     ListInputs(NodeId),
+    /// List the outputs of a node
     ListOutputs(NodeId),
+    /// Dump the value of a node
     Dump(NodeId, ParamId),
+    /// Load a value into a node
     Load(NodeId, ParamId, Value),
 }
 
