@@ -159,13 +159,18 @@ type ExternalReference = (Sender<(Command, Message)>, Command);
 
 type InternalReference = (NodeId, ParamId);
 
+/// The runner worker
 struct InternalRunner {
+    /// The graph
     graph: Graph,
+    /// A receiver for the commands
     receiver: Receiver<(Command, Message)>,
+    /// External links
     external: Vec<(ExternalReference, InternalReference)>,
 }
 
 impl InternalRunner {
+    /// Run the internal runner
     fn run(mut self) {
         'main: loop {
             while let Ok((command, message)) = self.receiver.recv() {
@@ -207,6 +212,7 @@ impl InternalRunner {
         }
     }
 
+    /// Dispatch a command to the graph
     fn dispatch_command(&mut self, command: Command, message: Message) {
         match command {
             Command::ListNodes => message.set(Ok(self.graph.list_nodes())),
@@ -221,14 +227,18 @@ impl InternalRunner {
     }
 }
 
+/// Runner that wraps the internal runner
 struct Runner {
+    /// Thread with the internal runner inside
     thread: Option<JoinHandle<()>>,
+    /// Sender to the internal runner
     sender: Sender<(Command, Message)>,
 }
 
 type ChannelTuple = (Sender<(Command, Message)>, Receiver<(Command, Message)>);
 
 impl Runner {
+    /// Creates a runner from a graph repr
     fn try_from_repr(
         name: GraphId,
         mut repr: GraphRepr,
@@ -270,6 +280,7 @@ impl Runner {
         })
     }
 
+    /// Send a command to the internal runner
     pub fn command(&mut self, command: Command) -> Result<Value> {
         let (message, receiver) = Message::new();
 
