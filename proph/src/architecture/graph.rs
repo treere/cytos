@@ -15,7 +15,7 @@ use serde::Deserialize;
 pub struct GraphRepr {
     /// List of links between nodes
     #[serde(default)]
-    pub links: Vec<Link>,
+    links: Vec<Link>,
 
     /// Map of nodes with it's id
     nodes: HashMap<NodeId, NodeRepr>,
@@ -48,12 +48,12 @@ impl GraphRepr {
 
 /// Link between nodes
 #[derive(Deserialize, Debug)]
-pub struct Link {
+struct Link {
     /// Source node param
-    pub src: (NodeId, ParamId),
+    src: (NodeId, ParamId),
 
     /// Destination node param
-    pub dst: (NodeId, ParamId),
+    dst: (NodeId, ParamId),
 }
 
 /// Graph.

@@ -19,11 +19,14 @@ use super::{GraphId, NodeId, ParamId, Result, Value};
 use std::collections::HashMap;
 use std::thread::{Builder, JoinHandle};
 
+/// Link between params of different graphs
 #[derive(Deserialize, Debug, Clone)]
-pub struct Link {
-    pub src: (GraphId, NodeId, ParamId),
+struct Link {
+    /// Source node
+    src: (GraphId, NodeId, ParamId),
 
-    pub dst: (GraphId, NodeId, ParamId),
+    /// Destination node
+    dst: (GraphId, NodeId, ParamId),
 }
 
 /// SystemRepr
