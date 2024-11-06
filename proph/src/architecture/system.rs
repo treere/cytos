@@ -24,9 +24,9 @@ use std::thread::{Builder, JoinHandle};
 /// Deserializable System Representation
 #[derive(Deserialize, Debug)]
 pub struct SystemRepr {
-    /// Graphs in the repr
+    /// Graphs by name
     #[serde(default)]
-    graphs: Vec<GraphRepr>,
+    graphs: HashMap<GraphId, GraphRepr>,
 }
 
 impl SystemRepr {
@@ -57,9 +57,9 @@ impl System {
         let channels: HashMap<_, _> = repr
             .graphs
             .iter()
-            .map(|graph| {
+            .map(|(graph_id, _graph)| {
                 let (sender, receiver) = unbounded::<(Command, Message)>();
-                (graph.name, (sender, Some(receiver)))
+                (*graph_id, (sender, Some(receiver)))
             })
             .collect();
 
@@ -76,8 +76,14 @@ impl System {
         let runners = repr
             .graphs
             .into_iter()
-            .map(|graph_repr| {
-                load_runner(graph_repr, &mut receivers, loader.clone(), senders.clone())
+            .map(|(graph_id, graph_repr)| {
+                load_runner(
+                    graph_id,
+                    graph_repr,
+                    &mut receivers,
+                    loader.clone(),
+                    senders.clone(),
+                )
             })
             .collect::<Result<IndexMap<_, _>>>()?;
 
@@ -91,13 +97,12 @@ impl System {
 }
 
 fn load_runner(
+    id: GraphId,
     graph_repr: GraphRepr,
     receivers: &mut HashMap<GraphId, Option<Receiver<(Command, Message)>>>,
     loader: Registry,
     senders: HashMap<GraphId, Sender<(Command, Message)>>,
 ) -> Result<(GraphId, Runner)> {
-    let id = graph_repr.name;
-
     let receiver = receivers.get_mut(&id).ok_or("missing channel")?;
 
     let receiver = receiver.take().ok_or("missing receiver")?;
@@ -268,7 +273,7 @@ impl Runner {
 
                 repr.links
                     .retain(|x| matches!(x.src, LinkSource::Internal(_, _)));
-                let (_, graph) = repr.to_graph(&reg).expect("Cannot build graph");
+                let graph = repr.to_graph(&reg).expect("Cannot build graph");
 
                 InternalRunner {
                     graph,

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::loader::Registry;
 
 use super::{
@@ -11,15 +13,12 @@ use serde::Deserialize;
 /// Graph representatio to be loaded
 #[derive(Deserialize, Debug)]
 pub struct GraphRepr {
-    /// Graph name
-    pub name: GraphId,
-
     /// List of links between nodes
     #[serde(default)]
     pub links: Vec<Link>,
 
-    /// List of nodes
-    nodes: Vec<NodeRepr>,
+    /// Map of nodes with it's id
+    nodes: HashMap<NodeId, NodeRepr>,
 }
 
 impl GraphRepr {
@@ -29,11 +28,11 @@ impl GraphRepr {
     }
 
     /// Convert a [`GraphRepr`] into a [`Graph`]
-    pub fn to_graph(self, loader: &Registry) -> Result<(GraphId, Graph)> {
+    pub fn to_graph(self, loader: &Registry) -> Result<Graph> {
         let mut graph = Graph::default();
-        for node_repr in self.nodes {
-            let (id, node) = node_repr.to_node(loader)?;
-            graph = graph.insert(id, node)?;
+        for (node_id, node_repr) in self.nodes {
+            let node = node_repr.to_node(loader)?;
+            graph = graph.insert(node_id, node)?;
         }
 
         for Link { src, dst: (d0, d1) } in self.links {
@@ -51,7 +50,7 @@ impl GraphRepr {
                 }
             }
         }
-        Ok((self.name, graph))
+        Ok(graph)
     }
 }
 

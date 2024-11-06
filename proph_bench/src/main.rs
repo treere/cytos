@@ -39,7 +39,7 @@ fn main() -> Result<(), String> {
     };
 
     let graph = GraphRepr::from_json(&configuration).map_err(|r| r.to_string())?;
-    let (_, mut graph) = graph.to_graph(&loader).map_err(|r| r.to_string())?;
+    let mut graph = graph.to_graph(&loader).map_err(|r| r.to_string())?;
 
     graph.initialize().expect("cannot initialize");
 
