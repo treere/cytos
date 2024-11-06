@@ -47,27 +47,10 @@ impl SystemRepr {
     pub fn from_json(file: &str) -> Result<Self> {
         serde_json::from_str(file).map_err(|v| format!("cannot read file: {v}").into())
     }
-}
-
-/// System
-#[derive(Default)]
-pub struct System {
-    /// Runners where there is a runner per graph
-    runners: IndexMap<GraphId, Runner>,
-}
-
-impl System {
-    /// Send a command to a runner
-    pub fn command(&mut self, graph: GraphId, command: Command) -> Result<Value> {
-        self.runners
-            .get_mut(&graph)
-            .ok_or("not found")?
-            .command(command)
-    }
 
     /// Convert a system representation into a System
-    pub fn from_repr(repr: SystemRepr, loader: &Registry) -> Result<Self> {
-        let channels: HashMap<_, _> = repr
+    pub fn to_system(self, loader: &Registry) -> Result<System> {
+        let channels: HashMap<_, _> = self
             .graphs
             .iter()
             .map(|(graph_id, _graph)| {
@@ -86,7 +69,7 @@ impl System {
             .map(|(graph_id, (_, receiver))| (graph_id, receiver))
             .collect();
 
-        let runners = repr
+        let runners = self
             .graphs
             .into_iter()
             .map(|(graph_id, graph_repr)| {
@@ -96,12 +79,29 @@ impl System {
                     &mut receivers,
                     loader.clone(),
                     senders.clone(),
-                    &repr.links,
+                    &self.links,
                 )
             })
             .collect::<Result<IndexMap<_, _>>>()?;
 
-        Ok(Self { runners })
+        Ok(System { runners })
+    }
+}
+
+/// System
+#[derive(Default)]
+pub struct System {
+    /// Runners where there is a runner per graph
+    runners: IndexMap<GraphId, Runner>,
+}
+
+impl System {
+    /// Send a command to a runner
+    pub fn command(&mut self, graph: GraphId, command: Command) -> Result<Value> {
+        self.runners
+            .get_mut(&graph)
+            .ok_or("not found")?
+            .command(command)
     }
 
     /// Iterator on graph names

@@ -34,7 +34,7 @@ fn system_load(status: Rc<Mutex<Status>>) -> Command<'static> {
         }
 
         let repr = SystemRepr::from_json(&configuration).map_err(|x| anyhow!(x.to_string()))?;
-        let system = System::from_repr(repr, &registry).map_err(|x| anyhow!(x.to_string()))?;
+        let system = repr.to_system(&registry).map_err(|x| anyhow!(x.to_string()))?;
 
         status.system = system;
         println!("loaded:");
