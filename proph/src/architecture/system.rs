@@ -50,12 +50,13 @@ impl SystemRepr {
 
     /// Convert a system representation into a System
     pub fn to_system(self, loader: &Registry) -> Result<System> {
-        let channels: HashMap<_, _> = self
+        let channels: HashMap<GraphId, _> = self
             .graphs
-            .iter()
-            .map(|(graph_id, _graph)| {
+            .keys()
+            .cloned()
+            .map(|graph_id| {
                 let (sender, receiver) = unbounded::<(Command, Message)>();
-                (*graph_id, (sender, Some(receiver)))
+                (graph_id, (sender, Some(receiver)))
             })
             .collect();
 
