@@ -135,18 +135,21 @@ pub enum Command {
 
 type ResponseResult = std::result::Result<Value, String>;
 
+/// Message is a letter that contains an sender which can be used to set a response
 #[derive(Clone)]
 pub struct Message {
     sender: Sender<ResponseResult>,
 }
 
 impl Message {
+    /// Creates a message and returns the received where it is possible to listen to the response
     fn new() -> (Self, Receiver<ResponseResult>) {
         let (sender, receiver) = bounded::<ResponseResult>(0);
 
         (Self { sender }, receiver)
     }
 
+    /// Set the response and consume the message
     fn set<T: Serialize>(self, resp: Result<T>) {
         let resp = resp
             .and_then(|v| Value::load(&v))
@@ -155,8 +158,10 @@ impl Message {
     }
 }
 
+/// External address
 type ExternalReference = (Sender<(Command, Message)>, Command);
 
+/// Internal address
 type InternalReference = (NodeId, ParamId);
 
 /// The runner worker
