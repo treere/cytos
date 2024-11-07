@@ -224,7 +224,7 @@ impl InternalRunner {
                     Command::Kill => break 'main,
                     Command::Start => break,
                     Command::Status => message.set(Ok("Idle")),
-                    _ => self.dispatch_command(command, message),
+                    command => self.dispatch_command(command, message),
                 }
             }
 
@@ -235,7 +235,7 @@ impl InternalRunner {
                         Command::Kill => break 'main,
                         Command::Stop => break 'outer,
                         Command::Status => message.set(Ok("Running")),
-                        _ => self.dispatch_command(command, message),
+                        command => self.dispatch_command(command, message),
                     }
                 }
 
@@ -268,7 +268,7 @@ impl InternalRunner {
             Command::Load(node, param, value) => {
                 message.set(self.graph.load((node, param), value));
             }
-            _ => (),
+            Command::Kill | Command::Start | Command::Stop | Command::Status => (),
         }
     }
 }
