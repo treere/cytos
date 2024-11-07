@@ -170,6 +170,8 @@ pub enum Command {
     Dump(NodeId, ParamId),
     /// Load a value into a node
     Load(NodeId, ParamId, Value),
+    /// Multi command. Kill, Start, Stop and Status are not processed
+    Multi(Vec<Command>),
 }
 
 type ResponseResult = std::result::Result<Value, String>;
@@ -189,11 +191,18 @@ impl Message {
     }
 
     /// Set the response and consume the message
-    fn set<T: Serialize>(self, resp: Result<T>) {
-        let resp = resp
-            .and_then(|v| Value::load(&v))
-            .map_err(|r| r.to_string());
+    fn prepare_and_set<T: Serialize>(self, resp: Result<T>) {
+        let resp = Self::prepare(resp);
         self.sender.send(resp).expect("cannot send");
+    }
+
+    fn set(self, resp: ResponseResult) {
+        self.sender.send(resp).expect("cannot send");
+    }
+
+    fn prepare<T: Serialize>(resp: Result<T>) -> ResponseResult {
+        resp.and_then(|v| Value::load(&v))
+            .map_err(|r| r.to_string())
     }
 }
 
@@ -221,8 +230,12 @@ impl InternalRunner {
                 match command {
                     Command::Kill => break 'main,
                     Command::Start => break,
-                    Command::Status => message.set(Ok("Idle")),
-                    command => self.dispatch_command(command, message),
+                    Command::Status => message.prepare_and_set(Ok("Idle")),
+                    command => {
+                        if let Some(result) = self.dispatch_command(command) {
+                            message.set(result);
+                        }
+                    }
                 }
             }
 
@@ -232,8 +245,12 @@ impl InternalRunner {
                     match command {
                         Command::Kill => break 'main,
                         Command::Stop => break 'outer,
-                        Command::Status => message.set(Ok("Running")),
-                        command => self.dispatch_command(command, message),
+                        Command::Status => message.prepare_and_set(Ok("Running")),
+                        command => {
+                            if let Some(result) = self.dispatch_command(command) {
+                                message.set(result);
+                            }
+                        }
                     }
                 }
 
@@ -257,16 +274,25 @@ impl InternalRunner {
     }
 
     /// Dispatch a command to the graph
-    fn dispatch_command(&mut self, command: Command, message: Message) {
+    fn dispatch_command(&mut self, command: Command) -> Option<ResponseResult> {
         match command {
-            Command::ListNodes => message.set(Ok(self.graph.list_nodes())),
-            Command::ListInputs(node) => message.set(self.graph.list_node_inputs(node)),
-            Command::ListOutputs(node) => message.set(self.graph.list_node_outputs(node)),
-            Command::Dump(node, param) => message.set(self.graph.dumper_for((node, param))),
-            Command::Load(node, param, value) => {
-                message.set(self.graph.load((node, param), value));
+            Command::ListNodes => Some(Message::prepare(Ok(self.graph.list_nodes()))),
+            Command::ListInputs(node) => Some(Message::prepare(self.graph.list_node_inputs(node))),
+            Command::ListOutputs(node) => {
+                Some(Message::prepare(self.graph.list_node_outputs(node)))
             }
-            Command::Kill | Command::Start | Command::Stop | Command::Status => (),
+            Command::Dump(node, param) => {
+                Some(Message::prepare(self.graph.dumper_for((node, param))))
+            }
+            Command::Load(node, param, value) => {
+                Some(Message::prepare(self.graph.load((node, param), value)))
+            }
+
+            Command::Kill | Command::Start | Command::Stop | Command::Status => None,
+            Command::Multi(vec) => Some(Message::prepare(Ok(vec
+                .into_iter()
+                .map(|c| self.dispatch_command(c))
+                .collect::<Vec<_>>()))),
         }
     }
 }
