@@ -39,7 +39,7 @@ impl SystemRepr {
     }
 
     /// Convert a system representation into a System
-    pub fn to_system(self, loader: &Registry) -> Result<System> {
+    pub fn to_system(self, registry: &Registry) -> Result<System> {
         let (graphs, senders): (HashMap<_, _>, HashMap<_, _>) = self
             .graphs
             .into_iter()
@@ -52,18 +52,68 @@ impl SystemRepr {
         let runners = graphs
             .into_iter()
             .map(|(graph_id, (graph_repr, receiver))| {
-                load_runner(
+                Self::create_runner(
                     graph_id,
                     graph_repr,
                     receiver,
-                    loader.clone(),
                     senders.clone(),
+                    registry.clone(),
                     &self.links,
                 )
             })
             .collect::<Result<IndexMap<_, _>>>()?;
 
         Ok(System { runners })
+    }
+
+    fn create_runner(
+        graph_id: GraphId,
+        graph_repr: GraphRepr,
+        receiver: Receiver<(Command, Message)>,
+
+        senders: HashMap<GraphId, Sender<(Command, Message)>>,
+        registry: Registry,
+        links: &Vec<Link>,
+    ) -> Result<(GraphId, Runner)> {
+        let sender = senders.get(&graph_id).ok_or("missing sender")?.clone();
+
+        let links: Vec<_> = links
+            .iter()
+            .filter(|l| l.dst.0 == graph_id)
+            .cloned()
+            .collect();
+
+        let thread = Builder::new()
+            .name(graph_id.to_string())
+            .spawn(move || {
+                let external = links
+                    .into_iter()
+                    .map(|x| {
+                        let (g, n, p) = x.src;
+                        let (_, nd, pd) = x.dst;
+
+                        ((senders[&g].clone(), Command::Dump(n, p)), (nd, pd))
+                    })
+                    .collect::<Vec<_>>();
+
+                let graph = graph_repr.to_graph(&registry).expect("Cannot build graph");
+
+                InternalRunner {
+                    graph,
+                    receiver,
+                    external,
+                }
+                .run();
+            })
+            .or(Err("cannot run thread"))?;
+
+        Ok((
+            graph_id,
+            Runner {
+                thread: Some(thread),
+                sender,
+            },
+        ))
     }
 }
 
@@ -94,25 +144,9 @@ impl System {
     }
 
     /// Iterator on graph names
-    pub fn keys(&self) -> impl Iterator<Item = &GraphId> {
+    pub fn graphs(&self) -> impl Iterator<Item = &GraphId> {
         self.runners.keys()
     }
-}
-
-fn load_runner(
-    id: GraphId,
-    graph_repr: GraphRepr,
-    receiver: Receiver<(Command, Message)>,
-    loader: Registry,
-    senders: HashMap<GraphId, Sender<(Command, Message)>>,
-    links: &Vec<Link>,
-) -> Result<(GraphId, Runner)> {
-    let sender = senders.get(&id).ok_or("missing sender")?.clone();
-
-    let runner = Runner::try_from_repr(id, graph_repr, loader, (sender, receiver), senders, links)
-        .or(Err("cannot create runner"))?;
-
-    Ok((id, runner))
 }
 
 /// Commands that a runner can send
@@ -245,50 +279,7 @@ struct Runner {
     sender: Sender<(Command, Message)>,
 }
 
-type ChannelTuple = (Sender<(Command, Message)>, Receiver<(Command, Message)>);
-
 impl Runner {
-    /// Creates a runner from a graph repr
-    fn try_from_repr(
-        name: GraphId,
-        repr: GraphRepr,
-        reg: Registry,
-        (sender, receiver): ChannelTuple,
-        senders: HashMap<GraphId, Sender<(Command, Message)>>,
-        links: &Vec<Link>,
-    ) -> Result<Self> {
-        let links: Vec<_> = links.iter().filter(|l| l.dst.0 == name).cloned().collect();
-
-        let thread = Builder::new()
-            .name(name.to_string())
-            .spawn(move || {
-                let external = links
-                    .into_iter()
-                    .map(|x| {
-                        let (g, n, p) = x.src;
-                        let (_, nd, pd) = x.dst;
-
-                        ((senders[&g].clone(), Command::Dump(n, p)), (nd, pd))
-                    })
-                    .collect::<Vec<_>>();
-
-                let graph = repr.to_graph(&reg).expect("Cannot build graph");
-
-                InternalRunner {
-                    graph,
-                    receiver,
-                    external,
-                }
-                .run();
-            })
-            .or(Err("cannot run thread"))?;
-
-        Ok(Self {
-            thread: Some(thread),
-            sender,
-        })
-    }
-
     /// Send a command to the internal runner
     pub fn command(&mut self, command: Command) -> Result<Value> {
         let (message, receiver) = Message::new();

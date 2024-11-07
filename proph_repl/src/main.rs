@@ -38,7 +38,7 @@ fn system_load(status: Rc<Mutex<Status>>) -> Command<'static> {
 
         status.system = system;
         println!("loaded:");
-        for name in status.system.keys() {
+        for name in status.system.graphs() {
             println!("-> {name:}");
         }
 
@@ -52,7 +52,7 @@ fn graph_list(status: Rc<Mutex<Status>>) -> Command<'static> {
         () => ||{
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
 
-            for name in status.system.keys() {
+            for name in status.system.graphs() {
                 println!("-> {name:}");
             }
             Ok(CommandStatus::Done)
