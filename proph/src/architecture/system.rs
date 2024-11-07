@@ -76,17 +76,32 @@ impl SystemRepr {
     ) -> Result<(GraphId, Runner)> {
         let sender = senders.get(&graph_id).ok_or("missing sender")?.clone();
 
-        let links = links
+        let mut links: Vec<_> = links
             .iter()
             .filter(|l| l.dst.0 == graph_id)
-            .map(|link| {
-                let (g, n, p) = link.src;
-                let (_, nd, pd) = link.dst;
+            .cloned()
+            .collect();
+
+        links.sort_by_key(|x| x.src.0);
+
+        let links = links[..]
+            .chunk_by(|a, b| a.src.0 == b.src.0)
+            .map(|links| {
+                let (commands, destinations): (Vec<Command>, Vec<(NodeId, ParamId)>) = links
+                    .iter()
+                    .map(|link| {
+                        (
+                            Command::Dump(link.src.1, link.src.2),
+                            (link.dst.1, link.dst.2),
+                        )
+                    })
+                    .unzip();
+                let g = links[0].src.0;
 
                 senders
                     .get(&g)
                     .cloned()
-                    .map(|sender| ((sender, Command::Dump(n, p)), (nd, pd)))
+                    .map(|sender| ((sender, Command::Multi(commands)), destinations))
             })
             .collect::<Option<Vec<_>>>()
             .ok_or("missin sender")?;
@@ -219,7 +234,7 @@ struct InternalRunner {
     /// A receiver for the commands
     receiver: Receiver<(Command, Message)>,
     /// Links between graphs
-    links: Vec<(ExternalReference, InternalReference)>,
+    links: Vec<(ExternalReference, Vec<InternalReference>)>,
 }
 
 impl InternalRunner {
@@ -255,14 +270,21 @@ impl InternalRunner {
                 }
 
                 let (message, receiver) = Message::new();
-                for ((sender, command), internal) in &self.links {
-                    let response = match sender.send((command.clone(), message.clone())) {
-                        Ok(()) => receiver.recv().unwrap(),
-                        Err(_) => Err("Cannot send".into()),
-                    }
-                    .unwrap();
+                for ((sender, command), internals) in &self.links {
+                    let response: Vec<Value> =
+                        match sender.send((command.clone(), message.clone())) {
+                            Ok(()) => receiver.recv().unwrap(),
+                            Err(_) => Err("Cannot send".into()),
+                        }
+                        .map(|r| r.dump().unwrap())
+                        .unwrap();
 
-                    self.graph.load(*internal, response).unwrap();
+                    internals
+                        .iter()
+                        .zip(response)
+                        .for_each(|(internal, response)| {
+                            self.graph.load(*internal, response).unwrap()
+                        })
                 }
 
                 if self.graph.step().is_err() {

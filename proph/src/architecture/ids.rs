@@ -5,7 +5,7 @@ use serde::de::Error;
 /// Macro to create an index struct
 macro_rules! create_ids {
     ($struct_name:ident) => {
-        #[derive(PartialEq, Eq, Clone, Copy, Hash)]
+        #[derive(PartialEq, Eq, Clone, Copy, Hash, PartialOrd, Ord)]
         pub struct $struct_name(pub u64);
 
         impl serde::Serialize for $struct_name {
