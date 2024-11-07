@@ -19,16 +19,6 @@ use super::{GraphId, NodeId, ParamId, Result, Value};
 use std::collections::HashMap;
 use std::thread::{Builder, JoinHandle};
 
-/// Link between params of different graphs
-#[derive(Deserialize, Debug, Clone)]
-struct Link {
-    /// Source node
-    src: (GraphId, NodeId, ParamId),
-
-    /// Destination node
-    dst: (GraphId, NodeId, ParamId),
-}
-
 /// SystemRepr
 ///
 /// Deserializable System Representation
@@ -50,34 +40,22 @@ impl SystemRepr {
 
     /// Convert a system representation into a System
     pub fn to_system(self, loader: &Registry) -> Result<System> {
-        let channels: HashMap<GraphId, _> = self
-            .graphs
-            .keys()
-            .cloned()
-            .map(|graph_id| {
-                let (sender, receiver) = unbounded::<(Command, Message)>();
-                (graph_id, (sender, Some(receiver)))
-            })
-            .collect();
-
-        let senders: HashMap<_, _> = channels
-            .iter()
-            .map(|(graph_id, (sender, _))| (*graph_id, sender.clone()))
-            .collect();
-
-        let mut receivers: HashMap<_, _> = channels
-            .into_iter()
-            .map(|(graph_id, (_, receiver))| (graph_id, receiver))
-            .collect();
-
-        let runners = self
+        let (graphs, senders): (HashMap<_, _>, HashMap<_, _>) = self
             .graphs
             .into_iter()
             .map(|(graph_id, graph_repr)| {
+                let (sender, receiver) = unbounded::<(Command, Message)>();
+                ((graph_id, (graph_repr, receiver)), (graph_id, sender))
+            })
+            .unzip();
+
+        let runners = graphs
+            .into_iter()
+            .map(|(graph_id, (graph_repr, receiver))| {
                 load_runner(
                     graph_id,
                     graph_repr,
-                    &mut receivers,
+                    receiver,
                     loader.clone(),
                     senders.clone(),
                     &self.links,
@@ -87,6 +65,16 @@ impl SystemRepr {
 
         Ok(System { runners })
     }
+}
+
+/// Link between params of different graphs
+#[derive(Deserialize, Debug, Clone)]
+struct Link {
+    /// Source node
+    src: (GraphId, NodeId, ParamId),
+
+    /// Destination node
+    dst: (GraphId, NodeId, ParamId),
 }
 
 /// System
@@ -114,15 +102,11 @@ impl System {
 fn load_runner(
     id: GraphId,
     graph_repr: GraphRepr,
-    receivers: &mut HashMap<GraphId, Option<Receiver<(Command, Message)>>>,
+    receiver: Receiver<(Command, Message)>,
     loader: Registry,
     senders: HashMap<GraphId, Sender<(Command, Message)>>,
     links: &Vec<Link>,
 ) -> Result<(GraphId, Runner)> {
-    let receiver = receivers.get_mut(&id).ok_or("missing channel")?;
-
-    let receiver = receiver.take().ok_or("missing receiver")?;
-
     let sender = senders.get(&id).ok_or("missing sender")?.clone();
 
     let runner = Runner::try_from_repr(id, graph_repr, loader, (sender, receiver), senders, links)
