@@ -40,7 +40,7 @@ impl SystemRepr {
 
     /// Convert a system representation into a System
     pub fn to_system(self, registry: &Registry) -> Result<System> {
-        let (graphs, senders): (HashMap<_, _>, HashMap<_, _>) = self
+        let (graphs, senders): (IndexMap<_, _>, IndexMap<_, _>) = self
             .graphs
             .into_iter()
             .map(|(graph_id, graph_repr)| {
@@ -70,32 +70,30 @@ impl SystemRepr {
         graph_id: GraphId,
         graph_repr: GraphRepr,
         receiver: Receiver<(Command, Message)>,
-
-        senders: HashMap<GraphId, Sender<(Command, Message)>>,
+        senders: IndexMap<GraphId, Sender<(Command, Message)>>,
         registry: Registry,
         links: &[Link],
     ) -> Result<(GraphId, Runner)> {
         let sender = senders.get(&graph_id).ok_or("missing sender")?.clone();
 
-        let links: Vec<_> = links
+        let links = links
             .iter()
             .filter(|l| l.dst.0 == graph_id)
-            .cloned()
-            .collect();
+            .map(|link| {
+                let (g, n, p) = link.src;
+                let (_, nd, pd) = link.dst;
+
+                senders
+                    .get(&g)
+                    .cloned()
+                    .map(|sender| ((sender, Command::Dump(n, p)), (nd, pd)))
+            })
+            .collect::<Option<Vec<_>>>()
+            .ok_or("missin sender")?;
 
         let thread = Builder::new()
             .name(graph_id.to_string())
             .spawn(move || {
-                let links = links
-                    .into_iter()
-                    .map(|x| {
-                        let (g, n, p) = x.src;
-                        let (_, nd, pd) = x.dst;
-
-                        ((senders[&g].clone(), Command::Dump(n, p)), (nd, pd))
-                    })
-                    .collect::<Vec<_>>();
-
                 let graph = graph_repr
                     .into_graph(&registry)
                     .expect("Cannot build graph");
