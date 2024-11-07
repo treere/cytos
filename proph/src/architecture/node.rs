@@ -21,7 +21,7 @@ pub struct NodeRepr {
 
 impl NodeRepr {
     /// Convert a [`NodeRepr`] into a [`Node`] loading factories from a [`Registry`]
-    pub fn to_node(self, loader: &Registry) -> Result<Node> {
+    pub fn into_node(self, loader: &Registry) -> Result<Node> {
         let mut transformer = loader.load(self.typ.as_str())?;
 
         for (prop, value) in self.props {

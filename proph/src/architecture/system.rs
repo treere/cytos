@@ -73,7 +73,7 @@ impl SystemRepr {
 
         senders: HashMap<GraphId, Sender<(Command, Message)>>,
         registry: Registry,
-        links: &Vec<Link>,
+        links: &[Link],
     ) -> Result<(GraphId, Runner)> {
         let sender = senders.get(&graph_id).ok_or("missing sender")?.clone();
 
@@ -96,7 +96,9 @@ impl SystemRepr {
                     })
                     .collect::<Vec<_>>();
 
-                let graph = graph_repr.to_graph(&registry).expect("Cannot build graph");
+                let graph = graph_repr
+                    .into_graph(&registry)
+                    .expect("Cannot build graph");
 
                 InternalRunner {
                     graph,

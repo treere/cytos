@@ -33,7 +33,7 @@ pub struct DynamicLoadingRegistryWrapper<'a> {
     lib: Arc<Library>,
 }
 
-impl<'a> DynamicLoadingRegistryWrapper<'a> {
+impl DynamicLoadingRegistryWrapper<'_> {
     /// Add a dynamic factory by name removing the previous one.
     pub fn add<K: Transformer + 'static>(
         &mut self,

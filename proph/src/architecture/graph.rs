@@ -28,10 +28,10 @@ impl GraphRepr {
     }
 
     /// Convert a [`GraphRepr`] into a [`Graph`]
-    pub fn to_graph(self, loader: &Registry) -> Result<Graph> {
+    pub fn into_graph(self, loader: &Registry) -> Result<Graph> {
         let mut graph = Graph::default();
         for (node_id, node_repr) in self.nodes {
-            let node = node_repr.to_node(loader)?;
+            let node = node_repr.into_node(loader)?;
             graph = graph.insert(node_id, node)?;
         }
 
