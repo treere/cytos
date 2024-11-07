@@ -76,17 +76,14 @@ impl SystemRepr {
     ) -> Result<(GraphId, Runner)> {
         let sender = senders.get(&graph_id).ok_or("missing sender")?.clone();
 
-        let mut links: Vec<_> = links
-            .iter()
-            .filter(|l| l.dst.0 == graph_id)
-            .cloned()
-            .collect();
+        let mut links: Vec<_> = links.iter().filter(|l| l.dst.0 == graph_id).collect();
 
         links.sort_by_key(|x| x.src.0);
 
         let links = links[..]
             .chunk_by(|a, b| a.src.0 == b.src.0)
             .map(|links| {
+                let g = links[0].src.0;
                 let (commands, destinations): (Vec<Command>, Vec<(NodeId, ParamId)>) = links
                     .iter()
                     .map(|link| {
@@ -96,7 +93,6 @@ impl SystemRepr {
                         )
                     })
                     .unzip();
-                let g = links[0].src.0;
 
                 senders
                     .get(&g)
