@@ -86,7 +86,7 @@ impl SystemRepr {
         let thread = Builder::new()
             .name(graph_id.to_string())
             .spawn(move || {
-                let external = links
+                let links = links
                     .into_iter()
                     .map(|x| {
                         let (g, n, p) = x.src;
@@ -103,7 +103,7 @@ impl SystemRepr {
                 InternalRunner {
                     graph,
                     receiver,
-                    external,
+                    links,
                 }
                 .run();
             })
@@ -211,8 +211,8 @@ struct InternalRunner {
     graph: Graph,
     /// A receiver for the commands
     receiver: Receiver<(Command, Message)>,
-    /// External links
-    external: Vec<(ExternalReference, InternalReference)>,
+    /// Links between graphs
+    links: Vec<(ExternalReference, InternalReference)>,
 }
 
 impl InternalRunner {
@@ -240,7 +240,7 @@ impl InternalRunner {
                 }
 
                 let (message, receiver) = Message::new();
-                for ((sender, command), internal) in &self.external {
+                for ((sender, command), internal) in &self.links {
                     let response = match sender.send((command.clone(), message.clone())) {
                         Ok(()) => receiver.recv().unwrap(),
                         Err(_) => Err("Cannot send".into()),
