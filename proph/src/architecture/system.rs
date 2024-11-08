@@ -76,31 +76,7 @@ impl SystemRepr {
     ) -> Result<(GraphId, Runner)> {
         let sender = senders.get(&graph_id).ok_or("missing sender")?.clone();
 
-        let mut links: Vec<_> = links.iter().filter(|l| l.dst.0 == graph_id).collect();
-
-        links.sort_by_key(|x| x.src.0);
-
-        let links = links[..]
-            .chunk_by(|a, b| a.src.0 == b.src.0)
-            .map(|links| {
-                let g = links[0].src.0;
-                let (commands, destinations): (Vec<Command>, Vec<(NodeId, ParamId)>) = links
-                    .iter()
-                    .map(|link| {
-                        (
-                            Command::Dump(link.src.1, link.src.2),
-                            (link.dst.1, link.dst.2),
-                        )
-                    })
-                    .unzip();
-
-                senders
-                    .get(&g)
-                    .cloned()
-                    .map(|sender| ((sender, Command::Multi(commands)), destinations))
-            })
-            .collect::<Option<Vec<_>>>()
-            .ok_or("missin sender")?;
+        let links = Self::create_link(graph_id, senders, links)?;
 
         let thread = Builder::new()
             .name(graph_id.to_string())
@@ -125,6 +101,43 @@ impl SystemRepr {
                 sender,
             },
         ))
+    }
+
+    fn create_link(
+        graph_id: GraphId,
+        senders: IndexMap<GraphId, Sender<(Command, Message)>>,
+        links: &[Link],
+    ) -> Result<
+        Vec<(
+            (Sender<(Command, Message)>, Command),
+            Vec<(NodeId, ParamId)>,
+        )>,
+    > {
+        let mut links: Vec<_> = links.iter().filter(|l| l.dst.0 == graph_id).collect();
+
+        links.sort_by_key(|x| x.src.0);
+
+        links[..]
+            .chunk_by(|a, b| a.src.0 == b.src.0)
+            .map(|links| {
+                let g = links[0].src.0;
+                let (commands, destinations): (Vec<Command>, Vec<(NodeId, ParamId)>) = links
+                    .iter()
+                    .map(|link| {
+                        (
+                            Command::Dump(link.src.1, link.src.2),
+                            (link.dst.1, link.dst.2),
+                        )
+                    })
+                    .unzip();
+
+                senders
+                    .get(&g)
+                    .cloned()
+                    .map(|sender| ((sender, Command::Multi(commands)), destinations))
+            })
+            .collect::<Option<Vec<_>>>()
+            .ok_or("missin sender".into())
     }
 }
 
