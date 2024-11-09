@@ -29,18 +29,17 @@ impl GraphRepr {
 
     /// Convert a [`GraphRepr`] into a [`Graph`]
     pub fn into_graph(self, loader: &Registry) -> Result<Graph> {
-        let mut graph = Graph::default();
+        let mut nodes = IndexMap::default();
+
         for (node_id, node_repr) in self.nodes {
             let node = node_repr.into_node(loader)?;
-            graph = graph.insert(node_id, node)?;
+            nodes.insert(node_id, node);
         }
 
-        for Link {
-            src: (s0, s1),
-            dst: (d0, d1),
-        } in self.links
-        {
-            graph.internal_link((s0, s1), (d0, d1))?;
+        let mut graph = Graph { nodes };
+
+        for Link { src, dst } in self.links {
+            graph.internal_link(src, dst)?;
         }
         Ok(graph)
     }
@@ -64,18 +63,6 @@ pub struct Graph {
 }
 
 impl Graph {
-    /// Add a processor with a given id to the graph.
-    pub fn insert(mut self, id: NodeId, processor: Node) -> Result<Self> {
-        match self.nodes.get(&id) {
-            None => {
-                self.nodes.insert(id, processor);
-
-                Ok(self)
-            }
-            _ => Err("already exist".into()),
-        }
-    }
-
     /// Connects a output data to an input one.
     pub fn internal_link(
         &mut self,
