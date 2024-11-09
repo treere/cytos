@@ -1,34 +1,27 @@
 {
-  "name": "bench",
-  "nodes": [
-    {
-      "name": "SOURCE",
+  "nodes": {
+    "SOURCE": {
       "type": "IncrementalGenerator"
     },
-    {
-      "name": "DOUBLER0",
+    "DOUBLER0": {
       "type": "AddValue",
       "props": {
         "increment": 1
       }
     },
-    {
-      "name": "DOUBLER1",
+    "DOUBLER1": {
       "type": "AddValue"
     },
-    {
-      "name": "DOUBLER2",
+    "DOUBLER2": {
       "type": "AddValue"
     },
-    {
-      "name": "DOUBLER3",
+    "DOUBLER3": {
       "type": "AddValue"
     },
-    {
-      "name": "DOUBLER4",
+    "DOUBLER4": {
       "type": "AddValue"
     }
-  ],
+  },
   "links": [
     {
       "src": [

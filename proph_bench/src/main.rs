@@ -6,7 +6,7 @@ use std::fs::File;
 use std::io::Read;
 
 fn main() -> Result<(), String> {
-    let loader = Registry::default();
+    let mut loader = Registry::default();
 
     let matches = Command::new("bench")
         .about("benchmark a configuration")
@@ -20,7 +20,14 @@ fn main() -> Result<(), String> {
                 .default_value("10")
                 .value_parser(value_parser!(u64)),
         )
+        .arg(Arg::new("library").short('l'))
         .get_matches();
+
+    if let Some(library) = matches.get_one::<String>("library") {
+        loader
+            .load_library(dbg!(library))
+            .map_err(|e| e.to_string())?;
+    }
 
     let steps = *matches.get_one::<u64>("steps").expect("missing steps");
 
