@@ -1,23 +1,15 @@
 {
-  "name": "capture",
-  "nodes": [
-    {
-      "name": "SOURCE",
+  "nodes": {
+    "SOURCE": {
       "type": "Rscam"
     },
-    {
-      "name": "DECODER",
-      "type": "ZuneImageDecoder"
+    "DECODER": {
+      "type": "ImageDecoder"
     },
-    {
-      "name": "GRAY",
-      "type": "ImageGrayScale"
-    },
-    {
-      "name": "MEAN",
+    "MEAN": {
       "type": "ImageMean"
     }
-  ],
+  },
   "links": [
     {
       "src": [
@@ -33,16 +25,6 @@
       "src": [
         "DECODER",
         "decoded"
-      ],
-      "dst": [
-        "GRAY",
-        "input"
-      ]
-    },
-    {
-      "src": [
-        "GRAY",
-        "output"
       ],
       "dst": [
         "MEAN",

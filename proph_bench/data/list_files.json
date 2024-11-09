@@ -1,15 +1,12 @@
 {
-  "name": "listfiles",
-  "nodes": [
-    {
-      "name": "lister",
+  "nodes": {
+    "lister": {
       "type": "ListFiles"
     },
-    {
-      "name": "printer",
+    "printer": {
       "type": "PrintString"
     }
-  ],
+  },
   "links": [
     {
       "src": [

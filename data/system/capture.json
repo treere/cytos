@@ -1,42 +1,25 @@
 {
-  "graphs": [
-    {
-      "name": "capture",
-      "nodes": [
-        {
-          "name": "SOURCE",
+  "graphs": {
+    "capture": {
+      "nodes": {
+        "SOURCE": {
           "type": "Rscam"
         }
-      ]
+      }
     },
-    {
-      "name": "process",
-      "nodes": [
-        {
-          "name": "DECODER",
+    "process": {
+      "nodes": {
+        "DECODER": {
           "type": "ImageDecoder"
         },
-        {
-          "name": "MEAN",
+        "MEAN": {
           "type": "ImageMean"
         },
-        {
-          "name": "PrintF64",
+        "PrintF64": {
           "type": "PrintF64"
         }
-      ],
+      },
       "links": [
-        {
-          "src": [
-            "capture",
-            "SOURCE",
-            "frame"
-          ],
-          "dst": [
-            "DECODER",
-            "frame"
-          ]
-        },
         {
           "src": [
             "DECODER",
@@ -57,6 +40,20 @@
             "input"
           ]
         }
+      ]
+    }
+  },
+  "links": [
+    {
+      "src": [
+        "capture",
+        "SOURCE",
+        "frame"
+      ],
+      "dst": [
+        "process",
+        "DECODER",
+        "frame"
       ]
     }
   ]

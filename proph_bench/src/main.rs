@@ -48,10 +48,10 @@ fn main() -> Result<(), String> {
     let graph = GraphRepr::from_json(&configuration).map_err(|r| r.to_string())?;
     let mut graph = graph.into_graph(&loader).map_err(|r| r.to_string())?;
 
-    graph.initialize().expect("cannot initialize");
+    graph.initialize().map_err(|e| e.to_string())?;
 
     println!("running {steps} steps");
-    graph.step().expect("step");
+    graph.step().map_err(|e| e.to_string())?;
 
     let seconds = execution_time(|| {
         for _ in 0..steps {

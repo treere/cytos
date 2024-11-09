@@ -1,34 +1,31 @@
 {
-  "graphs": [
-    {
-      "name": "main",
-      "nodes": [
-        {
-          "name": "SOURCE",
+  "graphs": {
+    "main": {
+      "nodes": {
+        "SOURCE": {
           "type": "IncrementalGenerator"
         }
-      ]
+      }
     },
-    {
-      "name": "printer",
-      "nodes": [
-        {
-          "name": "PRINTER1",
+    "printer": {
+      "nodes": {
+        "PRINTER1": {
           "type": "PrintU64"
         }
+      }
+    }
+  },
+  "links": [
+    {
+      "src": [
+        "main",
+        "source",
+        "output"
       ],
-      "links": [
-        {
-          "src": [
-            "main",
-            "source",
-            "output"
-          ],
-          "dst": [
-            "printer1",
-            "input"
-          ]
-        }
+      "dst": [
+        "printer",
+        "printer1",
+        "input"
       ]
     }
   ]

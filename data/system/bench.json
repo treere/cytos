@@ -1,75 +1,68 @@
 {
-  "graphs": [
-    {
-      "name": "source",
-      "nodes": [
-        {
-          "name": "time",
+  "graphs": {
+    "source": {
+      "nodes": {
+        "time": {
           "type": "IncrementalGenerator"
         },
-        {
-          "name": "timers",
+        "timers": {
           "type": "Timer"
         }
-      ],
+      },
       "links": []
     },
-    {
-      "name": "doubler0",
-      "nodes": [
-        {
-          "name": "node",
+    "doubler0": {
+      "nodes": {
+        "node": {
           "type": "AddValue",
           "props": {
             "increment": 1
           }
         },
-        {
-          "name": "timers",
+        "timers": {
           "type": "Timer"
         }
-      ],
-      "links": [
-        {
-          "src": [
-            "source",
-            "time",
-            "output"
-          ],
-          "dst": [
-            "node",
-            "input"
-          ]
+      },
+      "links": []
+    },
+    "doubler1": {
+      "nodes": {
+        "node": {
+          "type": "AddValue",
+          "props": {
+            "increment": 1
+          }
+        },
+        "timers": {
+          "type": "Timer"
         }
+      },
+      "links": []
+    }
+  },
+  "links": [
+    {
+      "src": [
+        "source",
+        "time",
+        "output"
+      ],
+      "dst": [
+        "doubler0",
+        "node",
+        "input"
       ]
     },
     {
-      "name": "doubler1",
-      "nodes": [
-        {
-          "name": "node",
-          "type": "AddValue",
-          "props": {
-            "increment": 1
-          }
-        },
-        {
-          "name": "timers",
-          "type": "Timer"
-        }
+      "src": [
+        "doubler0",
+        "node",
+        "output"
       ],
-      "links": [
-        {
-          "src": [
-            "doubler0",
-            "node",
-            "output"
-          ],
-          "dst": [
-            "node",
-            "input"
-          ]
-        }
+      "dst": [
+        "doubler1",
+        "node",
+        "input"
       ]
     }
   ]
