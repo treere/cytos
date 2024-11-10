@@ -76,7 +76,7 @@ impl SystemRepr {
     ) -> Result<(GraphId, Runner)> {
         let sender = senders.get(&graph_id).ok_or("missing sender")?.clone();
 
-        let links = Self::create_link(graph_id, senders, links)?;
+        let links = Self::create_links(graph_id, senders, links)?;
 
         let thread = Builder::new()
             .name(graph_id.to_string())
@@ -103,16 +103,11 @@ impl SystemRepr {
         ))
     }
 
-    fn create_link(
+    fn create_links(
         graph_id: GraphId,
         senders: IndexMap<GraphId, Sender<(Command, Message)>>,
         links: &[Link],
-    ) -> Result<
-        Vec<(
-            (Sender<(Command, Message)>, Command),
-            Vec<(NodeId, ParamId)>,
-        )>,
-    > {
+    ) -> Result<Vec<(ExternalReference, Vec<InternalReference>)>> {
         let mut links: Vec<_> = links.iter().filter(|l| l.dst.0 == graph_id).collect();
 
         links.sort_by_key(|x| x.src.0);
