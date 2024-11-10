@@ -10,7 +10,8 @@
     "process": {
       "nodes": {
         "DECODER": {
-          "type": "ImageDecoder"
+          "type": "ImageDecoder",
+          "on_error": "Skip"
         },
         "MEAN": {
           "type": "ImageMean"

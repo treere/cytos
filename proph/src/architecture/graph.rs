@@ -10,6 +10,37 @@ use super::{
 use indexmap::IndexMap;
 use serde::Deserialize;
 
+/// Graph behaviour on node failure
+#[derive(Debug, Deserialize)]
+enum OnError {
+    /// Skip this processing
+    Skip,
+
+    /// Continue processing the fraph
+    Continue,
+
+    /// Forward the error
+    Fail,
+}
+
+impl Default for OnError {
+    fn default() -> Self {
+        Self::Fail
+    }
+}
+
+/// Node depresentation from the braph point
+#[derive(Deserialize, Debug)]
+pub struct InternalNodeRepr {
+    /// Node repr
+    #[serde(flatten)]
+    node: NodeRepr,
+
+    /// On error expect behaviour
+    #[serde(default)]
+    on_error: OnError,
+}
+
 /// Graph representatio to be loaded
 #[derive(Deserialize, Debug)]
 pub struct GraphRepr {
@@ -18,7 +49,7 @@ pub struct GraphRepr {
     links: Vec<Link>,
 
     /// Map of nodes with it's id
-    nodes: HashMap<NodeId, NodeRepr>,
+    nodes: HashMap<NodeId, InternalNodeRepr>,
 }
 
 impl GraphRepr {
@@ -30,13 +61,15 @@ impl GraphRepr {
     /// Convert a [`GraphRepr`] into a [`Graph`]
     pub fn into_graph(self, loader: &Registry) -> Result<Graph> {
         let mut nodes = IndexMap::default();
+        let mut on_errors = IndexMap::default();
 
         for (node_id, node_repr) in self.nodes {
-            let node = node_repr.into_node(loader)?;
+            let node = node_repr.node.into_node(loader)?;
             nodes.insert(node_id, node);
+            on_errors.insert(node_id, node_repr.on_error);
         }
 
-        let mut graph = Graph { nodes };
+        let mut graph = Graph { nodes, on_errors };
 
         for Link { src, dst } in self.links {
             graph.internal_link(src, dst)?;
@@ -60,6 +93,9 @@ struct Link {
 pub struct Graph {
     /// Processors
     nodes: IndexMap<NodeId, Node>,
+
+    /// OnErrors
+    on_errors: IndexMap<NodeId, OnError>,
 }
 
 impl Graph {
@@ -120,8 +156,15 @@ impl Graph {
 
     /// Compute one step of processing
     pub fn step(&mut self) -> Result<()> {
-        for node in self.nodes.values_mut() {
-            node.step()?;
+        for (node_id, node) in self.nodes.iter_mut() {
+            match node.step() {
+                Ok(_) => continue,
+                Err(x) => match self.on_errors.get(node_id).unwrap_or(&OnError::Fail) {
+                    OnError::Skip => return Ok(()),
+                    OnError::Continue => continue,
+                    OnError::Fail => return Err(x),
+                },
+            }
         }
 
         Ok(())
