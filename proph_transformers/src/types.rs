@@ -18,7 +18,13 @@ impl serde::Serialize for FrameKind {
                 }
                 s.end()
             }
-            FrameKind::Raw(_vec) => todo!(),
+            FrameKind::Raw(vec) => {
+                let mut s = serializer.serialize_seq(Some(vec.len()))?;
+                for i in vec.iter() {
+                    s.serialize_element(i)?;
+                }
+                s.end()
+            }
         }
     }
 }
@@ -80,5 +86,32 @@ impl From<rscam::Frame> for Frame {
         Self {
             frame: FrameKind::Rscam(value),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use proph::architecture::Value;
+
+    use super::*;
+
+    #[test]
+    fn test_dump_empty_frame() {
+        let f = Frame::default();
+        let p = Value::load(&f).unwrap();
+
+        let p: Frame = p.dump().unwrap();
+        assert_eq!(0, p.as_u8().len());
+    }
+
+    #[test]
+    fn test_dump_dummy_frame() {
+        let f = Frame {
+            frame: FrameKind::Raw(vec![1, 2, 3]),
+        };
+        let p = Value::load(&f).unwrap();
+
+        let p: Frame = p.dump().unwrap();
+        assert_eq!(3, p.as_u8().len());
     }
 }
