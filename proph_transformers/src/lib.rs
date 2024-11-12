@@ -8,6 +8,7 @@ mod mean;
 mod print;
 mod source;
 mod timer;
+mod types;
 
 use add_one::AddValue;
 use decoder::ImageDecoder;

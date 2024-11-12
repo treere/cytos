@@ -2,7 +2,7 @@ use proph::architecture::{InputProp, OutputProp, Result, Stepper};
 use proph_derive::TransFn;
 use serde::{Deserialize, Serialize};
 
-use crate::source::Frame;
+use crate::types::Frame;
 
 #[derive(Default, Serialize, Deserialize, Clone)]
 pub struct Image {
