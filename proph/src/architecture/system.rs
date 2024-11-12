@@ -315,10 +315,13 @@ impl InternalRunner {
             }
 
             Command::Kill | Command::Start | Command::Stop | Command::Status => None,
-            Command::Multi(vec) => Some(Message::prepare(Ok(vec
-                .into_iter()
-                .map(|c| self.dispatch_command(c))
-                .collect::<Vec<_>>()))),
+            Command::Multi(vec) => {
+                let p: Result<Vec<_>> = vec
+                    .into_iter()
+                    .map(|c| self.dispatch_command(c).unwrap().map_err(|x| x.into()))
+                    .collect();
+                Some(Message::prepare(p))
+            }
         }
     }
 }
