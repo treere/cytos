@@ -117,11 +117,11 @@ impl SystemRepr {
             .chunk_by(|a, b| a.src.0 == b.src.0)
             .map(|requests| {
                 let g = requests[0].src.0;
-                let (commands, destinations): (Vec<Command>, Vec<(NodeId, ParamId)>) = requests
+                let (sources, destinations) = requests
                     .iter()
                     .map(|request| {
                         (
-                            Command::Dump(request.src.1, request.src.2),
+                            (request.src.1, request.src.2),
                             (request.dst.1, request.dst.2),
                         )
                     })
@@ -130,7 +130,7 @@ impl SystemRepr {
                 senders
                     .get(&g)
                     .cloned()
-                    .map(|sender| ((sender, Command::Multi(commands)), destinations))
+                    .map(|sender| ((sender, Command::MultiDump(sources)), destinations))
             })
             .collect::<Option<Vec<_>>>()
             .ok_or("missin sender".into())
@@ -190,8 +190,10 @@ pub enum Command {
     Dump(NodeId, ParamId),
     /// Load a value into a node
     Load(NodeId, ParamId, Value),
-    /// Multi command. Kill, Start, Stop and Status are not processed
-    Multi(Vec<Command>),
+    /// Multi dump command
+    MultiDump(Vec<(NodeId, ParamId)>),
+    /// Multi load command
+    MultiLoad(Vec<(NodeId, ParamId, Value)>),
 }
 
 type ResponseResult = std::result::Result<Value, String>;
@@ -323,10 +325,14 @@ impl InternalRunner {
             }
 
             Command::Kill | Command::Start | Command::Stop | Command::Status => None,
-            Command::Multi(vec) => {
+            Command::MultiDump(vec) => {
+                let p: Result<Vec<_>> = vec.into_iter().map(|c| self.graph.dumper_for(c)).collect();
+                Some(Message::prepare(p))
+            }
+            Command::MultiLoad(vec) => {
                 let p: Result<Vec<_>> = vec
                     .into_iter()
-                    .map(|c| self.done_dispatch_command(c).unwrap().map_err(|x| x.into()))
+                    .map(|(n, p, v)| self.graph.load((n, p), v))
                     .collect();
                 Some(Message::prepare(p))
             }
