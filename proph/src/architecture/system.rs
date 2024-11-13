@@ -90,6 +90,7 @@ impl SystemRepr {
                     graph,
                     receiver,
                     requests,
+                    queue: Vec::default(),
                 }
                 .run();
             })
@@ -238,6 +239,8 @@ struct InternalRunner {
     receiver: Receiver<(Command, Message)>,
     /// Requests between graphs
     requests: Vec<(ExternalReference, Vec<InternalReference>)>,
+    /// Queue
+    queue: Vec<(Command, Message)>,
 }
 
 impl InternalRunner {
@@ -249,11 +252,8 @@ impl InternalRunner {
                     Command::Kill => break 'main,
                     Command::Start => break,
                     Command::Status => message.prepare_and_set(Ok("Idle")),
-                    command => {
-                        if let Some(result) = self.dispatch_command(command, &StepResult::Done) {
-                            message.set(result);
-                        }
-                    }
+                    Command::Stop => (),
+                    command => self.dispatch_command(command, message, &StepResult::Done),
                 }
             }
 
@@ -283,11 +283,8 @@ impl InternalRunner {
                             Command::Kill => break 'main,
                             Command::Stop => break 'outer,
                             Command::Status => message.prepare_and_set(Ok("Running")),
-                            command => {
-                                if let Some(result) = self.dispatch_command(command, &cause) {
-                                    message.set(result);
-                                }
-                            }
+                            Command::Start => (),
+                            command => self.dispatch_command(command, message, &cause),
                         }
                     }
                 } else {
@@ -299,37 +296,65 @@ impl InternalRunner {
     }
 
     /// Dispatch a command to the graph
-    fn dispatch_command(&mut self, command: Command, cause: &StepResult) -> Option<ResponseResult> {
+    fn dispatch_command(&mut self, command: Command, message: Message, cause: &StepResult) {
         match cause {
-            StepResult::Done => self.done_dispatch_command(command),
-            StepResult::Skip => self.skip_dispatch_command(command),
+            StepResult::Done => {
+                let mut queue = vec![];
+                std::mem::swap(&mut self.queue, &mut queue);
+                queue
+                    .into_iter()
+                    .for_each(|(command, message)| self.done_dispatch_command(message, command));
+                self.done_dispatch_command(message, command)
+            }
+            StepResult::Skip => self.skip_dispatch_command(message, command),
         }
     }
 
-    fn done_dispatch_command(&mut self, command: Command) -> Option<ResponseResult> {
+    fn done_dispatch_command(&mut self, message: Message, command: Command) {
         match command {
-            Command::ListNodes => Some(Message::prepare(Ok(self.graph.list_nodes()))),
-            Command::ListInputs(node) => Some(Message::prepare(self.graph.list_node_inputs(node))),
-            Command::ListOutputs(node) => {
-                Some(Message::prepare(self.graph.list_node_outputs(node)))
+            Command::ListNodes => message.set(Message::prepare(Ok(self.graph.list_nodes()))),
+            Command::ListInputs(node) => {
+                message.set(Message::prepare(self.graph.list_node_inputs(node)))
             }
-            Command::Kill | Command::Start | Command::Stop | Command::Status => None,
+            Command::ListOutputs(node) => {
+                message.set(Message::prepare(self.graph.list_node_outputs(node)))
+            }
             Command::MultiDump(vec) => {
                 let p: Result<Vec<_>> = vec.into_iter().map(|c| self.graph.dumper_for(c)).collect();
-                Some(Message::prepare(p))
+                message.set(Message::prepare(p))
             }
             Command::MultiLoad(vec) => {
                 let p: Result<Vec<_>> = vec
                     .into_iter()
                     .map(|(n, p, v)| self.graph.load((n, p), v))
                     .collect();
-                Some(Message::prepare(p))
+                message.set(Message::prepare(p))
             }
+            Command::Kill | Command::Start | Command::Stop | Command::Status => unreachable!(),
         }
     }
 
-    fn skip_dispatch_command(&mut self, _command: Command) -> Option<ResponseResult> {
-        todo!()
+    fn skip_dispatch_command(&mut self, message: Message, command: Command) {
+        match command {
+            Command::ListNodes => message.set(Message::prepare(Ok(self.graph.list_nodes()))),
+            Command::ListInputs(node) => {
+                message.set(Message::prepare(self.graph.list_node_inputs(node)))
+            }
+            Command::ListOutputs(node) => {
+                message.set(Message::prepare(self.graph.list_node_outputs(node)))
+            }
+            Command::MultiDump(_) => {
+                self.queue.push((command, message));
+            }
+            Command::MultiLoad(vec) => {
+                let p: Result<Vec<_>> = vec
+                    .into_iter()
+                    .map(|(n, p, v)| self.graph.load((n, p), v))
+                    .collect();
+                message.set(Message::prepare(p))
+            }
+            Command::Kill | Command::Start | Command::Stop | Command::Status => unreachable!(),
+        }
     }
 }
 
