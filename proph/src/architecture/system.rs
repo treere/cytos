@@ -28,8 +28,8 @@ pub struct SystemRepr {
     #[serde(default)]
     graphs: HashMap<GraphId, GraphRepr>,
 
-    /// Links between graphs
-    links: Vec<Link>,
+    /// Request between graphs
+    requests: Vec<Link>,
 }
 
 impl SystemRepr {
@@ -58,7 +58,7 @@ impl SystemRepr {
                     receiver,
                     senders.clone(),
                     registry.clone(),
-                    &self.links,
+                    &self.requests,
                 )
             })
             .collect::<Result<IndexMap<_, _>>>()?;
@@ -72,11 +72,11 @@ impl SystemRepr {
         receiver: Receiver<(Command, Message)>,
         senders: IndexMap<GraphId, Sender<(Command, Message)>>,
         registry: Registry,
-        links: &[Link],
+        requests: &[Link],
     ) -> Result<(GraphId, Runner)> {
         let sender = senders.get(&graph_id).ok_or("missing sender")?.clone();
 
-        let links = Self::create_links(graph_id, senders, links)?;
+        let requests = Self::create_requests(graph_id, senders, requests)?;
 
         let thread = Builder::new()
             .name(graph_id.to_string())
@@ -88,7 +88,7 @@ impl SystemRepr {
                 InternalRunner {
                     graph,
                     receiver,
-                    links,
+                    requests,
                 }
                 .run();
             })
@@ -103,25 +103,25 @@ impl SystemRepr {
         ))
     }
 
-    fn create_links(
+    fn create_requests(
         graph_id: GraphId,
         senders: IndexMap<GraphId, Sender<(Command, Message)>>,
-        links: &[Link],
+        requests: &[Link],
     ) -> Result<Vec<(ExternalReference, Vec<InternalReference>)>> {
-        let mut links: Vec<_> = links.iter().filter(|l| l.dst.0 == graph_id).collect();
+        let mut requests: Vec<_> = requests.iter().filter(|l| l.dst.0 == graph_id).collect();
 
-        links.sort_by_key(|x| x.src.0);
+        requests.sort_by_key(|x| x.src.0);
 
-        links[..]
+        requests[..]
             .chunk_by(|a, b| a.src.0 == b.src.0)
-            .map(|links| {
-                let g = links[0].src.0;
-                let (commands, destinations): (Vec<Command>, Vec<(NodeId, ParamId)>) = links
+            .map(|requests| {
+                let g = requests[0].src.0;
+                let (commands, destinations): (Vec<Command>, Vec<(NodeId, ParamId)>) = requests
                     .iter()
-                    .map(|link| {
+                    .map(|request| {
                         (
-                            Command::Dump(link.src.1, link.src.2),
-                            (link.dst.1, link.dst.2),
+                            Command::Dump(request.src.1, request.src.2),
+                            (request.dst.1, request.dst.2),
                         )
                     })
                     .unzip();
@@ -237,8 +237,8 @@ struct InternalRunner {
     graph: Graph,
     /// A receiver for the commands
     receiver: Receiver<(Command, Message)>,
-    /// Links between graphs
-    links: Vec<(ExternalReference, Vec<InternalReference>)>,
+    /// Requests between graphs
+    requests: Vec<(ExternalReference, Vec<InternalReference>)>,
 }
 
 impl InternalRunner {
@@ -274,7 +274,7 @@ impl InternalRunner {
                 }
 
                 let (message, receiver) = Message::new();
-                for ((sender, command), internals) in &self.links {
+                for ((sender, command), internals) in &self.requests {
                     let response: Vec<Value> =
                         match sender.send((command.clone(), message.clone())) {
                             Ok(()) => receiver.recv().unwrap(),
