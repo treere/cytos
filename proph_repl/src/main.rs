@@ -231,7 +231,7 @@ fn node_dump(status: Rc<Mutex<Status>>) -> Command<'static> {
             let graph_id : GraphId = serde_json::from_str(&graph).map_err(|x| anyhow!(x))?;
 
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
-            let result = status.system.command(graph_id, RCommand::Dump(node,param));
+            let result = status.system.command(graph_id, RCommand::MultiDump(vec![(node,param)]));
 
             println!("{result:?}");
 
@@ -253,7 +253,7 @@ fn node_load(status: Rc<Mutex<Status>>) -> Command<'static> {
             let value: Value = serde_json::from_str(&value).map_err(|x| anyhow!(x))?;
 
             let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
-            let result = status.system.command(graph_id, RCommand::Load(node,param, value));
+            let result = status.system.command(graph_id, RCommand::MultiLoad(vec![(node,param, value)]));
 
             println!("{result:?}");
 

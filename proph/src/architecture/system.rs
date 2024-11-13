@@ -186,10 +186,6 @@ pub enum Command {
     ListInputs(NodeId),
     /// List the outputs of a node
     ListOutputs(NodeId),
-    /// Dump the value of a node
-    Dump(NodeId, ParamId),
-    /// Load a value into a node
-    Load(NodeId, ParamId, Value),
     /// Multi dump command
     MultiDump(Vec<(NodeId, ParamId)>),
     /// Multi load command
@@ -317,13 +313,6 @@ impl InternalRunner {
             Command::ListOutputs(node) => {
                 Some(Message::prepare(self.graph.list_node_outputs(node)))
             }
-            Command::Dump(node, param) => {
-                Some(Message::prepare(self.graph.dumper_for((node, param))))
-            }
-            Command::Load(node, param, value) => {
-                Some(Message::prepare(self.graph.load((node, param), value)))
-            }
-
             Command::Kill | Command::Start | Command::Stop | Command::Status => None,
             Command::MultiDump(vec) => {
                 let p: Result<Vec<_>> = vec.into_iter().map(|c| self.graph.dumper_for(c)).collect();
