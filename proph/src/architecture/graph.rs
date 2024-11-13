@@ -11,6 +11,7 @@ use indexmap::IndexMap;
 use serde::Deserialize;
 
 /// Result of a step
+#[derive(Debug)]
 pub enum StepResult {
     /// All is ok
     Done,
