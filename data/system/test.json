@@ -15,7 +15,7 @@
       }
     }
   },
-  "links": [
+  "requests": [
     {
       "src": [
         "main",

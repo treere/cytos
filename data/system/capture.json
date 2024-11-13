@@ -44,7 +44,7 @@
       ]
     }
   },
-  "links": [
+  "requests": [
     {
       "src": [
         "capture",
