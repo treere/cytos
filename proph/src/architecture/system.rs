@@ -12,6 +12,7 @@ use serde::Serialize;
 
 use crate::loader::Registry;
 
+use super::graph::StepResult;
 use super::graph::{Graph, GraphRepr};
 
 use super::{GraphId, NodeId, ParamId, Result, Value};
@@ -251,7 +252,7 @@ impl InternalRunner {
                     Command::Start => break,
                     Command::Status => message.prepare_and_set(Ok("Idle")),
                     command => {
-                        if let Some(result) = self.dispatch_command(command) {
+                        if let Some(result) = self.dispatch_command(command, &StepResult::Done) {
                             message.set(result);
                         }
                     }
@@ -260,19 +261,6 @@ impl InternalRunner {
 
             self.graph.initialize().expect("cannot initialize");
             'outer: loop {
-                while let Ok((command, message)) = self.receiver.try_recv() {
-                    match command {
-                        Command::Kill => break 'main,
-                        Command::Stop => break 'outer,
-                        Command::Status => message.prepare_and_set(Ok("Running")),
-                        command => {
-                            if let Some(result) = self.dispatch_command(command) {
-                                message.set(result);
-                            }
-                        }
-                    }
-                }
-
                 let (message, receiver) = Message::new();
                 for ((sender, command), internals) in &self.requests {
                     let response: Vec<Value> =
@@ -291,7 +279,20 @@ impl InternalRunner {
                         })
                 }
 
-                if self.graph.step().is_err() {
+                if let Ok(cause) = self.graph.step() {
+                    while let Ok((command, message)) = self.receiver.try_recv() {
+                        match command {
+                            Command::Kill => break 'main,
+                            Command::Stop => break 'outer,
+                            Command::Status => message.prepare_and_set(Ok("Running")),
+                            command => {
+                                if let Some(result) = self.dispatch_command(command, &cause) {
+                                    message.set(result);
+                                }
+                            }
+                        }
+                    }
+                } else {
                     break 'outer;
                 }
             }
@@ -300,7 +301,14 @@ impl InternalRunner {
     }
 
     /// Dispatch a command to the graph
-    fn dispatch_command(&mut self, command: Command) -> Option<ResponseResult> {
+    fn dispatch_command(&mut self, command: Command, cause: &StepResult) -> Option<ResponseResult> {
+        match cause {
+            StepResult::Done => self.done_dispatch_command(command),
+            StepResult::Skip => self.skip_dispatch_command(command),
+        }
+    }
+
+    fn done_dispatch_command(&mut self, command: Command) -> Option<ResponseResult> {
         match command {
             Command::ListNodes => Some(Message::prepare(Ok(self.graph.list_nodes()))),
             Command::ListInputs(node) => Some(Message::prepare(self.graph.list_node_inputs(node))),
@@ -318,11 +326,15 @@ impl InternalRunner {
             Command::Multi(vec) => {
                 let p: Result<Vec<_>> = vec
                     .into_iter()
-                    .map(|c| self.dispatch_command(c).unwrap().map_err(|x| x.into()))
+                    .map(|c| self.done_dispatch_command(c).unwrap().map_err(|x| x.into()))
                     .collect();
                 Some(Message::prepare(p))
             }
         }
+    }
+
+    fn skip_dispatch_command(&mut self, _command: Command) -> Option<ResponseResult> {
+        todo!()
     }
 }
 

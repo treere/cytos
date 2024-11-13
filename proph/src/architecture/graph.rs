@@ -10,6 +10,14 @@ use super::{
 use indexmap::IndexMap;
 use serde::Deserialize;
 
+/// Result of a step
+pub enum StepResult {
+    /// All is ok
+    Done,
+    /// Is skipping the processing
+    Skip,
+}
+
 /// Graph behaviour on node failure
 #[derive(Debug, Deserialize)]
 enum OnError {
@@ -155,19 +163,19 @@ impl Graph {
     }
 
     /// Compute one step of processing
-    pub fn step(&mut self) -> Result<()> {
+    pub fn step(&mut self) -> Result<StepResult> {
         for (node_id, node) in self.nodes.iter_mut() {
             match node.step() {
                 Ok(_) => continue,
                 Err(x) => match self.on_errors.get(node_id).unwrap_or(&OnError::Fail) {
-                    OnError::Skip => return Ok(()),
+                    OnError::Skip => return Ok(StepResult::Skip),
                     OnError::Continue => continue,
                     OnError::Fail => return Err(x),
                 },
             }
         }
 
-        Ok(())
+        Ok(StepResult::Done)
     }
 
     /// List nodes
