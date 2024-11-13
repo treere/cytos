@@ -29,8 +29,13 @@ pub struct SystemRepr {
     #[serde(default)]
     graphs: HashMap<GraphId, GraphRepr>,
 
+    #[serde(default)]
     /// Request between graphs
     requests: Vec<Link>,
+
+    #[serde(default)]
+    /// Send between graphs
+    sends: Vec<Link>,
 }
 
 impl SystemRepr {
@@ -60,6 +65,7 @@ impl SystemRepr {
                     senders.clone(),
                     registry.clone(),
                     &self.requests,
+                    &self.sends,
                 )
             })
             .collect::<Result<IndexMap<_, _>>>()?;
@@ -74,10 +80,12 @@ impl SystemRepr {
         senders: IndexMap<GraphId, Sender<(Command, Message)>>,
         registry: Registry,
         requests: &[Link],
+        sends: &[Link],
     ) -> Result<(GraphId, Runner)> {
         let sender = senders.get(&graph_id).ok_or("missing sender")?.clone();
 
-        let requests = Self::create_requests(graph_id, senders, requests)?;
+        let sends = Self::create_sends(graph_id, &senders, sends)?;
+        let requests = Self::create_requests(graph_id, &senders, requests)?;
 
         let thread = Builder::new()
             .name(graph_id.to_string())
@@ -90,6 +98,7 @@ impl SystemRepr {
                     graph,
                     receiver,
                     requests,
+                    sends,
                     queue: Vec::default(),
                 }
                 .run();
@@ -105,11 +114,43 @@ impl SystemRepr {
         ))
     }
 
+    fn create_sends(
+        graph_id: GraphId,
+        senders: &IndexMap<GraphId, Sender<(Command, Message)>>,
+        requests: &[Link],
+    ) -> Result<Vec<(ExternalCommand, Vec<InternalReference>)>> {
+        let mut requests: Vec<_> = requests.iter().filter(|l| l.dst.0 == graph_id).collect();
+
+        requests.sort_by_key(|x| x.dst.0);
+
+        requests[..]
+            .chunk_by(|a, b| a.dst.0 == b.dst.0)
+            .map(|requests| {
+                let g = requests[0].dst.0;
+                let (sources, destinations) = requests
+                    .iter()
+                    .map(|request| {
+                        (
+                            (request.src.1, request.src.2),
+                            (request.dst.1, request.dst.2),
+                        )
+                    })
+                    .unzip();
+
+                senders
+                    .get(&g)
+                    .cloned()
+                    .map(|sender| ((sender, sources), destinations))
+            })
+            .collect::<Option<Vec<_>>>()
+            .ok_or("missin sender".into())
+    }
+
     fn create_requests(
         graph_id: GraphId,
-        senders: IndexMap<GraphId, Sender<(Command, Message)>>,
+        senders: &IndexMap<GraphId, Sender<(Command, Message)>>,
         requests: &[Link],
-    ) -> Result<Vec<(ExternalReference, Vec<InternalReference>)>> {
+    ) -> Result<Vec<(ExternalCommand, Vec<InternalReference>)>> {
         let mut requests: Vec<_> = requests.iter().filter(|l| l.dst.0 == graph_id).collect();
 
         requests.sort_by_key(|x| x.src.0);
@@ -131,7 +172,7 @@ impl SystemRepr {
                 senders
                     .get(&g)
                     .cloned()
-                    .map(|sender| ((sender, Command::MultiDump(sources)), destinations))
+                    .map(|sender| ((sender, sources), destinations))
             })
             .collect::<Option<Vec<_>>>()
             .ok_or("missin sender".into())
@@ -226,7 +267,7 @@ impl Message {
 }
 
 /// External address
-type ExternalReference = (Sender<(Command, Message)>, Command);
+type ExternalCommand = (Sender<(Command, Message)>, Vec<(NodeId, ParamId)>);
 
 /// Internal address
 type InternalReference = (NodeId, ParamId);
@@ -238,7 +279,9 @@ struct InternalRunner {
     /// A receiver for the commands
     receiver: Receiver<(Command, Message)>,
     /// Requests between graphs
-    requests: Vec<(ExternalReference, Vec<InternalReference>)>,
+    requests: Vec<(ExternalCommand, Vec<InternalReference>)>,
+    /// Sends between graphs
+    sends: Vec<(ExternalCommand, Vec<InternalReference>)>,
     /// Queue
     queue: Vec<(Command, Message)>,
 }
@@ -259,25 +302,10 @@ impl InternalRunner {
 
             self.graph.initialize().expect("cannot initialize");
             'outer: loop {
-                let (message, receiver) = Message::new();
-                for ((sender, command), internals) in &self.requests {
-                    let response: Vec<Value> =
-                        match sender.send((command.clone(), message.clone())) {
-                            Ok(()) => receiver.recv().unwrap(),
-                            Err(_) => Err("Cannot send".into()),
-                        }
-                        .map(|r| r.dump().unwrap())
-                        .unwrap();
-
-                    internals
-                        .iter()
-                        .zip(response)
-                        .for_each(|(internal, response)| {
-                            self.graph.load(*internal, response).unwrap()
-                        })
-                }
+                self.request_values();
 
                 if let Ok(cause) = self.graph.step() {
+                    self.send_values();
                     while let Ok((command, message)) = self.receiver.try_recv() {
                         match command {
                             Command::Kill => break 'main,
@@ -354,6 +382,40 @@ impl InternalRunner {
                 message.set(Message::prepare(p))
             }
             Command::Kill | Command::Start | Command::Stop | Command::Status => unreachable!(),
+        }
+    }
+
+    fn request_values(&mut self) {
+        let (message, receiver) = Message::new();
+        for ((sender, nodes), internals) in &self.requests {
+            let response: Vec<Value> =
+                match sender.send((Command::MultiDump(nodes.clone()), message.clone())) {
+                    Ok(()) => receiver.recv().unwrap(),
+                    Err(_) => Err("Cannot send".into()),
+                }
+                .map(|r| r.dump().unwrap())
+                .unwrap();
+
+            internals
+                .iter()
+                .zip(response)
+                .for_each(|(internal, response)| self.graph.load(*internal, response).unwrap())
+        }
+    }
+
+    fn send_values(&mut self) {
+        let (message, _receiver) = Message::new();
+
+        for ((sender, nodes), internals) in &self.sends {
+            let loads = internals
+                .iter()
+                .map(|x| self.graph.dumper_for(*x).unwrap())
+                .zip(nodes)
+                .map(|(v, (n, p))| (*n, *p, v))
+                .collect();
+            sender
+                .send((Command::MultiLoad(loads), message.clone()))
+                .unwrap();
         }
     }
 }
