@@ -1,0 +1,53 @@
+{
+  "graphs": {
+    "capture": {
+      "nodes": {
+        "SOURCE": {
+          "type": "Rscam"
+        },
+        "DECODER": {
+          "type": "ImageDecoder",
+          "on_error": "Skip"
+        },
+        "MEAN": {
+          "type": "ImageMean"
+        },
+        "PrintF64": {
+          "type": "PrintF64"
+        }
+      },
+      "links": [
+        {
+          "src": [
+            "DECODER",
+            "decoded"
+          ],
+          "dst": [
+            "MEAN",
+            "input"
+          ]
+        },
+        {
+          "src": [
+            "MEAN",
+            "output"
+          ],
+          "dst": [
+            "PrintF64",
+            "input"
+          ]
+        },
+        {
+          "src": [
+            "SOURCE",
+            "frame"
+          ],
+          "dst": [
+            "DECODER",
+            "frame"
+          ]
+        }
+      ]
+    }
+  }
+}
