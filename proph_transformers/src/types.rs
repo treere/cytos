@@ -91,14 +91,19 @@ impl From<rscam::Frame> for Frame {
 }
 
 impl Ownable for Frame {
-    type Value = u8;
+    type Value = Vec<u8>;
 
     fn to_ownable(&self) -> Self::Value {
-        todo!()
+        match &self.frame {
+            FrameKind::Rscam(frame) => frame.iter().cloned().collect(),
+            FrameKind::Raw(vec) => vec.clone(),
+        }
     }
 
-    fn from_owned(_v: &Self::Value) -> Self {
-        todo!()
+    fn from_owned(v: &Self::Value) -> Self {
+        Self {
+            frame: FrameKind::Raw(v.clone()),
+        }
     }
 }
 

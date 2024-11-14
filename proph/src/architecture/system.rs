@@ -221,7 +221,6 @@ impl System {
 }
 
 /// Commands that a runner can send
-
 pub enum Command {
     /// Kill the runner
     Kill,
@@ -445,21 +444,23 @@ impl InternalRunner {
     fn request_values(&mut self) {
         let (message, receiver) = Message::new();
         for ((sender, nodes), internals) in &self.requests {
-            let response: Vec<Value> =
-                match sender.send((Command::MultiDump(nodes.clone()), message.clone())) {
+            let response: Vec<_> =
+                match sender.send((Command::MultiOwnedDump(nodes.clone()), message.clone())) {
                     Ok(()) => receiver.recv().unwrap(),
                     Err(_) => Err("Cannot send".into()),
                 }
                 .map(|r| match r {
-                    Pippo::Value(r) => r.dump().unwrap(),
-                    _ => todo!(),
+                    Pippo::Value(_) => unreachable!(),
+                    Pippo::Var(v) => v,
                 })
                 .unwrap();
 
             internals
                 .iter()
                 .zip(response)
-                .for_each(|(internal, response)| self.graph.load(*internal, response).unwrap())
+                .for_each(|(internal, response)| {
+                    self.graph.load_owned(*internal, response).unwrap()
+                })
         }
     }
 
@@ -469,12 +470,12 @@ impl InternalRunner {
         for ((sender, nodes), internals) in &self.sends {
             let loads = internals
                 .iter()
-                .map(|x| self.graph.dumper_for(*x).unwrap())
+                .map(|x| self.graph.dumper_owned_for(*x).unwrap())
                 .zip(nodes)
                 .map(|(v, (n, p))| (*n, *p, v))
                 .collect();
             sender
-                .send((Command::MultiLoad(loads), message.clone()))
+                .send((Command::MultiOwnedLoad(loads), message.clone()))
                 .unwrap();
         }
     }

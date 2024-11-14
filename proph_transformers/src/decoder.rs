@@ -12,14 +12,14 @@ pub struct Image {
 }
 
 impl Ownable for Image {
-    type Value = u8;
+    type Value = Image;
 
     fn to_ownable(&self) -> Self::Value {
-        todo!()
+        self.clone()
     }
 
-    fn from_owned(_v: &Self::Value) -> Self {
-        todo!()
+    fn from_owned(v: &Self::Value) -> Self {
+        v.clone()
     }
 }
 
