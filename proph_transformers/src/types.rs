@@ -1,3 +1,4 @@
+use proph::architecture::props::Ownable;
 use serde::{ser::SerializeSeq, Deserialize, Serialize};
 
 enum FrameKind {
@@ -86,6 +87,18 @@ impl From<rscam::Frame> for Frame {
         Self {
             frame: FrameKind::Rscam(value),
         }
+    }
+}
+
+impl Ownable for Frame {
+    type Value = u8;
+
+    fn to_ownable(&self) -> Self::Value {
+        todo!()
+    }
+
+    fn from_owned(_v: &Self::Value) -> Self {
+        todo!()
     }
 }
 

@@ -24,6 +24,72 @@ impl Ownable for u8 {
         *v
     }
 }
+impl Ownable for u64 {
+    type Value = u64;
+
+    fn to_ownable(&self) -> Self::Value {
+        *self
+    }
+
+    fn from_owned(v: &Self::Value) -> Self {
+        *v
+    }
+}
+impl Ownable for i32 {
+    type Value = i32;
+
+    fn to_ownable(&self) -> Self::Value {
+        *self
+    }
+
+    fn from_owned(v: &Self::Value) -> Self {
+        *v
+    }
+}
+impl Ownable for f64 {
+    type Value = f64;
+
+    fn to_ownable(&self) -> Self::Value {
+        *self
+    }
+
+    fn from_owned(v: &Self::Value) -> Self {
+        *v
+    }
+}
+impl Ownable for String {
+    type Value = String;
+
+    fn to_ownable(&self) -> Self::Value {
+        self.clone()
+    }
+
+    fn from_owned(v: &Self::Value) -> Self {
+        v.clone()
+    }
+}
+impl Ownable for (u32, u32) {
+    type Value = (u32, u32);
+
+    fn to_ownable(&self) -> Self::Value {
+        self.clone()
+    }
+
+    fn from_owned(v: &Self::Value) -> Self {
+        v.clone()
+    }
+}
+impl Ownable for std::time::Duration {
+    type Value = std::time::Duration;
+
+    fn to_ownable(&self) -> Self::Value {
+        self.clone()
+    }
+
+    fn from_owned(v: &Self::Value) -> Self {
+        v.clone()
+    }
+}
 
 pub struct GenericOwnedProp(Box<dyn Any + Send + Sync + 'static>);
 

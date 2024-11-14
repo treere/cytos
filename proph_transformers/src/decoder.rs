@@ -1,4 +1,4 @@
-use proph::architecture::{InputProp, OutputProp, Result, Stepper};
+use proph::architecture::{props::Ownable, InputProp, OutputProp, Result, Stepper};
 use proph_derive::TransFn;
 use serde::{Deserialize, Serialize};
 
@@ -9,6 +9,18 @@ pub struct Image {
     pub width: u32,
     pub height: u32,
     pub data: Vec<u8>,
+}
+
+impl Ownable for Image {
+    type Value = u8;
+
+    fn to_ownable(&self) -> Self::Value {
+        todo!()
+    }
+
+    fn from_owned(_v: &Self::Value) -> Self {
+        todo!()
+    }
 }
 
 #[derive(TransFn, Default)]
