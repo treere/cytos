@@ -221,7 +221,7 @@ impl System {
 }
 
 /// Commands that a runner can send
-#[derive(Debug, Clone)]
+
 pub enum Command {
     /// Kill the runner
     Kill,
@@ -241,6 +241,11 @@ pub enum Command {
     MultiDump(Vec<(NodeId, ParamId)>),
     /// Multi load command
     MultiLoad(Vec<(NodeId, ParamId, Value)>),
+
+    /// Multi owned dump command
+    MultiOwnedDump(Vec<(NodeId, ParamId)>),
+    /// Multi load command
+    MultiOwnedLoad(Vec<(NodeId, ParamId, GenericOwnedProp)>),
 }
 
 enum Pippo {
@@ -383,6 +388,14 @@ impl InternalRunner {
                 message.set(Message::prepare(p))
             }
             Command::Kill | Command::Start | Command::Stop | Command::Status => unreachable!(),
+            Command::MultiOwnedDump(vec) => todo!(),
+            Command::MultiOwnedLoad(vec) => {
+                let p: Result<Vec<_>> = vec
+                    .into_iter()
+                    .map(|(n, p, v)| self.graph.load_owned((n, p), v))
+                    .collect();
+                message.set(Message::prepare(p))
+            }
         }
     }
 
@@ -406,6 +419,8 @@ impl InternalRunner {
                 message.set(Message::prepare(p))
             }
             Command::Kill | Command::Start | Command::Stop | Command::Status => unreachable!(),
+            Command::MultiOwnedDump(vec) => todo!(),
+            Command::MultiOwnedLoad(vec) => todo!(),
         }
     }
 
