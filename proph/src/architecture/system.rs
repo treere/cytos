@@ -429,8 +429,16 @@ impl InternalRunner {
                 message.set(Message::prepare(p))
             }
             Command::Kill | Command::Start | Command::Stop | Command::Status => unreachable!(),
-            Command::MultiOwnedDump(vec) => todo!(),
-            Command::MultiOwnedLoad(vec) => todo!(),
+            Command::MultiOwnedDump(_) => {
+                self.queue.push((command, message));
+            }
+            Command::MultiOwnedLoad(vec) => {
+                let p: Result<Vec<_>> = vec
+                    .into_iter()
+                    .map(|(n, p, v)| self.graph.load_owned((n, p), v))
+                    .collect();
+                message.set(Message::prepare(p))
+            }
         }
     }
 
