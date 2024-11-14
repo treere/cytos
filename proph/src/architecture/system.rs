@@ -250,7 +250,7 @@ pub enum Command {
 
 enum Pippo {
     Value(Value),
-    Var(GenericOwnedProp),
+    Var(Vec<GenericOwnedProp>),
 }
 
 impl std::fmt::Debug for Pippo {
@@ -292,6 +292,10 @@ impl Message {
         resp.and_then(|v| Value::load(&v))
             .map(Pippo::Value)
             .map_err(|r| r.to_string())
+    }
+
+    fn prepare_p(resp: Result<Vec<GenericOwnedProp>>) -> ResponseResult {
+        resp.map(Pippo::Var).map_err(|r| r.to_string())
     }
 }
 
@@ -388,7 +392,13 @@ impl InternalRunner {
                 message.set(Message::prepare(p))
             }
             Command::Kill | Command::Start | Command::Stop | Command::Status => unreachable!(),
-            Command::MultiOwnedDump(vec) => todo!(),
+            Command::MultiOwnedDump(vec) => {
+                let p: Result<Vec<_>> = vec
+                    .into_iter()
+                    .map(|c| self.graph.dumper_owned_for(c))
+                    .collect();
+                message.set(Message::prepare_p(p))
+            }
             Command::MultiOwnedLoad(vec) => {
                 let p: Result<Vec<_>> = vec
                     .into_iter()
