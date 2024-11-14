@@ -72,22 +72,22 @@ impl Ownable for (u32, u32) {
     type Value = (u32, u32);
 
     fn to_ownable(&self) -> Self::Value {
-        self.clone()
+        *self
     }
 
     fn from_owned(v: &Self::Value) -> Self {
-        v.clone()
+        *v
     }
 }
 impl Ownable for std::time::Duration {
     type Value = std::time::Duration;
 
     fn to_ownable(&self) -> Self::Value {
-        self.clone()
+        *self
     }
 
     fn from_owned(v: &Self::Value) -> Self {
-        v.clone()
+        *v
     }
 }
 
@@ -120,7 +120,7 @@ impl<T: 'static> Prop<T> {
 }
 
 impl<T: Ownable> Prop<T> {
-    pub fn into_owned_generic(&self) -> GenericOwnedProp {
+    pub fn to_owned_generic(&self) -> GenericOwnedProp {
         GenericOwnedProp(Box::new(self.to_ownable()))
     }
 
@@ -203,7 +203,7 @@ impl<T: 'static + Serialize> InputProp<T> {
 
 impl<T: Ownable> InputProp<T> {
     pub fn into_owned_generic(&self) -> GenericOwnedProp {
-        self.0.into_owned_generic()
+        self.0.to_owned_generic()
     }
     pub fn load_owned_generic(&mut self, val: GenericOwnedProp) -> Result<()> {
         self.0.load_owned_generic(val)
@@ -245,7 +245,7 @@ impl<T: 'static + Serialize> OutputProp<T> {
 
 impl<T: Ownable> OutputProp<T> {
     pub fn into_owned_generic(&self) -> GenericOwnedProp {
-        self.0.into_owned_generic()
+        self.0.to_owned_generic()
     }
     pub fn load_owned_generic(&mut self, val: GenericOwnedProp) -> Result<()> {
         self.0.load_owned_generic(val)
@@ -325,7 +325,7 @@ mod tests {
     fn test_multi_thread() {
         let prop = Prop::new(1);
 
-        let gen = prop.into_owned_generic();
+        let gen = prop.to_owned_generic();
 
         std::thread::spawn(|| {
             let mut thread_prop = Prop::new(2);
