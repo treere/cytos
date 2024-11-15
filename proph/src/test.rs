@@ -1,5 +1,7 @@
 use crate::architecture::props::{GenericInputProp, GenericOutputProp};
-use crate::architecture::{GenericOwnedProp, ParamId, Result, Stepper, Transformer, Value};
+use crate::architecture::{
+    GenericOwnedProp, InputProp, OutputProp, ParamId, Result, Stepper, Transformer, Value,
+};
 
 #[derive(Default)]
 pub struct Empty {}
@@ -45,5 +47,79 @@ impl Transformer for Empty {
 
     fn output_names(&self) -> Vec<ParamId> {
         vec![]
+    }
+}
+
+#[derive(Default)]
+pub struct Constant {
+    input: InputProp<i32>,
+    output: OutputProp<i32>,
+}
+
+impl Stepper for Constant {
+    fn step(&mut self) -> Result<()> {
+        *self.output = *self.input;
+        Ok(())
+    }
+}
+
+impl Transformer for Constant {
+    fn link(&mut self, name: ParamId, val: GenericOutputProp) -> Result<()> {
+        match name {
+            ParamId(0) => self.input.link_value(val),
+            _ => Err("".into()),
+        }
+    }
+
+    fn load(&mut self, name: ParamId, val: Value) -> Result<()> {
+        match name {
+            ParamId(0) => self.input.load(val),
+            _ => Err("".into()),
+        }
+    }
+
+    fn dump(&self, name: ParamId) -> Result<Value> {
+        match name {
+            ParamId(0) => self.input.dump(),
+            ParamId(1) => self.output.dump(),
+            _ => Err("".into()),
+        }
+    }
+
+    fn load_owned(&mut self, name: ParamId, val: GenericOwnedProp) -> Result<()> {
+        match name {
+            ParamId(0) => self.input.load_owned_generic(val),
+            _ => Err("".into()),
+        }
+    }
+
+    fn dump_owned(&self, name: ParamId) -> Result<GenericOwnedProp> {
+        match name {
+            ParamId(0) => Ok(self.input.into_owned_generic()),
+            ParamId(1) => Ok(self.output.into_owned_generic()),
+            _ => Err("".into()),
+        }
+    }
+
+    fn output(&self, name: ParamId) -> Option<GenericOutputProp> {
+        match name {
+            ParamId(1) => Some(self.output.as_generic()),
+            _ => None,
+        }
+    }
+
+    fn input(&self, name: ParamId) -> Option<GenericInputProp> {
+        match name {
+            ParamId(0) => Some(self.input.as_generic()),
+            _ => None,
+        }
+    }
+
+    fn input_names(&self) -> Vec<ParamId> {
+        vec![ParamId(0)]
+    }
+
+    fn output_names(&self) -> Vec<ParamId> {
+        vec![ParamId(1)]
     }
 }
