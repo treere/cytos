@@ -380,7 +380,7 @@ impl InternalRunner {
                 message.set(Message::prepare(self.graph.list_node_outputs(node)))
             }
             Command::MultiDump(vec) => {
-                let p: Result<Vec<_>> = vec.into_iter().map(|c| self.graph.dumper_for(c)).collect();
+                let p: Result<Vec<_>> = vec.into_iter().map(|c| self.graph.dump(c)).collect();
                 message.set(Message::prepare(p))
             }
             Command::MultiLoad(vec) => {
@@ -394,7 +394,7 @@ impl InternalRunner {
             Command::MultiOwnedDump(vec) => {
                 let p: Result<Vec<_>> = vec
                     .into_iter()
-                    .map(|c| self.graph.dumper_owned_for(c))
+                    .map(|c| self.graph.dump_owned(c))
                     .collect();
                 message.set(Message::prepare_p(p))
             }
@@ -470,7 +470,7 @@ impl InternalRunner {
         for ((sender, nodes), internals) in &self.sends {
             let loads = internals
                 .iter()
-                .map(|x| self.graph.dumper_owned_for(*x).unwrap())
+                .map(|x| self.graph.dump_owned(*x).unwrap())
                 .zip(nodes)
                 .map(|(v, (n, p))| (*n, *p, v))
                 .collect();

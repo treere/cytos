@@ -81,7 +81,7 @@ impl GraphRepr {
         let mut graph = Graph { nodes, on_errors };
 
         for Link { src, dst } in self.links {
-            graph.internal_link(src, dst)?;
+            graph.link(src, dst)?;
         }
         Ok(graph)
     }
@@ -109,7 +109,7 @@ pub struct Graph {
 
 impl Graph {
     /// Connects a output data to an input one.
-    pub fn internal_link(
+    pub fn link(
         &mut self,
         (src_node_id, src_param_id): (NodeId, ParamId),
         (dst_node_id, dst_param_id): (NodeId, ParamId),
@@ -153,14 +153,14 @@ impl Graph {
     }
 
     /// Dump the param of a node
-    pub fn dumper_for(&self, (node_id, param_id): (NodeId, ParamId)) -> Result<Value> {
+    pub fn dump(&self, (node_id, param_id): (NodeId, ParamId)) -> Result<Value> {
         self.nodes
             .get(&node_id)
             .ok_or("cannot find node")?
             .dump(param_id)
     }
 
-    pub fn dumper_owned_for(
+    pub fn dump_owned(
         &self,
         (node_id, param_id): (NodeId, ParamId),
     ) -> Result<GenericOwnedProp> {
