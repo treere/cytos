@@ -6,91 +6,119 @@ use super::{Result, Value};
 
 /// Convert to and from a Send+Sync type
 pub trait Ownable {
+    /// Send sync type
     type Value: Send + Sync + 'static;
 
+    /// Convert to ownable
     fn to_ownable(&self) -> Self::Value;
 
+    /// Convert from ownable
     fn from_owned(v: &Self::Value) -> Self;
 }
 
-impl Ownable for u8 {
-    type Value = u8;
+macro_rules! create_ownable_copy {
+    ($ty:ty) => {
+        impl Ownable for $ty {
+            type Value = $ty;
 
-    fn to_ownable(&self) -> Self::Value {
-        *self
-    }
+            fn to_ownable(&self) -> Self::Value {
+                *self
+            }
 
-    fn from_owned(v: &Self::Value) -> Self {
-        *v
-    }
-}
-impl Ownable for u64 {
-    type Value = u64;
-
-    fn to_ownable(&self) -> Self::Value {
-        *self
-    }
-
-    fn from_owned(v: &Self::Value) -> Self {
-        *v
-    }
-}
-impl Ownable for i32 {
-    type Value = i32;
-
-    fn to_ownable(&self) -> Self::Value {
-        *self
-    }
-
-    fn from_owned(v: &Self::Value) -> Self {
-        *v
-    }
-}
-impl Ownable for f64 {
-    type Value = f64;
-
-    fn to_ownable(&self) -> Self::Value {
-        *self
-    }
-
-    fn from_owned(v: &Self::Value) -> Self {
-        *v
-    }
-}
-impl Ownable for String {
-    type Value = String;
-
-    fn to_ownable(&self) -> Self::Value {
-        self.clone()
-    }
-
-    fn from_owned(v: &Self::Value) -> Self {
-        v.clone()
-    }
-}
-impl Ownable for (u32, u32) {
-    type Value = (u32, u32);
-
-    fn to_ownable(&self) -> Self::Value {
-        *self
-    }
-
-    fn from_owned(v: &Self::Value) -> Self {
-        *v
-    }
-}
-impl Ownable for std::time::Duration {
-    type Value = std::time::Duration;
-
-    fn to_ownable(&self) -> Self::Value {
-        *self
-    }
-
-    fn from_owned(v: &Self::Value) -> Self {
-        *v
-    }
+            fn from_owned(v: &Self::Value) -> Self {
+                *v
+            }
+        }
+    };
 }
 
+macro_rules! create_ownable_clone {
+    ($ty:ty) => {
+        impl Ownable for $ty {
+            type Value = $ty;
+
+            fn to_ownable(&self) -> Self::Value {
+                self.clone()
+            }
+
+            fn from_owned(v: &Self::Value) -> Self {
+                v.clone()
+            }
+        }
+    };
+}
+
+macro_rules! create_ownable_clone_container {
+    ($ty:ty) => {
+        impl<T: Clone + 'static + Send + Sync> Ownable for $ty {
+            type Value = $ty;
+
+            fn to_ownable(&self) -> Self::Value {
+                self.clone()
+            }
+
+            fn from_owned(v: &Self::Value) -> Self {
+                v.clone()
+            }
+        }
+    };
+}
+
+macro_rules! create_ownable_clone_container_doubled {
+    ($ty:ty) => {
+        impl<K: Clone + 'static + Send + Sync, V: Clone + 'static + Send + Sync> Ownable for $ty {
+            type Value = $ty;
+
+            fn to_ownable(&self) -> Self::Value {
+                self.clone()
+            }
+
+            fn from_owned(v: &Self::Value) -> Self {
+                v.clone()
+            }
+        }
+    };
+}
+
+create_ownable_copy!(u8);
+create_ownable_copy!(u16);
+create_ownable_copy!(u32);
+create_ownable_copy!(u64);
+create_ownable_copy!(i8);
+create_ownable_copy!(i16);
+create_ownable_copy!(i32);
+create_ownable_copy!(i64);
+create_ownable_copy!(f32);
+create_ownable_copy!(f64);
+create_ownable_copy!(std::time::Duration);
+
+create_ownable_clone!(String);
+
+create_ownable_clone_container!((T,));
+create_ownable_clone_container!((T, T));
+create_ownable_clone_container!((T, T, T));
+create_ownable_clone_container!((T, T, T, T));
+create_ownable_clone_container!((T, T, T, T, T));
+create_ownable_clone_container!((T, T, T, T, T, T));
+create_ownable_clone_container!((T, T, T, T, T, T, T));
+create_ownable_clone_container!((T, T, T, T, T, T, T, T));
+create_ownable_clone_container!((T, T, T, T, T, T, T, T, T));
+create_ownable_clone_container!((T, T, T, T, T, T, T, T, T, T));
+create_ownable_clone_container!((T, T, T, T, T, T, T, T, T, T, T));
+create_ownable_clone_container!((T, T, T, T, T, T, T, T, T, T, T, T));
+create_ownable_clone_container!((T, T, T, T, T, T, T, T, T, T, T, T, T));
+create_ownable_clone_container!((T, T, T, T, T, T, T, T, T, T, T, T, T, T));
+create_ownable_clone_container!(Vec<T>);
+create_ownable_clone_container!(std::collections::VecDeque<T>);
+create_ownable_clone_container!(std::collections::HashSet<T>);
+create_ownable_clone_container!(std::collections::BTreeSet<T>);
+create_ownable_clone_container!(std::collections::LinkedList<T>);
+create_ownable_clone_container!(std::collections::BinaryHeap<T>);
+
+create_ownable_clone_container_doubled!(std::collections::HashMap<K,V>);
+create_ownable_clone_container_doubled!(std::collections::BTreeMap<K,V>);
+
+/// Generic Property as owned
 pub struct GenericOwnedProp(Box<dyn Any + Send + Sync + 'static>);
 
 /// Internal prop structure
@@ -244,9 +272,12 @@ impl<T: 'static + Serialize> OutputProp<T> {
 }
 
 impl<T: Ownable> OutputProp<T> {
+    /// Convert OutputProp to generic
     pub fn into_owned_generic(&self) -> GenericOwnedProp {
         self.0.to_owned_generic()
     }
+
+    /// Load OutputProp to generic
     pub fn load_owned_generic(&mut self, val: GenericOwnedProp) -> Result<()> {
         self.0.load_owned_generic(val)
     }
