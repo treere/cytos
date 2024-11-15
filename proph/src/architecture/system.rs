@@ -21,6 +21,8 @@ use super::{GraphId, NodeId, ParamId, Result, Value};
 use std::collections::HashMap;
 use std::thread::{Builder, JoinHandle};
 
+type ProphCommand = (Command, Response);
+
 /// SystemRepr
 ///
 /// Deserializable System Representation
@@ -47,27 +49,40 @@ impl SystemRepr {
 
     /// Convert a system representation into a System
     pub fn to_system(self, registry: &Registry) -> Result<System> {
+        // From the map of id, reprs create a map of ip, repr and receiver
+        // and a map of id, sender.
         let (graphs, senders): (IndexMap<_, _>, IndexMap<_, _>) = self
             .graphs
             .into_iter()
             .map(|(graph_id, graph_repr)| {
-                let (sender, receiver) = unbounded::<(Command, Message)>();
+                let (sender, receiver) = unbounded::<ProphCommand>();
                 ((graph_id, (graph_repr, receiver)), (graph_id, sender))
             })
             .unzip();
 
         let runners = graphs
             .into_iter()
-            .map(|(graph_id, (graph_repr, receiver))| {
+            .map(|(id, (repr, receiver))| {
+                let sender = senders.get(&id).ok_or("missing sender")?.clone();
+
                 Self::create_runner(
-                    graph_id,
-                    graph_repr,
+                    id,
+                    repr,
                     receiver,
                     senders.clone(),
                     registry.clone(),
                     &self.requests,
                     &self.sends,
                 )
+                .map(|thread| {
+                    (
+                        id,
+                        Runner {
+                            thread: Some(thread),
+                            sender,
+                        },
+                    )
+                })
             })
             .collect::<Result<IndexMap<_, _>>>()?;
 
@@ -75,25 +90,21 @@ impl SystemRepr {
     }
 
     fn create_runner(
-        graph_id: GraphId,
-        graph_repr: GraphRepr,
-        receiver: Receiver<(Command, Message)>,
-        senders: IndexMap<GraphId, Sender<(Command, Message)>>,
+        id: GraphId,
+        repr: GraphRepr,
+        receiver: Receiver<ProphCommand>,
+        senders: IndexMap<GraphId, Sender<ProphCommand>>,
         registry: Registry,
         requests: &[Link],
         sends: &[Link],
-    ) -> Result<(GraphId, Runner)> {
-        let sender = senders.get(&graph_id).ok_or("missing sender")?.clone();
+    ) -> Result<JoinHandle<()>> {
+        let requests = Self::create_requests(id, &senders, requests)?;
+        let sends = Self::create_sends(id, &senders, sends)?;
 
-        let sends = Self::create_sends(graph_id, &senders, sends)?;
-        let requests = Self::create_requests(graph_id, &senders, requests)?;
-
-        let thread = Builder::new()
-            .name(graph_id.to_string())
+        Builder::new()
+            .name(id.to_string())
             .spawn(move || {
-                let graph = graph_repr
-                    .into_graph(&registry)
-                    .expect("Cannot build graph");
+                let graph = repr.into_graph(&registry).expect("Cannot build graph");
 
                 InternalRunner {
                     graph,
@@ -104,23 +115,15 @@ impl SystemRepr {
                 }
                 .run();
             })
-            .or(Err("cannot run thread"))?;
-
-        Ok((
-            graph_id,
-            Runner {
-                thread: Some(thread),
-                sender,
-            },
-        ))
+            .or(Err("cannot run thread".into()))
     }
 
     fn create_sends(
         graph_id: GraphId,
-        senders: &IndexMap<GraphId, Sender<(Command, Message)>>,
-        requests: &[Link],
-    ) -> Result<Vec<(ExternalCommand, Vec<InternalReference>)>> {
-        let mut requests: Vec<_> = requests.iter().filter(|l| l.src.0 == graph_id).collect();
+        senders: &IndexMap<GraphId, Sender<ProphCommand>>,
+        sends: &[Link],
+    ) -> Result<Vec<(ExternalDestination, Vec<Destination>)>> {
+        let mut requests: Vec<_> = sends.iter().filter(|l| l.src.0 == graph_id).collect();
 
         requests.sort_by_key(|x| x.dst.0);
 
@@ -141,18 +144,18 @@ impl SystemRepr {
                 senders
                     .get(&g)
                     .cloned()
-                    .map(|sender| ((sender, sources), destinations))
+                    .map(|sender| ((sender, destinations), sources))
             })
             .collect::<Option<Vec<_>>>()
             .ok_or("missin sender".into())
     }
 
     fn create_requests(
-        graph_id: GraphId,
-        senders: &IndexMap<GraphId, Sender<(Command, Message)>>,
+        id: GraphId,
+        senders: &IndexMap<GraphId, Sender<ProphCommand>>,
         requests: &[Link],
-    ) -> Result<Vec<(ExternalCommand, Vec<InternalReference>)>> {
-        let mut requests: Vec<_> = requests.iter().filter(|l| l.dst.0 == graph_id).collect();
+    ) -> Result<Vec<(ExternalDestination, Vec<Destination>)>> {
+        let mut requests: Vec<_> = requests.iter().filter(|l| l.dst.0 == id).collect();
 
         requests.sort_by_key(|x| x.src.0);
 
@@ -201,13 +204,13 @@ impl System {
     /// Send a command to a runner
     pub fn command(&mut self, graph: GraphId, command: Command) -> Result<Value> {
         self.internal_command(graph, command).and_then(|r| match r {
-            InternalValue::Value(value) => Ok(value),
-            InternalValue::Var(_generic_owned_prop) => Err("cannot return owned".into()),
+            Internal::Value(value) => Ok(value),
+            Internal::Prop(_generic_owned_prop) => Err("cannot return owned".into()),
         })
     }
 
     /// Send a command to a runner
-    fn internal_command(&mut self, graph: GraphId, command: Command) -> Result<InternalValue> {
+    fn internal_command(&mut self, graph: GraphId, command: Command) -> Result<Internal> {
         self.runners
             .get_mut(&graph)
             .ok_or("not found")?
@@ -240,36 +243,35 @@ pub enum Command {
     MultiDump(Vec<(NodeId, ParamId)>),
     /// Multi load command
     MultiLoad(Vec<(NodeId, ParamId, Value)>),
-
     /// Multi owned dump command
     MultiOwnedDump(Vec<(NodeId, ParamId)>),
     /// Multi load command
     MultiOwnedLoad(Vec<(NodeId, ParamId, GenericOwnedProp)>),
 }
 
-enum InternalValue {
+enum Internal {
     Value(Value),
-    Var(Vec<GenericOwnedProp>),
+    Prop(Vec<GenericOwnedProp>),
 }
 
-impl std::fmt::Debug for InternalValue {
+impl std::fmt::Debug for Internal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            InternalValue::Value(value) => write!(f, "{:?}", value),
-            InternalValue::Var(_generic_owned_prop) => write!(f, "GenericOwnedProp"),
+            Internal::Value(value) => write!(f, "{:?}", value),
+            Internal::Prop(_generic_owned_prop) => write!(f, "GenericOwnedProp"),
         }
     }
 }
 
-type ResponseResult = std::result::Result<InternalValue, String>;
+type ResponseResult = std::result::Result<Internal, String>;
 
 /// Message is a letter that contains an sender which can be used to set a response
 #[derive(Clone)]
-pub struct Message {
+pub struct Response {
     sender: Sender<ResponseResult>,
 }
 
-impl Message {
+impl Response {
     /// Creates a message and returns the received where it is possible to listen to the response
     fn new() -> (Self, Receiver<ResponseResult>) {
         let (sender, receiver) = bounded::<ResponseResult>(0);
@@ -278,44 +280,40 @@ impl Message {
     }
 
     /// Set the response and consume the message
-    fn prepare_and_set<T: Serialize>(self, resp: Result<T>) {
-        let resp = Self::prepare(resp);
+    fn send_value<T: Serialize>(self, resp: Result<T>) {
+        let resp = resp
+            .and_then(|v| Value::load(&v))
+            .map(Internal::Value)
+            .map_err(|r| r.to_string());
+
         self.sender.send(resp).expect("cannot send");
     }
 
-    fn set(self, resp: ResponseResult) {
+    fn send_prop(self, resp: Result<Vec<GenericOwnedProp>>) {
+        let resp = resp.map(Internal::Prop).map_err(|r| r.to_string());
+
         self.sender.send(resp).expect("cannot send");
-    }
-
-    fn prepare<T: Serialize>(resp: Result<T>) -> ResponseResult {
-        resp.and_then(|v| Value::load(&v))
-            .map(InternalValue::Value)
-            .map_err(|r| r.to_string())
-    }
-
-    fn prepare_p(resp: Result<Vec<GenericOwnedProp>>) -> ResponseResult {
-        resp.map(InternalValue::Var).map_err(|r| r.to_string())
     }
 }
 
-/// External address
-type ExternalCommand = (Sender<(Command, Message)>, Vec<(NodeId, ParamId)>);
-
 /// Internal address
-type InternalReference = (NodeId, ParamId);
+type Destination = (NodeId, ParamId);
+
+/// External address
+type ExternalDestination = (Sender<ProphCommand>, Vec<Destination>);
 
 /// The runner worker
 struct InternalRunner {
     /// The graph
     graph: Graph,
     /// A receiver for the commands
-    receiver: Receiver<(Command, Message)>,
+    receiver: Receiver<ProphCommand>,
     /// Requests between graphs
-    requests: Vec<(ExternalCommand, Vec<InternalReference>)>,
+    requests: Vec<(ExternalDestination, Vec<Destination>)>,
     /// Sends between graphs
-    sends: Vec<(ExternalCommand, Vec<InternalReference>)>,
+    sends: Vec<(ExternalDestination, Vec<Destination>)>,
     /// Queue
-    queue: Vec<(Command, Message)>,
+    queue: Vec<ProphCommand>,
 }
 
 impl InternalRunner {
@@ -326,7 +324,7 @@ impl InternalRunner {
                 match command {
                     Command::Kill => break 'main,
                     Command::Start => break,
-                    Command::Status => message.prepare_and_set(Ok("Idle")),
+                    Command::Status => message.send_value(Ok("Idle")),
                     Command::Stop => (),
                     command => self.dispatch_command(command, message, &StepResult::Done),
                 }
@@ -342,7 +340,7 @@ impl InternalRunner {
                         match command {
                             Command::Kill => break 'main,
                             Command::Stop => break 'outer,
-                            Command::Status => message.prepare_and_set(Ok("Running")),
+                            Command::Status => message.send_value(Ok("Running")),
                             Command::Start => (),
                             command => self.dispatch_command(command, message, &cause),
                         }
@@ -356,7 +354,7 @@ impl InternalRunner {
     }
 
     /// Dispatch a command to the graph
-    fn dispatch_command(&mut self, command: Command, message: Message, cause: &StepResult) {
+    fn dispatch_command(&mut self, command: Command, message: Response, cause: &StepResult) {
         match cause {
             StepResult::Done => {
                 let mut queue = vec![];
@@ -370,50 +368,42 @@ impl InternalRunner {
         }
     }
 
-    fn done_dispatch_command(&mut self, message: Message, command: Command) {
+    fn done_dispatch_command(&mut self, message: Response, command: Command) {
         match command {
-            Command::ListNodes => message.set(Message::prepare(Ok(self.graph.list_nodes()))),
-            Command::ListInputs(node) => {
-                message.set(Message::prepare(self.graph.list_node_inputs(node)))
-            }
-            Command::ListOutputs(node) => {
-                message.set(Message::prepare(self.graph.list_node_outputs(node)))
-            }
+            Command::ListNodes => message.send_value(Ok(self.graph.list_nodes())),
+            Command::ListInputs(node) => message.send_value(self.graph.list_node_inputs(node)),
+            Command::ListOutputs(node) => message.send_value(self.graph.list_node_outputs(node)),
             Command::MultiDump(vec) => {
-                let p: Result<Vec<_>> = vec.into_iter().map(|c| self.graph.dump(c)).collect();
-                message.set(Message::prepare(p))
+                let dump: Result<Vec<_>> = vec.into_iter().map(|c| self.graph.dump(c)).collect();
+                message.send_value(dump)
             }
             Command::MultiLoad(vec) => {
                 let p: Result<Vec<_>> = vec
                     .into_iter()
                     .map(|(n, p, v)| self.graph.load((n, p), v))
                     .collect();
-                message.set(Message::prepare(p))
+                message.send_value(p)
             }
             Command::Kill | Command::Start | Command::Stop | Command::Status => unreachable!(),
             Command::MultiOwnedDump(vec) => {
                 let p: Result<Vec<_>> = vec.into_iter().map(|c| self.graph.dump_owned(c)).collect();
-                message.set(Message::prepare_p(p))
+                message.send_prop(p)
             }
             Command::MultiOwnedLoad(vec) => {
                 let p: Result<Vec<_>> = vec
                     .into_iter()
                     .map(|(n, p, v)| self.graph.load_owned((n, p), v))
                     .collect();
-                message.set(Message::prepare(p))
+                message.send_value(p)
             }
         }
     }
 
-    fn skip_dispatch_command(&mut self, message: Message, command: Command) {
+    fn skip_dispatch_command(&mut self, message: Response, command: Command) {
         match command {
-            Command::ListNodes => message.set(Message::prepare(Ok(self.graph.list_nodes()))),
-            Command::ListInputs(node) => {
-                message.set(Message::prepare(self.graph.list_node_inputs(node)))
-            }
-            Command::ListOutputs(node) => {
-                message.set(Message::prepare(self.graph.list_node_outputs(node)))
-            }
+            Command::ListNodes => message.send_value(Ok(self.graph.list_nodes())),
+            Command::ListInputs(node) => message.send_value(self.graph.list_node_inputs(node)),
+            Command::ListOutputs(node) => message.send_value(self.graph.list_node_outputs(node)),
             Command::MultiDump(_) => {
                 self.queue.push((command, message));
             }
@@ -422,7 +412,7 @@ impl InternalRunner {
                     .into_iter()
                     .map(|(n, p, v)| self.graph.load((n, p), v))
                     .collect();
-                message.set(Message::prepare(p))
+                message.send_value(p)
             }
             Command::Kill | Command::Start | Command::Stop | Command::Status => unreachable!(),
             Command::MultiOwnedDump(_) => {
@@ -433,13 +423,13 @@ impl InternalRunner {
                     .into_iter()
                     .map(|(n, p, v)| self.graph.load_owned((n, p), v))
                     .collect();
-                message.set(Message::prepare(p))
+                message.send_value(p)
             }
         }
     }
 
     fn request_values(&mut self) {
-        let (message, receiver) = Message::new();
+        let (message, receiver) = Response::new();
         for ((sender, nodes), internals) in &self.requests {
             let response: Vec<_> =
                 match sender.send((Command::MultiOwnedDump(nodes.clone()), message.clone())) {
@@ -447,8 +437,8 @@ impl InternalRunner {
                     Err(_) => Err("Cannot send".into()),
                 }
                 .map(|r| match r {
-                    InternalValue::Value(_) => unreachable!(),
-                    InternalValue::Var(v) => v,
+                    Internal::Value(_) => unreachable!(),
+                    Internal::Prop(v) => v,
                 })
                 .unwrap();
 
@@ -462,7 +452,7 @@ impl InternalRunner {
     }
 
     fn send_values(&mut self) {
-        let (message, _receiver) = Message::new();
+        let (message, _receiver) = Response::new();
 
         for ((sender, nodes), internals) in &self.sends {
             let loads = internals
@@ -483,18 +473,18 @@ struct Runner {
     /// Thread with the internal runner inside
     thread: Option<JoinHandle<()>>,
     /// Sender to the internal runner
-    sender: Sender<(Command, Message)>,
+    sender: Sender<ProphCommand>,
 }
 
 impl Runner {
     /// Send a command to the internal runner
-    pub fn command(&mut self, command: Command) -> Result<InternalValue> {
-        let (message, receiver) = Message::new();
+    pub fn command(&mut self, command: Command) -> Result<Internal> {
+        let (message, receiver) = Response::new();
 
         match self.sender.send((command, message)) {
             Ok(()) => receiver
                 .recv()
-                .unwrap_or(Ok(InternalValue::Value(Value::load(&()).unwrap())))
+                .unwrap_or(Ok(Internal::Value(Value::load(&()).unwrap())))
                 .map_err(Into::into),
             Err(_) => Err("Cannot send".into()),
         }
@@ -504,7 +494,7 @@ impl Runner {
 impl Drop for Runner {
     fn drop(&mut self) {
         if let Some(t) = self.thread.take() {
-            let (message, _receiver) = Message::new();
+            let (message, _receiver) = Response::new();
             self.sender
                 .send((Command::Kill, message))
                 .expect("cannot send");
