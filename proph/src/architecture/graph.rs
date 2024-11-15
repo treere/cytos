@@ -208,7 +208,7 @@ impl Graph {
 mod tests {
     use super::*;
 
-    use crate::test::Empty;
+    use crate::test::{Constant, Empty};
 
     #[test]
     fn test_default_graph() {
@@ -230,5 +230,53 @@ mod tests {
         assert_eq!(1, graph.list_nodes().len());
         assert_eq!(0, graph.list_node_inputs(node_id).expect("nodes").len());
         assert_eq!(0, graph.list_node_outputs(node_id).expect("nodes").len());
+    }
+
+    #[test]
+    fn test_graph_with_constant_node() {
+        let node: Node = Box::new(Constant::default());
+
+        let node_id = NodeId(0);
+
+        let mut graph = Graph {
+            nodes: IndexMap::from_iter(vec![(node_id, node)].into_iter()),
+            on_errors: IndexMap::from_iter(vec![(node_id, OnError::Continue)].into_iter()),
+        };
+
+        assert!(graph.initialize().is_ok());
+        assert!(graph.step().is_ok());
+        assert!(graph.terminate().is_ok());
+
+        assert_eq!(vec![node_id], graph.list_nodes());
+        assert_eq!(
+            vec![ParamId(0)],
+            graph.list_node_inputs(node_id).expect("no node")
+        );
+        assert_eq!(
+            vec![ParamId(1)],
+            graph.list_node_outputs(node_id).expect("no node")
+        );
+
+        let one = Value::load(&1).expect("cannot load");
+        assert!(graph.load((node_id, ParamId(0)), one).is_ok());
+
+        assert!(graph.initialize().is_ok());
+        assert!(graph.step().is_ok());
+        assert!(graph.terminate().is_ok());
+
+        let input: i32 = graph
+            .dump((node_id, ParamId(0)))
+            .expect("dump")
+            .dump()
+            .expect("value");
+
+        let output: i32 = graph
+            .dump((node_id, ParamId(1)))
+            .expect("dump")
+            .dump()
+            .expect("value");
+
+        assert_eq!(input, 1);
+        assert_eq!(output, 1);
     }
 }
