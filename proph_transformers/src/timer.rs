@@ -1,9 +1,9 @@
 use std::time::{Duration, Instant};
 
 use proph::architecture::{OutputProp, Stepper};
-use proph_derive::TransFn;
+use proph_derive::ProphNode;
 
-#[derive(TransFn)]
+#[derive(ProphNode)]
 pub struct Timer {
     output: OutputProp<Duration>,
 

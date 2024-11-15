@@ -1,5 +1,5 @@
 use proph::architecture::{props::Ownable, InputProp, OutputProp, Result, Stepper};
-use proph_derive::TransFn;
+use proph_derive::ProphNode;
 use serde::{Deserialize, Serialize};
 
 use crate::types::Frame;
@@ -23,7 +23,7 @@ impl Ownable for Image {
     }
 }
 
-#[derive(TransFn, Default)]
+#[derive(ProphNode, Default)]
 pub struct ImageDecoder {
     frame: InputProp<Frame>,
 

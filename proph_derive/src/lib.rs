@@ -8,7 +8,7 @@ use syn::{
 const INPUT_PROP_TYPE: &[&str] = &["InputProp"];
 const OUTPUT_PROP_TYPE: &[&str] = &["OutputProp"];
 
-#[proc_macro_derive(TransFn)]
+#[proc_macro_derive(ProphNode)]
 pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
     let DeriveInput {
         ident,

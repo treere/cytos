@@ -1,9 +1,9 @@
 use proph::architecture::{InputProp, OutputProp, Result, Stepper};
-use proph_derive::TransFn;
+use proph_derive::ProphNode;
 
 use crate::decoder::Image;
 
-#[derive(TransFn, Default)]
+#[derive(ProphNode, Default)]
 pub struct Mean {
     input: InputProp<Image>,
     output: OutputProp<f64>,

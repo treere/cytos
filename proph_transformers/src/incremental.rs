@@ -1,7 +1,7 @@
 use proph::architecture::{OutputProp, Result, Stepper};
-use proph_derive::TransFn;
+use proph_derive::ProphNode;
 
-#[derive(TransFn, Default)]
+#[derive(ProphNode, Default)]
 pub struct IncrementalGenerator {
     output: OutputProp<u64>,
 }

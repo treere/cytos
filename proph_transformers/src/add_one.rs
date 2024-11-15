@@ -1,7 +1,7 @@
 use proph::architecture::{InputProp, OutputProp, Result, Stepper};
-use proph_derive::TransFn;
+use proph_derive::ProphNode;
 
-#[derive(TransFn)]
+#[derive(ProphNode)]
 pub struct AddValue {
     input: InputProp<u64>,
     increment: InputProp<u64>,

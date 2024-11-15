@@ -1,9 +1,9 @@
 use proph::architecture::{props::Ownable, InputProp, Result, Stepper};
-use proph_derive::TransFn;
+use proph_derive::ProphNode;
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Display;
 
-#[derive(TransFn, Default)]
+#[derive(ProphNode, Default)]
 pub struct Print<T>
 where
     T: Ownable + Display + Default + DeserializeOwned + Serialize + 'static,

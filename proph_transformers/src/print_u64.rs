@@ -1,7 +1,7 @@
 use proph::architecture::{Done, InputProp, Stepper};
-use proph_derive::TransFn;
+use proph_derive::ProphNode;
 
-#[derive(TransFn, Default)]
+#[derive(ProphNode, Default)]
 pub struct PrintU64 {
     input: InputProp<u64>,
 }

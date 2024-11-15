@@ -1,10 +1,10 @@
 use proph::architecture::{InputProp, OutputProp, Result, Stepper};
-use proph_derive::TransFn;
+use proph_derive::ProphNode;
 use rscam::Camera;
 
 use crate::types::Frame;
 
-#[derive(TransFn)]
+#[derive(ProphNode)]
 pub struct Rscam {
     filename: InputProp<String>,
     interval: InputProp<(u32, u32)>,

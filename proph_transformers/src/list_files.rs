@@ -1,9 +1,9 @@
 use std::fs::ReadDir;
 
 use proph::architecture::{InputProp, OutputProp, Stepper};
-use proph_derive::TransFn;
+use proph_derive::ProphNode;
 
-#[derive(TransFn, Default)]
+#[derive(ProphNode, Default)]
 pub struct ListFiles {
     input: InputProp<String>,
     output: OutputProp<String>,
