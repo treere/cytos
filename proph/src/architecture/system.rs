@@ -392,10 +392,7 @@ impl InternalRunner {
             }
             Command::Kill | Command::Start | Command::Stop | Command::Status => unreachable!(),
             Command::MultiOwnedDump(vec) => {
-                let p: Result<Vec<_>> = vec
-                    .into_iter()
-                    .map(|c| self.graph.dump_owned(c))
-                    .collect();
+                let p: Result<Vec<_>> = vec.into_iter().map(|c| self.graph.dump_owned(c)).collect();
                 message.set(Message::prepare_p(p))
             }
             Command::MultiOwnedLoad(vec) => {

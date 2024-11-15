@@ -108,80 +108,10 @@ pub struct Graph {
 }
 
 impl Graph {
-    /// Connects a output data to an input one.
-    pub fn link(
-        &mut self,
-        (src_node_id, src_param_id): (NodeId, ParamId),
-        (dst_node_id, dst_param_id): (NodeId, ParamId),
-    ) -> Result<()> {
-        let output = self
-            .nodes
-            .get(&src_node_id)
-            .ok_or("cannot find source")?
-            .output(src_param_id)
-            .ok_or("cannot find param")?;
-
-        self.nodes
-            .get_mut(&dst_node_id)
-            .ok_or("cannot find dest")?
-            .link(dst_param_id, output)?;
-
-        Ok(())
-    }
-
-    /// Load a value into the param of a node
-    pub fn load(&mut self, (node_id, param_id): (NodeId, ParamId), value: Value) -> Result<()> {
-        self.nodes
-            .get_mut(&node_id)
-            .ok_or("cannot find node")?
-            .load(param_id, value)?;
-
-        Ok(())
-    }
-
-    pub fn load_owned(
-        &mut self,
-        (node_id, param_id): (NodeId, ParamId),
-        value: GenericOwnedProp,
-    ) -> Result<()> {
-        self.nodes
-            .get_mut(&node_id)
-            .ok_or("cannot find node")?
-            .load_owned(param_id, value)?;
-
-        Ok(())
-    }
-
-    /// Dump the param of a node
-    pub fn dump(&self, (node_id, param_id): (NodeId, ParamId)) -> Result<Value> {
-        self.nodes
-            .get(&node_id)
-            .ok_or("cannot find node")?
-            .dump(param_id)
-    }
-
-    pub fn dump_owned(
-        &self,
-        (node_id, param_id): (NodeId, ParamId),
-    ) -> Result<GenericOwnedProp> {
-        self.nodes
-            .get(&node_id)
-            .ok_or("cannot find node")?
-            .dump_owned(param_id)
-    }
-
     /// Initialize the nodes
     pub fn initialize(&mut self) -> Result<()> {
         for node in self.nodes.values_mut() {
             node.initialize()?;
-        }
-        Ok(())
-    }
-
-    /// Terminate the nodes
-    pub fn terminate(&mut self) -> Result<()> {
-        for node in self.nodes.values_mut() {
-            node.terminate()?;
         }
         Ok(())
     }
@@ -202,24 +132,74 @@ impl Graph {
         Ok(StepResult::Done)
     }
 
+    /// Terminate the nodes
+    pub fn terminate(&mut self) -> Result<()> {
+        for node in self.nodes.values_mut() {
+            node.terminate()?;
+        }
+        Ok(())
+    }
+
+    /// Load a value into the param of a node
+    pub fn load(&mut self, (node_id, param_id): (NodeId, ParamId), value: Value) -> Result<()> {
+        self.get_node_mut(node_id)?.load(param_id, value)
+    }
+
+    /// Dump the param of a node
+    pub fn dump(&self, (node_id, param_id): (NodeId, ParamId)) -> Result<Value> {
+        self.get_node(node_id)?.dump(param_id)
+    }
+
+    /// Load an owned value into the param of a node
+    pub fn load_owned(
+        &mut self,
+        (node_id, param_id): (NodeId, ParamId),
+        value: GenericOwnedProp,
+    ) -> Result<()> {
+        self.get_node_mut(node_id)?.load_owned(param_id, value)
+    }
+
+    /// Dump the param as owned of a node
+    pub fn dump_owned(&self, (node_id, param_id): (NodeId, ParamId)) -> Result<GenericOwnedProp> {
+        self.get_node(node_id)?.dump_owned(param_id)
+    }
+
     /// List nodes
     pub fn list_nodes(&self) -> Vec<NodeId> {
         self.nodes.keys().copied().collect()
     }
 
     /// List node inputs
-    pub fn list_node_inputs(&self, node: NodeId) -> Result<Vec<ParamId>> {
-        self.nodes
-            .get(&node)
-            .map(|n| n.input_names())
-            .ok_or("missing node".into())
+    pub fn list_node_inputs(&self, node_id: NodeId) -> Result<Vec<ParamId>> {
+        self.get_node(node_id).map(|n| n.input_names())
     }
 
     /// List node outputs
-    pub fn list_node_outputs(&self, node: NodeId) -> Result<Vec<ParamId>> {
-        self.nodes
-            .get(&node)
-            .map(|n| n.output_names())
-            .ok_or("missing node".into())
+    pub fn list_node_outputs(&self, node_id: NodeId) -> Result<Vec<ParamId>> {
+        self.get_node(node_id).map(|n| n.output_names())
+    }
+
+    /// Connects a output data to an input one.
+    pub fn link(
+        &mut self,
+        (src_node_id, src_param_id): (NodeId, ParamId),
+        (dst_node_id, dst_param_id): (NodeId, ParamId),
+    ) -> Result<()> {
+        let output = self
+            .get_node(src_node_id)?
+            .output(src_param_id)
+            .ok_or("cannot find param")?;
+
+        self.get_node_mut(dst_node_id)?.link(dst_param_id, output)?;
+
+        Ok(())
+    }
+
+    fn get_node(&self, node_id: NodeId) -> Result<&Node> {
+        self.nodes.get(&node_id).ok_or("missing node".into())
+    }
+
+    fn get_node_mut(&mut self, node_id: NodeId) -> Result<&mut Node> {
+        self.nodes.get_mut(&node_id).ok_or("missing node".into())
     }
 }
