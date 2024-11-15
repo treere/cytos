@@ -203,3 +203,32 @@ impl Graph {
         self.nodes.get_mut(&node_id).ok_or("missing node".into())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::test::Empty;
+
+    #[test]
+    fn test_default_graph() {
+        let g = Graph::default();
+        assert_eq!(0, g.list_nodes().len());
+    }
+
+    #[test]
+    fn test_graph_with_empty_node() {
+        let node: Node = Box::new(Empty::default());
+
+        let node_id = NodeId(0);
+
+        let graph = Graph {
+            nodes: IndexMap::from_iter(vec![(node_id, node)].into_iter()),
+            on_errors: IndexMap::from_iter(vec![(node_id, OnError::Continue)].into_iter()),
+        };
+
+        assert_eq!(1, graph.list_nodes().len());
+        assert_eq!(0, graph.list_node_inputs(node_id).expect("nodes").len());
+        assert_eq!(0, graph.list_node_outputs(node_id).expect("nodes").len());
+    }
+}
