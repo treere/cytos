@@ -201,13 +201,13 @@ impl System {
     /// Send a command to a runner
     pub fn command(&mut self, graph: GraphId, command: Command) -> Result<Value> {
         self.internal_command(graph, command).and_then(|r| match r {
-            Pippo::Value(value) => Ok(value),
-            Pippo::Var(_generic_owned_prop) => Err("cannot return owned".into()),
+            InternalValue::Value(value) => Ok(value),
+            InternalValue::Var(_generic_owned_prop) => Err("cannot return owned".into()),
         })
     }
 
     /// Send a command to a runner
-    fn internal_command(&mut self, graph: GraphId, command: Command) -> Result<Pippo> {
+    fn internal_command(&mut self, graph: GraphId, command: Command) -> Result<InternalValue> {
         self.runners
             .get_mut(&graph)
             .ok_or("not found")?
@@ -247,21 +247,21 @@ pub enum Command {
     MultiOwnedLoad(Vec<(NodeId, ParamId, GenericOwnedProp)>),
 }
 
-enum Pippo {
+enum InternalValue {
     Value(Value),
     Var(Vec<GenericOwnedProp>),
 }
 
-impl std::fmt::Debug for Pippo {
+impl std::fmt::Debug for InternalValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Pippo::Value(value) => write!(f, "{:?}", value),
-            Pippo::Var(_generic_owned_prop) => write!(f, "GenericOwnedProp"),
+            InternalValue::Value(value) => write!(f, "{:?}", value),
+            InternalValue::Var(_generic_owned_prop) => write!(f, "GenericOwnedProp"),
         }
     }
 }
 
-type ResponseResult = std::result::Result<Pippo, String>;
+type ResponseResult = std::result::Result<InternalValue, String>;
 
 /// Message is a letter that contains an sender which can be used to set a response
 #[derive(Clone)]
@@ -289,12 +289,12 @@ impl Message {
 
     fn prepare<T: Serialize>(resp: Result<T>) -> ResponseResult {
         resp.and_then(|v| Value::load(&v))
-            .map(Pippo::Value)
+            .map(InternalValue::Value)
             .map_err(|r| r.to_string())
     }
 
     fn prepare_p(resp: Result<Vec<GenericOwnedProp>>) -> ResponseResult {
-        resp.map(Pippo::Var).map_err(|r| r.to_string())
+        resp.map(InternalValue::Var).map_err(|r| r.to_string())
     }
 }
 
@@ -447,8 +447,8 @@ impl InternalRunner {
                     Err(_) => Err("Cannot send".into()),
                 }
                 .map(|r| match r {
-                    Pippo::Value(_) => unreachable!(),
-                    Pippo::Var(v) => v,
+                    InternalValue::Value(_) => unreachable!(),
+                    InternalValue::Var(v) => v,
                 })
                 .unwrap();
 
@@ -488,13 +488,13 @@ struct Runner {
 
 impl Runner {
     /// Send a command to the internal runner
-    pub fn command(&mut self, command: Command) -> Result<Pippo> {
+    pub fn command(&mut self, command: Command) -> Result<InternalValue> {
         let (message, receiver) = Message::new();
 
         match self.sender.send((command, message)) {
             Ok(()) => receiver
                 .recv()
-                .unwrap_or(Ok(Pippo::Value(Value::load(&()).unwrap())))
+                .unwrap_or(Ok(InternalValue::Value(Value::load(&()).unwrap())))
                 .map_err(Into::into),
             Err(_) => Err("Cannot send".into()),
         }
