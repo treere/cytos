@@ -120,3 +120,26 @@ impl Registry {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use crate::test::Node;
+
+    use super::*;
+
+    #[test]
+    fn test_error_on_not_found() {
+        let reg = Registry::default();
+        assert!(reg.load("pippo").is_err());
+    }
+
+    #[test]
+    fn test_retrieve_loaded() {
+        let mut reg = Registry::default();
+
+        reg.add("pippo", Node::default);
+
+        assert!(reg.load("pippo").is_ok());
+    }
+}
