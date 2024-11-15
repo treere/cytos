@@ -332,10 +332,10 @@ impl InternalRunner {
 
             self.graph.initialize().expect("cannot initialize");
             'outer: loop {
-                self.request_values();
+                self.request_values().expect("cannot request");
 
                 if let Ok(cause) = self.graph.step() {
-                    self.send_values();
+                    self.send_values().expect("cannot send");
                     while let Ok((command, message)) = self.receiver.try_recv() {
                         match command {
                             Command::Kill => break 'main,
@@ -428,43 +428,39 @@ impl InternalRunner {
         }
     }
 
-    fn request_values(&mut self) {
+    fn request_values(&mut self) -> Result<()> {
         let (message, receiver) = Response::new();
         for ((sender, nodes), internals) in &self.requests {
             let response: Vec<_> =
                 match sender.send((Command::MultiOwnedDump(nodes.clone()), message.clone())) {
-                    Ok(()) => receiver.recv().unwrap(),
+                    Ok(()) => receiver.recv()?,
                     Err(_) => Err("Cannot send".into()),
                 }
                 .map(|r| match r {
                     Internal::Value(_) => unreachable!(),
                     Internal::Prop(v) => v,
-                })
-                .unwrap();
+                })?;
 
-            internals
-                .iter()
-                .zip(response)
-                .for_each(|(internal, response)| {
-                    self.graph.load_owned(*internal, response).unwrap()
-                })
+            for (internal, response) in internals.iter().zip(response) {
+                self.graph.load_owned(*internal, response)?;
+            }
         }
+        Ok(())
     }
 
-    fn send_values(&mut self) {
+    fn send_values(&mut self) -> Result<()> {
         let (message, _receiver) = Response::new();
 
         for ((sender, nodes), internals) in &self.sends {
             let loads = internals
                 .iter()
-                .map(|x| self.graph.dump_owned(*x).unwrap())
+                .map(|x| self.graph.dump_owned(*x))
                 .zip(nodes)
-                .map(|(v, (n, p))| (*n, *p, v))
-                .collect();
-            sender
-                .send((Command::MultiOwnedLoad(loads), message.clone()))
-                .unwrap();
+                .map(|(v, (n, p))| v.map(|val| (*n, *p, val)))
+                .collect::<Result<Vec<_>>>()?;
+            sender.send((Command::MultiOwnedLoad(loads), message.clone()))?;
         }
+        Ok(())
     }
 }
 
@@ -484,7 +480,7 @@ impl Runner {
         match self.sender.send((command, message)) {
             Ok(()) => receiver
                 .recv()
-                .unwrap_or(Ok(Internal::Value(Value::load(&()).unwrap())))
+                .unwrap_or(Ok(Internal::Value(Value::load(&())?)))
                 .map_err(Into::into),
             Err(_) => Err("Cannot send".into()),
         }

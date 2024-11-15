@@ -55,7 +55,7 @@ fn main() -> Result<(), String> {
 
     let seconds = execution_time(|| {
         for _ in 0..steps {
-            graph.step().unwrap();
+            graph.step().expect("step");
         }
     });
 

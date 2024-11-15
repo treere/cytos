@@ -116,9 +116,9 @@ mod tests {
     #[test]
     fn test_dump_empty_frame() {
         let f = Frame::default();
-        let p = Value::load(&f).unwrap();
+        let p = Value::load(&f).expect("cannot load");
 
-        let p: Frame = p.dump().unwrap();
+        let p: Frame = p.dump().expect("cannot dump");
         assert_eq!(0, p.as_u8().len());
     }
 
@@ -127,9 +127,9 @@ mod tests {
         let f = Frame {
             frame: FrameKind::Raw(vec![1, 2, 3]),
         };
-        let p = Value::load(&f).unwrap();
+        let p = Value::load(&f).expect("cannot load");
 
-        let p: Frame = p.dump().unwrap();
+        let p: Frame = p.dump().expect("cannot dump");
         assert_eq!(3, p.as_u8().len());
     }
 }

@@ -41,7 +41,8 @@ impl Stepper for Rscam {
     }
 
     fn initialize(&mut self) -> Result<()> {
-        let mut camera = rscam::new(&self.filename).unwrap();
+        let mut camera =
+            rscam::new(&self.filename).map_err(|x| format!("cannot open camera: {}", x))?;
 
         camera
             .start(&rscam::Config {
@@ -51,7 +52,7 @@ impl Stepper for Rscam {
                 nbuffers: 4,
                 ..Default::default()
             })
-            .unwrap();
+            .map_err(|x| format!("cannot start camera: {}", x))?;
 
         self.camera = Some(camera);
         Ok(())
