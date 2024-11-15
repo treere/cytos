@@ -419,11 +419,11 @@ impl InternalRunner {
                 self.queue.push((command, message));
             }
             Command::MultiOwnedLoad(vec) => {
-                let p: Result<Vec<_>> = vec
+                let loads: Result<Vec<_>> = vec
                     .into_iter()
                     .map(|(n, p, v)| self.graph.load_owned((n, p), v))
                     .collect();
-                message.send_value(p)
+                message.send_value(loads)
             }
         }
     }
@@ -451,11 +451,11 @@ impl InternalRunner {
     fn send_values(&mut self) -> Result<()> {
         let (message, _receiver) = Response::new();
 
-        for ((sender, nodes), internals) in &self.sends {
-            let loads = internals
+        for ((sender, external_nodes), internal_props) in &self.sends {
+            let loads = internal_props
                 .iter()
-                .map(|x| self.graph.dump_owned(*x))
-                .zip(nodes)
+                .map(|node| self.graph.dump_owned(*node))
+                .zip(external_nodes)
                 .map(|(v, (n, p))| v.map(|val| (*n, *p, val)))
                 .collect::<Result<Vec<_>>>()?;
             sender.send((Command::MultiOwnedLoad(loads), message.clone()))?;
