@@ -120,7 +120,7 @@ impl SystemRepr {
         senders: &IndexMap<GraphId, Sender<(Command, Message)>>,
         requests: &[Link],
     ) -> Result<Vec<(ExternalCommand, Vec<InternalReference>)>> {
-        let mut requests: Vec<_> = requests.iter().filter(|l| l.dst.0 == graph_id).collect();
+        let mut requests: Vec<_> = requests.iter().filter(|l| l.src.0 == graph_id).collect();
 
         requests.sort_by_key(|x| x.dst.0);
 
