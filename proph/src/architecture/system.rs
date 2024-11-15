@@ -15,6 +15,7 @@ use crate::loader::Registry;
 use super::graph::StepResult;
 use super::graph::{Graph, GraphRepr};
 
+use super::GenericOwnedProp;
 use super::{GraphId, NodeId, ParamId, Result, Value};
 
 use std::collections::HashMap;
@@ -199,6 +200,14 @@ pub struct System {
 impl System {
     /// Send a command to a runner
     pub fn command(&mut self, graph: GraphId, command: Command) -> Result<Value> {
+        self.internal_command(graph, command).and_then(|r| match r {
+            Pippo::Value(value) => Ok(value),
+            Pippo::Var(_generic_owned_prop) => Err("cannot return owned".into()),
+        })
+    }
+
+    /// Send a command to a runner
+    fn internal_command(&mut self, graph: GraphId, command: Command) -> Result<Pippo> {
         self.runners
             .get_mut(&graph)
             .ok_or("not found")?
@@ -212,7 +221,6 @@ impl System {
 }
 
 /// Commands that a runner can send
-#[derive(Debug, Clone)]
 pub enum Command {
     /// Kill the runner
     Kill,
@@ -232,9 +240,28 @@ pub enum Command {
     MultiDump(Vec<(NodeId, ParamId)>),
     /// Multi load command
     MultiLoad(Vec<(NodeId, ParamId, Value)>),
+
+    /// Multi owned dump command
+    MultiOwnedDump(Vec<(NodeId, ParamId)>),
+    /// Multi load command
+    MultiOwnedLoad(Vec<(NodeId, ParamId, GenericOwnedProp)>),
 }
 
-type ResponseResult = std::result::Result<Value, String>;
+enum Pippo {
+    Value(Value),
+    Var(Vec<GenericOwnedProp>),
+}
+
+impl std::fmt::Debug for Pippo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Pippo::Value(value) => write!(f, "{:?}", value),
+            Pippo::Var(_generic_owned_prop) => write!(f, "GenericOwnedProp"),
+        }
+    }
+}
+
+type ResponseResult = std::result::Result<Pippo, String>;
 
 /// Message is a letter that contains an sender which can be used to set a response
 #[derive(Clone)]
@@ -262,7 +289,12 @@ impl Message {
 
     fn prepare<T: Serialize>(resp: Result<T>) -> ResponseResult {
         resp.and_then(|v| Value::load(&v))
+            .map(Pippo::Value)
             .map_err(|r| r.to_string())
+    }
+
+    fn prepare_p(resp: Result<Vec<GenericOwnedProp>>) -> ResponseResult {
+        resp.map(Pippo::Var).map_err(|r| r.to_string())
     }
 }
 
@@ -359,6 +391,20 @@ impl InternalRunner {
                 message.set(Message::prepare(p))
             }
             Command::Kill | Command::Start | Command::Stop | Command::Status => unreachable!(),
+            Command::MultiOwnedDump(vec) => {
+                let p: Result<Vec<_>> = vec
+                    .into_iter()
+                    .map(|c| self.graph.dumper_owned_for(c))
+                    .collect();
+                message.set(Message::prepare_p(p))
+            }
+            Command::MultiOwnedLoad(vec) => {
+                let p: Result<Vec<_>> = vec
+                    .into_iter()
+                    .map(|(n, p, v)| self.graph.load_owned((n, p), v))
+                    .collect();
+                message.set(Message::prepare(p))
+            }
         }
     }
 
@@ -382,24 +428,39 @@ impl InternalRunner {
                 message.set(Message::prepare(p))
             }
             Command::Kill | Command::Start | Command::Stop | Command::Status => unreachable!(),
+            Command::MultiOwnedDump(_) => {
+                self.queue.push((command, message));
+            }
+            Command::MultiOwnedLoad(vec) => {
+                let p: Result<Vec<_>> = vec
+                    .into_iter()
+                    .map(|(n, p, v)| self.graph.load_owned((n, p), v))
+                    .collect();
+                message.set(Message::prepare(p))
+            }
         }
     }
 
     fn request_values(&mut self) {
         let (message, receiver) = Message::new();
         for ((sender, nodes), internals) in &self.requests {
-            let response: Vec<Value> =
-                match sender.send((Command::MultiDump(nodes.clone()), message.clone())) {
+            let response: Vec<_> =
+                match sender.send((Command::MultiOwnedDump(nodes.clone()), message.clone())) {
                     Ok(()) => receiver.recv().unwrap(),
                     Err(_) => Err("Cannot send".into()),
                 }
-                .map(|r| r.dump().unwrap())
+                .map(|r| match r {
+                    Pippo::Value(_) => unreachable!(),
+                    Pippo::Var(v) => v,
+                })
                 .unwrap();
 
             internals
                 .iter()
                 .zip(response)
-                .for_each(|(internal, response)| self.graph.load(*internal, response).unwrap())
+                .for_each(|(internal, response)| {
+                    self.graph.load_owned(*internal, response).unwrap()
+                })
         }
     }
 
@@ -409,12 +470,12 @@ impl InternalRunner {
         for ((sender, nodes), internals) in &self.sends {
             let loads = internals
                 .iter()
-                .map(|x| self.graph.dumper_for(*x).unwrap())
+                .map(|x| self.graph.dumper_owned_for(*x).unwrap())
                 .zip(nodes)
                 .map(|(v, (n, p))| (*n, *p, v))
                 .collect();
             sender
-                .send((Command::MultiLoad(loads), message.clone()))
+                .send((Command::MultiOwnedLoad(loads), message.clone()))
                 .unwrap();
         }
     }
@@ -430,13 +491,13 @@ struct Runner {
 
 impl Runner {
     /// Send a command to the internal runner
-    pub fn command(&mut self, command: Command) -> Result<Value> {
+    pub fn command(&mut self, command: Command) -> Result<Pippo> {
         let (message, receiver) = Message::new();
 
         match self.sender.send((command, message)) {
             Ok(()) => receiver
                 .recv()
-                .unwrap_or(Ok(Value::load(&()).unwrap()))
+                .unwrap_or(Ok(Pippo::Value(Value::load(&()).unwrap())))
                 .map_err(Into::into),
             Err(_) => Err("Cannot send".into()),
         }

@@ -4,7 +4,7 @@ use crate::loader::Registry;
 
 use super::{
     node::{Node, NodeRepr},
-    NodeId, ParamId, Result, Value,
+    GenericOwnedProp, NodeId, ParamId, Result, Value,
 };
 
 use indexmap::IndexMap;
@@ -139,12 +139,35 @@ impl Graph {
         Ok(())
     }
 
+    pub fn load_owned(
+        &mut self,
+        (node_id, param_id): (NodeId, ParamId),
+        value: GenericOwnedProp,
+    ) -> Result<()> {
+        self.nodes
+            .get_mut(&node_id)
+            .ok_or("cannot find node")?
+            .load_owned(param_id, value)?;
+
+        Ok(())
+    }
+
     /// Dump the param of a node
     pub fn dumper_for(&self, (node_id, param_id): (NodeId, ParamId)) -> Result<Value> {
         self.nodes
             .get(&node_id)
             .ok_or("cannot find node")?
             .dump(param_id)
+    }
+
+    pub fn dumper_owned_for(
+        &self,
+        (node_id, param_id): (NodeId, ParamId),
+    ) -> Result<GenericOwnedProp> {
+        self.nodes
+            .get(&node_id)
+            .ok_or("cannot find node")?
+            .dump_owned(param_id)
     }
 
     /// Initialize the nodes

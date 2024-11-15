@@ -1,3 +1,4 @@
+use proph::architecture::props::Ownable;
 use serde::{ser::SerializeSeq, Deserialize, Serialize};
 
 enum FrameKind {
@@ -85,6 +86,23 @@ impl From<rscam::Frame> for Frame {
     fn from(value: rscam::Frame) -> Self {
         Self {
             frame: FrameKind::Rscam(value),
+        }
+    }
+}
+
+impl Ownable for Frame {
+    type Value = Vec<u8>;
+
+    fn to_ownable(&self) -> Self::Value {
+        match &self.frame {
+            FrameKind::Rscam(frame) => frame.iter().cloned().collect(),
+            FrameKind::Raw(vec) => vec.clone(),
+        }
+    }
+
+    fn from_owned(v: &Self::Value) -> Self {
+        Self {
+            frame: FrameKind::Raw(v.clone()),
         }
     }
 }

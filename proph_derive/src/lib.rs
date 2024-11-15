@@ -26,6 +26,8 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
     let link = create_link(fields);
     let load = create_load(fields);
     let dump = create_dump(fields);
+    let load_owned = create_load_owned(fields);
+    let dump_owned = create_dump_owned(fields);
 
     let input = create_input(fields);
     let input_names = create_input_names(fields);
@@ -38,6 +40,9 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
             #link
             #load
             #dump
+
+            #load_owned
+            #dump_owned
 
             #input
             #input_names
@@ -111,6 +116,58 @@ fn create_dump(fields: &Fields) -> proc_macro2::TokenStream {
                 & self,
                 name: proph::architecture::ParamId
             ) -> proph::architecture::Result<proph::architecture::Value> {
+                match name {
+                    #(#inputs)*
+                    _ => Err("parameter not found".into()),
+                }
+
+            }
+        )
+    }
+}
+
+fn create_load_owned(fields: &Fields) -> proc_macro2::TokenStream {
+    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
+        .map(|field| {
+            let i = &field.ident;
+            let f = ident_to_lit(i);
+            quote! {#f => self.#i.load_owned_generic(value),}
+        })
+        .collect::<Vec<_>>();
+
+    {
+        quote!(
+            fn load_owned(
+                &mut self,
+                name: proph::architecture::ParamId,
+                value: proph::architecture::GenericOwnedProp,
+            ) -> proph::architecture::Result<()> {
+                match name {
+                    #(#inputs)*
+                    _ => Err("parameter not found".into()),
+                }
+
+            }
+        )
+    }
+}
+
+fn create_dump_owned(fields: &Fields) -> proc_macro2::TokenStream {
+    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
+        .chain(filter_fields_by_type(fields, OUTPUT_PROP_TYPE))
+        .map(|field| {
+            let i = &field.ident;
+            let f = ident_to_lit(i);
+            quote! {#f => Ok(self.#i.into_owned_generic()),}
+        })
+        .collect::<Vec<_>>();
+
+    {
+        quote!(
+            fn dump_owned(
+                & self,
+                name: proph::architecture::ParamId
+            ) -> proph::architecture::Result<proph::architecture::GenericOwnedProp> {
                 match name {
                     #(#inputs)*
                     _ => Err("parameter not found".into()),

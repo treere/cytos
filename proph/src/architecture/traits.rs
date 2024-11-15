@@ -1,5 +1,5 @@
 use super::{
-    props::{GenericInputProp, GenericOutputProp},
+    props::{GenericInputProp, GenericOutputProp, GenericOwnedProp},
     ParamId, Result, Value,
 };
 
@@ -29,6 +29,12 @@ pub trait Transformer: Stepper {
 
     /// Dump
     fn dump(&self, name: ParamId) -> Result<Value>;
+
+    /// Load
+    fn load_owned(&mut self, name: ParamId, val: GenericOwnedProp) -> Result<()>;
+
+    /// Dump
+    fn dump_owned(&self, name: ParamId) -> Result<GenericOwnedProp>;
 
     /// Get ouput by name
     fn output(&self, val: ParamId) -> Option<GenericOutputProp>;
