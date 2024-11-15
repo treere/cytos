@@ -66,3 +66,21 @@ fn format_radix(mut x: u64, radix: u32) -> String {
 create_ids!(GraphId);
 create_ids!(NodeId);
 create_ids!(ParamId);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_format_radix() {
+        assert_eq!(format_radix(120, 10), "120".to_owned());
+        assert_eq!(format_radix(8, 2), "1000".to_owned());
+    }
+
+    #[test]
+    fn test_graph_id() {
+        let g = GraphId(1);
+        let v = format!("{}", g);
+        assert_eq!(v, "1".to_owned());
+    }
+}
