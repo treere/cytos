@@ -124,7 +124,7 @@ impl Registry {
 #[cfg(test)]
 mod tests {
 
-    use crate::test::Node;
+    use crate::test::Empty;
 
     use super::*;
 
@@ -138,7 +138,7 @@ mod tests {
     fn test_retrieve_loaded() {
         let mut reg = Registry::default();
 
-        reg.add("pippo", Node::default);
+        reg.add("pippo", Empty::default);
 
         assert!(reg.load("pippo").is_ok());
     }

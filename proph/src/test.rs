@@ -1,69 +1,49 @@
-use crate::architecture::{Result, Stepper, Transformer};
+use crate::architecture::props::{GenericInputProp, GenericOutputProp};
+use crate::architecture::{GenericOwnedProp, ParamId, Result, Stepper, Transformer, Value};
 
 #[derive(Default)]
-pub struct Node {}
+pub struct Empty {}
 
-impl Stepper for Node {
+impl Stepper for Empty {
     fn step(&mut self) -> Result<()> {
         todo!()
     }
 }
 
-impl Transformer for Node {
-    fn link(
-        &mut self,
-        _name: crate::architecture::ParamId,
-        _val: crate::architecture::props::GenericOutputProp,
-    ) -> Result<()> {
-        todo!()
+impl Transformer for Empty {
+    fn link(&mut self, _name: ParamId, _val: GenericOutputProp) -> Result<()> {
+        Err("no link".into())
     }
 
-    fn load(
-        &mut self,
-        _name: crate::architecture::ParamId,
-        _val: crate::architecture::Value,
-    ) -> Result<()> {
-        todo!()
+    fn load(&mut self, _name: ParamId, _val: Value) -> Result<()> {
+        Err("load".into())
     }
 
-    fn dump(&self, _name: crate::architecture::ParamId) -> Result<crate::architecture::Value> {
-        todo!()
+    fn dump(&self, _name: ParamId) -> Result<Value> {
+        Err("dump".into())
     }
 
-    fn load_owned(
-        &mut self,
-        _name: crate::architecture::ParamId,
-        _val: crate::architecture::GenericOwnedProp,
-    ) -> Result<()> {
-        todo!()
+    fn load_owned(&mut self, _name: ParamId, _val: GenericOwnedProp) -> Result<()> {
+        Err("load_owned".into())
     }
 
-    fn dump_owned(
-        &self,
-        _name: crate::architecture::ParamId,
-    ) -> Result<crate::architecture::GenericOwnedProp> {
-        todo!()
+    fn dump_owned(&self, _name: ParamId) -> Result<GenericOwnedProp> {
+        Err("no data".into())
     }
 
-    fn output(
-        &self,
-        _val: crate::architecture::ParamId,
-    ) -> Option<crate::architecture::props::GenericOutputProp> {
-        todo!()
+    fn output(&self, _val: ParamId) -> Option<GenericOutputProp> {
+        None
     }
 
-    fn input(
-        &self,
-        _val: crate::architecture::ParamId,
-    ) -> Option<crate::architecture::props::GenericInputProp> {
-        todo!()
+    fn input(&self, _val: ParamId) -> Option<GenericInputProp> {
+        None
     }
 
-    fn input_names(&self) -> Vec<crate::architecture::ParamId> {
-        todo!()
+    fn input_names(&self) -> Vec<ParamId> {
+        vec![]
     }
 
-    fn output_names(&self) -> Vec<crate::architecture::ParamId> {
-        todo!()
+    fn output_names(&self) -> Vec<ParamId> {
+        vec![]
     }
 }
