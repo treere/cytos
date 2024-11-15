@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::loader::Registry;
 
 use super::{
@@ -41,6 +39,9 @@ impl Default for OnError {
 /// Node depresentation from the braph point
 #[derive(Deserialize, Debug)]
 pub struct InternalNodeRepr {
+    /// Name
+    name: NodeId,
+
     /// Node repr
     #[serde(flatten)]
     node: NodeRepr,
@@ -58,7 +59,7 @@ pub struct GraphRepr {
     links: Vec<Link>,
 
     /// Map of nodes with it's id
-    nodes: HashMap<NodeId, InternalNodeRepr>,
+    nodes: Vec<InternalNodeRepr>,
 }
 
 impl GraphRepr {
@@ -72,10 +73,10 @@ impl GraphRepr {
         let mut nodes = IndexMap::default();
         let mut on_errors = IndexMap::default();
 
-        for (node_id, node_repr) in self.nodes {
+        for node_repr in self.nodes {
             let node = node_repr.node.into_node(loader)?;
-            nodes.insert(node_id, node);
-            on_errors.insert(node_id, node_repr.on_error);
+            nodes.insert(node_repr.name, node);
+            on_errors.insert(node_repr.name, node_repr.on_error);
         }
 
         let mut graph = Graph { nodes, on_errors };

@@ -1,18 +1,20 @@
 {
   "graphs": {
     "main": {
-      "nodes": {
-        "SOURCE": {
+      "nodes": [
+        {
+          "name": "SOURCE",
           "type": "IncrementalGenerator"
         }
-      }
+      ]
     },
     "printer": {
-      "nodes": {
-        "PRINTER1": {
+      "nodes": [
+        {
+          "name": "PRINTER1",
           "type": "PrintU64"
         }
-      }
+      ]
     }
   },
   "requests": [

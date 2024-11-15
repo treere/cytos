@@ -1,21 +1,25 @@
 {
   "graphs": {
     "capture": {
-      "nodes": {
-        "SOURCE": {
+      "nodes": [
+        {
+          "name": "SOURCE",
           "type": "Rscam"
         },
-        "DECODER": {
+        {
+          "name": "DECODER",
           "type": "ImageDecoder",
           "on_error": "Skip"
         },
-        "MEAN": {
+        {
+          "name": "MEAN",
           "type": "ImageMean"
         },
-        "PrintF64": {
+        {
+          "name": "PrintF64",
           "type": "PrintF64"
         }
-      },
+      ],
       "links": [
         {
           "src": [

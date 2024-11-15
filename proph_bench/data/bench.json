@@ -1,27 +1,33 @@
 {
-  "nodes": {
-    "SOURCE": {
+  "nodes": [
+    {
+      "name": "SOURCE",
       "type": "IncrementalGenerator"
     },
-    "DOUBLER0": {
+    {
+      "name": "DOUBLER0",
       "type": "AddValue",
       "props": {
         "increment": 1
       }
     },
-    "DOUBLER1": {
+    {
+      "name": "DOUBLER1",
       "type": "AddValue"
     },
-    "DOUBLER2": {
+    {
+      "name": "DOUBLER2",
       "type": "AddValue"
     },
-    "DOUBLER3": {
+    {
+      "name": "DOUBLER3",
       "type": "AddValue"
     },
-    "DOUBLER4": {
+    {
+      "name": "DOUBLER4",
       "type": "AddValue"
     }
-  },
+  ],
   "links": [
     {
       "src": [

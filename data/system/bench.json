@@ -1,43 +1,46 @@
 {
   "graphs": {
     "source": {
-      "nodes": {
-        "time": {
+      "nodes": [
+        {
+          "name": "time",
           "type": "IncrementalGenerator"
         },
-        "timers": {
+        {
+          "name": "timers",
           "type": "Timer"
         }
-      },
-      "links": []
+      ]
     },
     "doubler0": {
-      "nodes": {
-        "node": {
+      "nodes": [
+        {
+          "name": "node",
           "type": "AddValue",
           "props": {
             "increment": 1
           }
         },
-        "timers": {
+        {
+          "name": "timers",
           "type": "Timer"
         }
-      },
-      "links": []
+      ]
     },
     "doubler1": {
-      "nodes": {
-        "node": {
+      "nodes": [
+        {
+          "name": "node",
           "type": "AddValue",
           "props": {
             "increment": 1
           }
         },
-        "timers": {
+        {
+          "name": "timers",
           "type": "Timer"
         }
-      },
-      "links": []
+      ]
     }
   },
   "requests": [
