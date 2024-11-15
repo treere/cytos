@@ -21,7 +21,7 @@ use super::{GraphId, NodeId, ParamId, Result, Value};
 use std::collections::HashMap;
 use std::thread::{Builder, JoinHandle};
 
-type ProphCommand = (Command, Response);
+type InternalCommand = (Command, Response);
 
 /// SystemRepr
 ///
@@ -55,7 +55,7 @@ impl SystemRepr {
             .graphs
             .into_iter()
             .map(|(graph_id, graph_repr)| {
-                let (sender, receiver) = unbounded::<ProphCommand>();
+                let (sender, receiver) = unbounded::<InternalCommand>();
                 ((graph_id, (graph_repr, receiver)), (graph_id, sender))
             })
             .unzip();
@@ -92,8 +92,8 @@ impl SystemRepr {
     fn create_runner(
         id: GraphId,
         repr: GraphRepr,
-        receiver: Receiver<ProphCommand>,
-        senders: IndexMap<GraphId, Sender<ProphCommand>>,
+        receiver: Receiver<InternalCommand>,
+        senders: IndexMap<GraphId, Sender<InternalCommand>>,
         registry: Registry,
         requests: &[Link],
         sends: &[Link],
@@ -120,7 +120,7 @@ impl SystemRepr {
 
     fn create_sends(
         graph_id: GraphId,
-        senders: &IndexMap<GraphId, Sender<ProphCommand>>,
+        senders: &IndexMap<GraphId, Sender<InternalCommand>>,
         sends: &[Link],
     ) -> Result<Vec<(ExternalDestination, Vec<Destination>)>> {
         let mut requests: Vec<_> = sends.iter().filter(|l| l.src.0 == graph_id).collect();
@@ -152,7 +152,7 @@ impl SystemRepr {
 
     fn create_requests(
         id: GraphId,
-        senders: &IndexMap<GraphId, Sender<ProphCommand>>,
+        senders: &IndexMap<GraphId, Sender<InternalCommand>>,
         requests: &[Link],
     ) -> Result<Vec<(ExternalDestination, Vec<Destination>)>> {
         let mut requests: Vec<_> = requests.iter().filter(|l| l.dst.0 == id).collect();
@@ -265,7 +265,7 @@ impl std::fmt::Debug for Internal {
 
 type ResponseResult = std::result::Result<Internal, String>;
 
-/// Message is a letter that contains an sender which can be used to set a response
+/// Reponse is a letter that contains an sender which can be used to set a response
 #[derive(Clone)]
 pub struct Response {
     sender: Sender<ResponseResult>,
@@ -300,20 +300,20 @@ impl Response {
 type Destination = (NodeId, ParamId);
 
 /// External address
-type ExternalDestination = (Sender<ProphCommand>, Vec<Destination>);
+type ExternalDestination = (Sender<InternalCommand>, Vec<Destination>);
 
 /// The runner worker
 struct InternalRunner {
     /// The graph
     graph: Graph,
     /// A receiver for the commands
-    receiver: Receiver<ProphCommand>,
+    receiver: Receiver<InternalCommand>,
     /// Requests between graphs
     requests: Vec<(ExternalDestination, Vec<Destination>)>,
     /// Sends between graphs
     sends: Vec<(ExternalDestination, Vec<Destination>)>,
     /// Queue
-    queue: Vec<ProphCommand>,
+    queue: Vec<InternalCommand>,
 }
 
 impl InternalRunner {
@@ -473,7 +473,7 @@ struct Runner {
     /// Thread with the internal runner inside
     thread: Option<JoinHandle<()>>,
     /// Sender to the internal runner
-    sender: Sender<ProphCommand>,
+    sender: Sender<InternalCommand>,
 }
 
 impl Runner {
