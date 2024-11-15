@@ -5,13 +5,13 @@ mod ids;
 mod node;
 pub mod props;
 pub mod system;
-mod traits;
+mod transfomer;
 pub mod value;
 
 use std::error::Error;
 
 pub use self::props::{GenericOwnedProp, InputProp, OutputProp};
-pub use self::traits::{Stepper, Transformer};
+pub use self::transfomer::{Stepper, Transformer};
 pub use ids::{GraphId, NodeId, ParamId};
 pub use system::System;
 pub use value::Value;
