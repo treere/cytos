@@ -34,6 +34,8 @@ pub extern "C" fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
         .add("Timer", Timer::default)
         .add("Blur", imageops::Blur::default)
         .add("FastBlur", imageops::FastBlur::default)
+        .add("Brighten", imageops::Brighten::default)
+        .add("Contrast", imageops::Contrast::default)
         .add("Filter3x3", imageops::Filter3x3::default)
         .add("Unsharpen", imageops::Unsharpen::default)
         .add("Save", imageops::Unsharpen::default);
