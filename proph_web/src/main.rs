@@ -9,7 +9,6 @@ use axum::{
     Router,
 };
 use proph::architecture::system::{Command, SystemRepr};
-use proph::architecture::{GraphId, NodeId, ParamId};
 use proph::{architecture::System, loader::Registry};
 use serde_json::{json, Value};
 
@@ -84,28 +83,23 @@ async fn graph_status(
     Json(json!(result))
 }
 async fn graph_start(Path(graph_id): Path<String>, State(system): State<WebSystem>) -> Json<Value> {
-    let graph_id: GraphId = serde_json::from_str(&graph_id).unwrap();
-    let result = system.command(graph_id, Command::Start).unwrap();
+    let result = system.command(graph_id.into(), Command::Start).unwrap();
     Json(json!(result))
 }
 async fn graph_stop(Path(graph_id): Path<String>, State(system): State<WebSystem>) -> Json<Value> {
-    let graph_id: GraphId = serde_json::from_str(&graph_id).unwrap();
-    let result = system.command(graph_id, Command::Stop).unwrap();
+    let result = system.command(graph_id.into(), Command::Stop).unwrap();
     Json(json!(result))
 }
 async fn node_list(Path(graph_id): Path<String>, State(system): State<WebSystem>) -> Json<Value> {
-    let graph_id: GraphId = serde_json::from_str(&graph_id).unwrap();
-    let result = system.command(graph_id, Command::ListNodes).unwrap();
+    let result = system.command(graph_id.into(), Command::ListNodes).unwrap();
     Json(json!(result))
 }
 async fn node_inputs(
     Path((graph_id, node_id)): Path<(String, String)>,
     State(system): State<WebSystem>,
 ) -> Json<Value> {
-    let graph_id: GraphId = serde_json::from_str(&graph_id).unwrap();
-    let node_id: NodeId = serde_json::from_str(&node_id).unwrap();
     let result = system
-        .command(graph_id, Command::ListInputs(node_id))
+        .command(graph_id.into(), Command::ListInputs(node_id.into()))
         .unwrap();
     Json(json!(result))
 }
@@ -113,10 +107,8 @@ async fn node_outputs(
     Path((graph_id, node_id)): Path<(String, String)>,
     State(system): State<WebSystem>,
 ) -> Json<Value> {
-    let graph_id: GraphId = serde_json::from_str(&graph_id).unwrap();
-    let node_id: NodeId = serde_json::from_str(&node_id).unwrap();
     let result = system
-        .command(graph_id, Command::ListOutputs(node_id))
+        .command(graph_id.into(), Command::ListOutputs(node_id.into()))
         .unwrap();
     Json(json!(result))
 }
@@ -124,12 +116,11 @@ async fn node_param_dump(
     Path((graph_id, node_id, param_id)): Path<(String, String, String)>,
     State(system): State<WebSystem>,
 ) -> Json<Value> {
-    let graph_id: GraphId = serde_json::from_str(&graph_id).unwrap();
-    let node_id: NodeId = serde_json::from_str(&node_id).unwrap();
-    let param_id: ParamId = serde_json::from_str(&param_id).unwrap();
-
     let result = system
-        .command(graph_id, Command::MultiDump(vec![(node_id, param_id)]))
+        .command(
+            graph_id.into(),
+            Command::MultiDump(vec![(node_id.into(), param_id.into())]),
+        )
         .unwrap();
     Json(json!(result))
 }
@@ -138,14 +129,10 @@ async fn node_param_load(
     State(system): State<WebSystem>,
     Json(value): Json<proph::architecture::Value>,
 ) -> Json<Value> {
-    let graph_id: GraphId = serde_json::from_str(&graph_id).unwrap();
-    let node_id: NodeId = serde_json::from_str(&node_id).unwrap();
-    let param_id: ParamId = serde_json::from_str(&param_id).unwrap();
-
     let result = system
         .command(
-            graph_id,
-            Command::MultiLoad(vec![(node_id, param_id, value)]),
+            graph_id.into(),
+            Command::MultiLoad(vec![(node_id.into(), param_id.into(), value)]),
         )
         .unwrap();
     Json(json!(result))
