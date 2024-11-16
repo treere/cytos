@@ -3,7 +3,6 @@ extern crate proph_derive;
 mod add_one;
 mod decoder;
 mod incremental;
-mod list_files;
 mod mean;
 mod print;
 mod source;
@@ -13,7 +12,6 @@ mod types;
 use add_one::AddValue;
 use decoder::ImageDecoder;
 use incremental::IncrementalGenerator;
-use list_files::ListFiles;
 use mean::Mean;
 use print::Print;
 use proph::loader::DynamicLoadingRegistryWrapper;
@@ -31,6 +29,5 @@ pub extern "C" fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
         .add("PrintU64", Print::<u64>::default)
         .add("PrintF64", Print::<f64>::default)
         .add("PrintString", Print::<String>::default)
-        .add("ListFiles", ListFiles::default)
         .add("Timer", Timer::default);
 }
