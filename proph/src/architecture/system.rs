@@ -202,7 +202,7 @@ pub struct System {
 
 impl System {
     /// Send a command to a runner
-    pub fn command(&mut self, graph: GraphId, command: Command) -> Result<Value> {
+    pub fn command(&self, graph: GraphId, command: Command) -> Result<Value> {
         self.internal_command(graph, command).and_then(|r| match r {
             Internal::Value(value) => Ok(value),
             Internal::Prop(_generic_owned_prop) => Err("cannot return owned".into()),
@@ -210,9 +210,9 @@ impl System {
     }
 
     /// Send a command to a runner
-    fn internal_command(&mut self, graph: GraphId, command: Command) -> Result<Internal> {
+    fn internal_command(&self, graph: GraphId, command: Command) -> Result<Internal> {
         self.runners
-            .get_mut(&graph)
+            .get(&graph)
             .ok_or("not found")?
             .command(command)
     }
@@ -474,7 +474,7 @@ struct Runner {
 
 impl Runner {
     /// Send a command to the internal runner
-    pub fn command(&mut self, command: Command) -> Result<Internal> {
+    pub fn command(&self, command: Command) -> Result<Internal> {
         let (message, receiver) = Response::new();
 
         match self.sender.send((command, message)) {

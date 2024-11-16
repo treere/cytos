@@ -43,8 +43,17 @@ macro_rules! create_ids {
                 write!(f, "{}", format_radix(self.0, 36))
             }
         }
+
+        impl From<String> for $struct_name {
+            fn from(value: String) -> Self {
+                let value = serde_json::to_string(&value).unwrap();
+                serde_json::from_str(&value).unwrap()
+            }
+        }
+
     };
 }
+
 
 /// Format an u64 using a given radix
 fn format_radix(mut x: u64, radix: u32) -> String {

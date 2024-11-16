@@ -58,7 +58,7 @@ fn graph_list(status: Rc<Mutex<Status>>) -> Result<CommandStatus, anyhow::Error>
 }
 
 fn graph_start(status: Rc<Mutex<Status>>, graph: String) -> Result<CommandStatus, anyhow::Error> {
-    let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
+    let status = status.lock().or(Err(anyhow!("cannot lock")))?;
     let graph = serde_json::to_string(&graph).map_err(|x| anyhow!(x))?;
     let graph_id: GraphId = serde_json::from_str(&graph).map_err(|x| anyhow!(x))?;
     let result = status.system.command(graph_id, RCommand::Start);
@@ -68,7 +68,7 @@ fn graph_start(status: Rc<Mutex<Status>>, graph: String) -> Result<CommandStatus
 }
 
 fn graph_stop(status: Rc<Mutex<Status>>, graph: String) -> Result<CommandStatus, anyhow::Error> {
-    let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
+    let status = status.lock().or(Err(anyhow!("cannot lock")))?;
     let graph = serde_json::to_string(&graph).map_err(|x| anyhow!(x))?;
     let graph_id: GraphId = serde_json::from_str(&graph).map_err(|x| anyhow!(x))?;
     let result = status.system.command(graph_id, RCommand::Stop);
@@ -79,7 +79,7 @@ fn graph_stop(status: Rc<Mutex<Status>>, graph: String) -> Result<CommandStatus,
 }
 
 fn graph_status(status: Rc<Mutex<Status>>, graph: String) -> Result<CommandStatus, anyhow::Error> {
-    let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
+    let status = status.lock().or(Err(anyhow!("cannot lock")))?;
     let graph = serde_json::to_string(&graph).map_err(|x| anyhow!(x))?;
     let graph_id: GraphId = serde_json::from_str(&graph).map_err(|x| anyhow!(x))?;
     let result = status.system.command(graph_id, RCommand::Status);
@@ -139,7 +139,7 @@ fn library_inspect(library: String) -> Result<CommandStatus, anyhow::Error> {
 fn node_list(status: Rc<Mutex<Status>>, graph: String) -> Result<CommandStatus, anyhow::Error> {
     let graph = serde_json::to_string(&graph).map_err(|x| anyhow!(x))?;
     let graph_id: GraphId = serde_json::from_str(&graph).map_err(|x| anyhow!(x))?;
-    let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
+    let status = status.lock().or(Err(anyhow!("cannot lock")))?;
     let result = status
         .system
         .command(graph_id, RCommand::ListNodes)
@@ -159,7 +159,7 @@ fn node_inputs(
     let node_id: NodeId = serde_json::from_str(&node).map_err(|x| anyhow!(x))?;
     let graph = serde_json::to_string(&graph).map_err(|x| anyhow!(x))?;
     let graph_id: GraphId = serde_json::from_str(&graph).map_err(|x| anyhow!(x))?;
-    let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
+    let status = status.lock().or(Err(anyhow!("cannot lock")))?;
     let result = status
         .system
         .command(graph_id, RCommand::ListInputs(node_id))
@@ -179,7 +179,7 @@ fn node_outputs(
     let node_id: NodeId = serde_json::from_str(&node).map_err(|x| anyhow!(x))?;
     let graph = serde_json::to_string(&graph).map_err(|x| anyhow!(x))?;
     let graph_id: GraphId = serde_json::from_str(&graph).map_err(|x| anyhow!(x))?;
-    let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
+    let status = status.lock().or(Err(anyhow!("cannot lock")))?;
     let result = status
         .system
         .command(graph_id, RCommand::ListOutputs(node_id))
@@ -203,7 +203,7 @@ fn node_dump(
     let graph = serde_json::to_string(&graph).map_err(|x| anyhow!(x))?;
     let graph_id: GraphId = serde_json::from_str(&graph).map_err(|x| anyhow!(x))?;
 
-    let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
+    let status = status.lock().or(Err(anyhow!("cannot lock")))?;
     let result = status
         .system
         .command(graph_id, RCommand::MultiDump(vec![(node, param)]));
@@ -228,7 +228,7 @@ fn node_load(
     let graph_id: GraphId = serde_json::from_str(&graph).map_err(|x| anyhow!(x))?;
     let value: Value = serde_json::from_str(&value).map_err(|x| anyhow!(x))?;
 
-    let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
+    let status = status.lock().or(Err(anyhow!("cannot lock")))?;
     let result = status
         .system
         .command(graph_id, RCommand::MultiLoad(vec![(node, param, value)]));
@@ -337,8 +337,8 @@ fn node_load_command(status: Rc<Mutex<Status>>) -> Command<'static> {
 }
 
 fn main() -> Result<(), &'static str> {
-    let matches = clap::Command::new("bench")
-        .about("benchmark a configuration")
+    let matches = clap::Command::new("rep")
+        .about("start a proph repl")
         .version("0.0.1")
         .arg_required_else_help(true)
         .author("Treere")
