@@ -4,11 +4,37 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::Frame;
 
-#[derive(Default, Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize)]
+pub struct SerdeImage {
+    width: u32,
+    height: u32,
+    data: Vec<u8>,
+}
+
+impl TryFrom<SerdeImage> for Image {
+    fn try_from(value: SerdeImage) -> std::result::Result<Self, Self::Error> {
+        let image = image::GrayImage::from_vec(value.width, value.height, value.data)
+            .ok_or("cannot convert")?;
+        Ok(Image { image })
+    }
+
+    type Error = &'static str;
+}
+
+impl Into<SerdeImage> for Image {
+    fn into(self) -> SerdeImage {
+        SerdeImage {
+            width: self.image.width(),
+            height: self.image.height(),
+            data: self.image.into_vec(),
+        }
+    }
+}
+
+#[derive(Default, Clone, Serialize, Deserialize)]
+#[serde(try_from = "SerdeImage", into = "SerdeImage")]
 pub struct Image {
-    pub width: u32,
-    pub height: u32,
-    pub data: Vec<u8>,
+    pub image: image::GrayImage,
 }
 
 impl Ownable for Image {
@@ -33,14 +59,8 @@ pub struct ImageDecoder {
 impl Stepper for ImageDecoder {
     fn step(&mut self) -> Result<()> {
         if let Ok(image) = image::load_from_memory(self.frame.as_u8()) {
-            let gray = image.to_luma8();
-            let width = gray.width();
-            let height = gray.height();
-            let data = gray.into_vec();
             *self.decoded = Image {
-                width,
-                height,
-                data,
+                image: image.to_luma8(),
             };
             Ok(())
         } else {
