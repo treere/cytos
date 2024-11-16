@@ -2,6 +2,7 @@ extern crate proph_derive;
 
 mod add_one;
 mod decoder;
+mod imageops;
 mod incremental;
 mod mean;
 mod print;
@@ -29,5 +30,9 @@ pub extern "C" fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
         .add("PrintU64", Print::<u64>::default)
         .add("PrintF64", Print::<f64>::default)
         .add("PrintString", Print::<String>::default)
-        .add("Timer", Timer::default);
+        .add("Timer", Timer::default)
+        .add("Blur", imageops::Blur::default)
+        .add("FastBlur", imageops::FastBlur::default)
+        .add("Filter3x3", imageops::Filter3x3::default)
+        .add("Unsharpen", imageops::Unsharpen::default);
 }
