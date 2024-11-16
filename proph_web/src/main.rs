@@ -4,7 +4,10 @@ use std::{fs::File, sync::Arc};
 
 use axum::extract::{Path, State};
 use axum::Json;
-use axum::{routing::get, Router};
+use axum::{
+    routing::{get, post},
+    Router,
+};
 use proph::architecture::system::{Command, SystemRepr};
 use proph::architecture::{GraphId, NodeId, ParamId};
 use proph::{architecture::System, loader::Registry};
@@ -46,14 +49,14 @@ async fn main() {
         .route("/", get(root))
         .route("/graphs", get(graphs_list))
         .route("/graphs/:id", get(graph_status))
-        .route("/graphs/:graph_id/start", get(graph_start))
-        .route("/graphs/:graph_id/stop", get(graph_stop))
+        .route("/graphs/:graph_id/start", post(graph_start))
+        .route("/graphs/:graph_id/stop", post(graph_stop))
         .route("/graphs/:graph_id/nodes", get(node_list))
         .route("/graphs/:graph_id/nodes/:node_id/inputs", get(node_inputs))
         .route("/graphs/:graph_id/nodes/:node_id/output", get(node_outputs))
         .route(
             "/graphs/:graph_id/nodes/:node_id/params/:param_id/load",
-            get(node_param_load),
+            post(node_param_load),
         )
         .route(
             "/graphs/:graph_id/nodes/:node_id/params/:param_id/dump",
@@ -67,7 +70,7 @@ async fn main() {
 }
 
 async fn root() -> &'static str {
-    "ciao!"
+    "Hello World!"
 }
 async fn graphs_list(State(system): State<WebSystem>) -> Json<Value> {
     let graphs: Vec<_> = system.graphs().cloned().collect();

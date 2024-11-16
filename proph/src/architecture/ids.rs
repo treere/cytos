@@ -50,10 +50,8 @@ macro_rules! create_ids {
                 serde_json::from_str(&value).unwrap()
             }
         }
-
     };
 }
-
 
 /// Format an u64 using a given radix
 fn format_radix(mut x: u64, radix: u32) -> String {
