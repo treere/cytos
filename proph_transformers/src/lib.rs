@@ -2,6 +2,7 @@ extern crate proph_derive;
 
 mod add_one;
 mod decoder;
+mod encoder;
 mod imageops;
 mod incremental;
 mod mean;
@@ -34,5 +35,6 @@ pub extern "C" fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
         .add("Blur", imageops::Blur::default)
         .add("FastBlur", imageops::FastBlur::default)
         .add("Filter3x3", imageops::Filter3x3::default)
-        .add("Unsharpen", imageops::Unsharpen::default);
+        .add("Unsharpen", imageops::Unsharpen::default)
+        .add("Save", imageops::Unsharpen::default);
 }
