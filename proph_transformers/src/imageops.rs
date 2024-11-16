@@ -62,7 +62,7 @@ pub struct Filter3x3 {
 impl Stepper for Filter3x3 {
     fn step(&mut self) -> Result<()> {
         *self.output = Image {
-            image: image::imageops::filter3x3(&self.input.image, &*self.kernel),
+            image: image::imageops::filter3x3(&self.input.image, &self.kernel),
         };
 
         Ok(())

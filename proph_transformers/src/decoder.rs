@@ -21,12 +21,12 @@ impl TryFrom<SerdeImage> for Image {
     type Error = &'static str;
 }
 
-impl Into<SerdeImage> for Image {
-    fn into(self) -> SerdeImage {
+impl From<Image> for SerdeImage {
+    fn from(value: Image) -> Self {
         SerdeImage {
-            width: self.image.width(),
-            height: self.image.height(),
-            data: self.image.into_vec(),
+            width: value.image.width(),
+            height: value.image.height(),
+            data: value.image.into_vec(),
         }
     }
 }

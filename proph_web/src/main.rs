@@ -28,7 +28,7 @@ async fn main() {
     let library = matches.get_one::<String>("library").unwrap();
 
     let mut registry = Registry::default();
-    registry.load_library(&library).unwrap();
+    registry.load_library(library).unwrap();
 
     let filename = matches.get_one::<String>("config").unwrap();
     let mut configuration = String::new();
