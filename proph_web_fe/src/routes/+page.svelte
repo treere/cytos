@@ -1,5 +1,11 @@
-<script>
-	let { data } = $props();
+<script lang="ts">
+	interface Props {
+		data: {
+			graphs: Promise<string[]>;
+		};
+	}
+
+	let { data }: Props = $props();
 </script>
 
 <h1 class="mb-3 text-5xl">Graph list</h1>
