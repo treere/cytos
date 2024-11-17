@@ -1,5 +1,12 @@
-<script>
+<script lang="ts">
 	let { data } = $props();
+
+	async function handleStart(name: string) {
+		await fetch(`/api/graphs/${name}/start`, { method: 'POST' });
+	}
+	async function handleStop(name: string) {
+		await fetch(`/api/graphs/${name}/stop`, { method: 'POST' });
+	}
 </script>
 
 <div>
@@ -10,6 +17,8 @@
 		loading
 	{:then status}
 		{status}
+		<button onclick={() => handleStart(data.name)}>start</button>
+		<button onclick={() => handleStop(data.name)}>stop</button>
 	{:catch}
 		Error
 	{/await}
