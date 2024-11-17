@@ -9,7 +9,7 @@
 {:then graphs}
 	<ul>
 		{#each graphs as graph}
-			<li>{graph}</li>
+			<li><a href={`graphs/${graph}`}>{graph}</a></li>
 		{/each}
 	</ul>
 {:catch}

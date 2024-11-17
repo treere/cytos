@@ -14,3 +14,16 @@
 		Error
 	{/await}
 </div>
+<div>
+	Nodi: {#await data.nodes}
+		loading
+	{:then nodes}
+		<ul>
+			{#each nodes as node}
+				<li>{node}</li>
+			{/each}
+		</ul>
+	{:catch}
+		Error
+	{/await}
+</div>
