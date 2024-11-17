@@ -52,7 +52,7 @@ async fn main() {
         .route("/graphs/:graph_id/stop", post(graph_stop))
         .route("/graphs/:graph_id/nodes", get(node_list))
         .route("/graphs/:graph_id/nodes/:node_id/inputs", get(node_inputs))
-        .route("/graphs/:graph_id/nodes/:node_id/output", get(node_outputs))
+        .route("/graphs/:graph_id/nodes/:node_id/outputs", get(node_outputs))
         .route(
             "/graphs/:graph_id/nodes/:node_id/params/:param_id/load",
             post(node_param_load),

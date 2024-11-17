@@ -20,7 +20,7 @@
 	{:then nodes}
 		<ul>
 			{#each nodes as node}
-				<li>{node}</li>
+				<li><a href={`/graphs/${data.name}/nodes/${node}`}>{node}</a></li>
 			{/each}
 		</ul>
 	{:catch}
