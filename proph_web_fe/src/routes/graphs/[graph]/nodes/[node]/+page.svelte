@@ -16,7 +16,7 @@
 	{:then inputs}
 		<ul>
 			{#each inputs as input}
-				<li>{input}</li>
+				<li><a href={`/graphs/${data.graph}/nodes/${data.node}/params/${input}`}>{input}</a></li>
 			{/each}
 		</ul>
 	{:catch}
@@ -30,7 +30,7 @@
 	{:then outputs}
 		<ul>
 			{#each outputs as output}
-				<li>{output}</li>
+				<li><a href={`/graphs/${data.graph}/nodes/${data.node}/params/${output}`}>{output}</a></li>
 			{/each}
 		</ul>
 	{:catch}
