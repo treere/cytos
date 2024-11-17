@@ -18,7 +18,7 @@
 	Value: {#await data.value}
 		loading
 	{:then value}
-		{JSON.stringify(value, null, 2)}
+		{JSON.stringify(value[0], null, 2)}
 	{:catch}
 		Error
 	{/await}
