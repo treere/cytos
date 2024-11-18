@@ -59,10 +59,9 @@ impl Stepper for Rscam {
     }
 
     fn terminate(&mut self) -> Result<()> {
-        if let Some(mut camera) = self.camera.take() {
-            camera.stop().or(Err("cannot stop".into()))
-        } else {
-            Ok(())
-        }
+        *self.frame = Frame::default();
+        let camera = self.camera.take();
+        drop(camera);
+        Ok(())
     }
 }
