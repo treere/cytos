@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { JSONEditor, Mode, type Content, type TextContent } from 'svelte-jsoneditor';
+	import { JSONEditor, Mode, type Content } from 'svelte-jsoneditor';
+	import { invalidateAll } from '$app/navigation';
 	let { data } = $props();
 
 	let content: Content | undefined = $state();
 
-	const update = () => {
+	const load = () => {
 		if (content !== undefined && 'text' in content && content.text !== undefined) {
 			fetch(`/api/graphs/${data.graph}/nodes/${data.node}/params/${data.param}/load`, {
 				method: 'POST',
@@ -17,22 +18,22 @@
 			console.log('Invalid content');
 		}
 	};
+
+	const update = () => {
+		invalidateAll();
+	};
 </script>
 
-<div>
-	Graph: {data.graph}
-</div>
+<h1 class="mb-4 text-3xl">
+  >
+	<a href="/">root</a> >
+	<a href={`/graphs/${data.graph}`}>{data.graph}</a> >
+	<a href={`/graphs/${data.graph}/nodes/${data.node}`}>{data.node}</a> >
+    <a href={`/graphs/${data.graph}/nodes/${data.node}/params/${data.param}`}>{data.param}</a> 
+</h1>
 
-<div>
-	Node: {data.node}
-</div>
-
-<div>
-	Param: {data.param}
-</div>
-
-<div>
-	Value: {#await data.value}
+<div class="mb-4">
+	{#await data.value}
 		loading
 	{:then value}
 		<JSONEditor
@@ -42,7 +43,18 @@
 				content = data;
 			}}
 		/>
-		<button onclick={update}>update</button>
+		<button
+			onclick={update}
+			class="mr-2 mt-3 rounded-lg bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
+		>
+			Update
+		</button>
+		<button
+			onclick={load}
+			class="mr-2 mt-3 rounded-lg bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
+		>
+			Load
+		</button>
 	{:catch}
 		Error
 	{/await}

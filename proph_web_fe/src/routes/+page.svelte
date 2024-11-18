@@ -8,12 +8,17 @@
 	let { data }: Props = $props();
 </script>
 
-<h1 class="mb-3 text-5xl">Graph list</h1>
+<h1 class="mb-4 text-3xl">
+  >
+	<a href="/">root</a>
+</h1>
+<div class="mb-4">
+	<h2 class="mb-4 text-2xl">Inputs</h2>
 
 {#await data.graphs}
-	loading
+	Loading
 {:then graphs}
-	<ul>
+	<ul class="list-inside list-disc pl-4">
 		{#each graphs as graph}
 			<li><a href={`graphs/${graph}`}>{graph}</a></li>
 		{/each}
@@ -21,3 +26,4 @@
 {:catch}
 	Error
 {/await}
+</div>

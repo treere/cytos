@@ -1,10 +1,10 @@
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ fetch, params }) => {
-	const name = params.graph;
+	const graph = params.graph;
 	return {
-		name,
-		status: fetch(`/api/graphs/${name}`).then((x) => x.json()),
-		nodes: fetch(`/api/graphs/${name}/nodes`).then((x) => x.json())
+		graph,
+		status: fetch(`/api/graphs/${graph}`).then((x) => x.json()),
+		nodes: fetch(`/api/graphs/${graph}/nodes`).then((x) => x.json())
 	};
 };
