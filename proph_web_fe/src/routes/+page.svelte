@@ -13,7 +13,7 @@
 	<a href="/">root</a>
 </h1>
 <div class="mb-4">
-	<h2 class="mb-4 text-2xl">Inputs</h2>
+	<h2 class="mb-4 text-2xl">Graphs</h2>
 
 {#await data.graphs}
 	Loading
