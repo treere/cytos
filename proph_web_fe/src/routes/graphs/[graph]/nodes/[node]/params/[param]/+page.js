@@ -6,6 +6,8 @@ export async function load({ fetch, params }) {
 		graph,
 		node,
 		param,
-		value: fetch(`/api/graphs/${graph}/nodes/${node}/params/${param}/dump`).then((x) => x.json())
+		value: fetch(`/api/graphs/${graph}/nodes/${node}/params/${param}/dump`)
+			.then((x) => x.json())
+			.then((x) => x[0])
 	};
 }

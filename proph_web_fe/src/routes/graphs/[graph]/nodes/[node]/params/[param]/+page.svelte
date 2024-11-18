@@ -1,4 +1,5 @@
 <script>
+	import { JSONEditor } from 'svelte-jsoneditor';
 	let { data } = $props();
 </script>
 
@@ -18,7 +19,7 @@
 	Value: {#await data.value}
 		loading
 	{:then value}
-		{JSON.stringify(value[0], null, 2)}
+		<JSONEditor content={{ json: value }} />
 	{:catch}
 		Error
 	{/await}
