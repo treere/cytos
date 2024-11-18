@@ -1,6 +1,18 @@
 <script>
 	import { JSONEditor } from 'svelte-jsoneditor';
 	let { data } = $props();
+
+	let content = $state();
+
+	const update = () => {
+		fetch(`/api/graphs/${data.graph}/nodes/${data.node}/params/${data.param}/load`, {
+			method: 'POST',
+			body: content.text,
+			headers: {
+				'Content-Type': 'application/json'
+			}
+		});
+	};
 </script>
 
 <div>
@@ -19,7 +31,13 @@
 	Value: {#await data.value}
 		loading
 	{:then value}
-		<JSONEditor content={{ json: value }} />
+		<JSONEditor
+			content={{ json: value }}
+			onChange={(data) => {
+				content = data;
+			}}
+		/>
+		<button onclick={update}>update</button>
 	{:catch}
 		Error
 	{/await}
