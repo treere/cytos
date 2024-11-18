@@ -1,5 +1,5 @@
 <script>
-	import { JSONEditor } from 'svelte-jsoneditor';
+	import { JSONEditor, Mode } from 'svelte-jsoneditor';
 	let { data } = $props();
 
 	let content = $state();
@@ -32,6 +32,7 @@
 		loading
 	{:then value}
 		<JSONEditor
+			mode={Mode.text}
 			content={{ json: value }}
 			onChange={(data) => {
 				content = data;
