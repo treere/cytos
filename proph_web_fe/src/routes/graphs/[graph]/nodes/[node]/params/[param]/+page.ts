@@ -1,4 +1,6 @@
-export async function load({ fetch, params }) {
+import type { PageLoad } from './$types';
+
+export const load: PageLoad = async ({ fetch, params }) => {
 	const graph = params.graph;
 	const node = params.node;
 	const param = params.param;
@@ -10,4 +12,4 @@ export async function load({ fetch, params }) {
 			.then((x) => x.json())
 			.then((x) => x[0])
 	};
-}
+};

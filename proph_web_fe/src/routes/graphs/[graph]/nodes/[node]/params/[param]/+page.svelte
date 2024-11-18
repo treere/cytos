@@ -1,17 +1,21 @@
-<script>
-	import { JSONEditor, Mode } from 'svelte-jsoneditor';
+<script lang="ts">
+	import { JSONEditor, Mode, type Content, type TextContent } from 'svelte-jsoneditor';
 	let { data } = $props();
 
-	let content = $state();
+	let content: Content | undefined = $state();
 
 	const update = () => {
-		fetch(`/api/graphs/${data.graph}/nodes/${data.node}/params/${data.param}/load`, {
-			method: 'POST',
-			body: content.text,
-			headers: {
-				'Content-Type': 'application/json'
-			}
-		});
+		if (content !== undefined && 'text' in content && content.text !== undefined) {
+			fetch(`/api/graphs/${data.graph}/nodes/${data.node}/params/${data.param}/load`, {
+				method: 'POST',
+				body: content.text,
+				headers: {
+					'Content-Type': 'application/json'
+				}
+			});
+		} else {
+			console.log('Invalid content');
+		}
 	};
 </script>
 
