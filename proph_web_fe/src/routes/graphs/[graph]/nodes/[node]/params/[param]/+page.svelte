@@ -25,17 +25,43 @@
 </script>
 
 <h1 class="mb-4 text-3xl">
-  >
+	>
 	<a href="/">root</a> >
 	<a href={`/graphs/${data.graph}`}>{data.graph}</a> >
 	<a href={`/graphs/${data.graph}/nodes/${data.node}`}>{data.node}</a> >
-    <a href={`/graphs/${data.graph}/nodes/${data.node}/params/${data.param}`}>{data.param}</a> 
+	<a href={`/graphs/${data.graph}/nodes/${data.node}/params/${data.param}`}>{data.param}</a>
 </h1>
 
 <div class="mb-4">
 	{#await data.value}
 		loading
 	{:then value}
+		<img id="image" alt="frame" />
+		<button
+			onclick={() => {
+				const binString = Array.from(value.frame, (byte: number) =>
+					String.fromCodePoint(byte)
+				).join('');
+				const b64encoded = btoa(binString);
+
+				document
+					.getElementById('image')
+					?.setAttribute('src', 'data:image/jpg;base64,' + b64encoded);
+			}}>view</button
+		>
+		<button
+			onclick={update}
+			class="my-3 mr-2 rounded-lg bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
+		>
+			Update
+		</button>
+		<button
+			onclick={load}
+			class="my-3 mr-2 rounded-lg bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
+		>
+			Load
+		</button>
+
 		<JSONEditor
 			mode={Mode.text}
 			content={{ json: value }}
@@ -43,18 +69,6 @@
 				content = data;
 			}}
 		/>
-		<button
-			onclick={update}
-			class="mr-2 mt-3 rounded-lg bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
-		>
-			Update
-		</button>
-		<button
-			onclick={load}
-			class="mr-2 mt-3 rounded-lg bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
-		>
-			Load
-		</button>
 	{:catch}
 		Error
 	{/await}

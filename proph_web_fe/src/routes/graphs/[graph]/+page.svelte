@@ -13,7 +13,7 @@
 </script>
 
 <h1 class="mb-4 text-3xl">
-  >
+	>
 	<a href="/">root</a> >
 	<a href={`/graphs/${data.graph}`}>{data.graph}</a>
 </h1>
