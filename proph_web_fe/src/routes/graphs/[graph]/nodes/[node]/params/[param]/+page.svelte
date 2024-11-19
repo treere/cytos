@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { JSONEditor, Mode, type Content } from 'svelte-jsoneditor';
 	import { invalidateAll } from '$app/navigation';
+	import ImageViewer from '$lib/image_viewer.svelte';
 	let { data } = $props();
 
 	let content: Content | undefined = $state();
@@ -36,19 +37,7 @@
 	{#await data.value}
 		loading
 	{:then value}
-		<img id="image" alt="frame" />
-		<button
-			onclick={() => {
-				const binString = Array.from(value.frame, (byte: number) =>
-					String.fromCodePoint(byte)
-				).join('');
-				const b64encoded = btoa(binString);
-
-				document
-					.getElementById('image')
-					?.setAttribute('src', 'data:image/jpg;base64,' + b64encoded);
-			}}>view</button
-		>
+		<ImageViewer {value} />
 		<button
 			onclick={update}
 			class="my-3 mr-2 rounded-lg bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
