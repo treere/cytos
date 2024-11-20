@@ -33,15 +33,19 @@
 		const ctx = canvas.getContext('2d');
 		canvas.style.width = '800px';
 
-		if (!ctx) return;
+		if (!ctx) throw 'boom';
 
 		ctx.putImageData(imageData, 0, 0);
 		setChild('image', canvas);
 	};
 
 	let render = () => {
-		if (selectedFormat === 'jpeg') renderImage();
-		else renderGreyArray();
+		try {
+			if (selectedFormat === 'jpeg') renderImage();
+			else renderGreyArray();
+		} catch {
+			alert('Error rendering');
+		}
 	};
 </script>
 
