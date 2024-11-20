@@ -52,7 +52,7 @@
 		</button>
 
 		<JSONEditor
-			mode={Mode.text}
+			mode={Mode.tree}
 			content={{ json: value }}
 			onChange={(data) => {
 				content = data;
