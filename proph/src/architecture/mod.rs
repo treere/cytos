@@ -10,7 +10,7 @@ pub mod value;
 
 use std::error::Error;
 
-pub use self::props::{GenericOwnedProp, InputProp, OutputProp};
+pub use self::props::{GenericOwnedProp, Prop};
 pub use self::transfomer::{Stepper, Transformer};
 pub use ids::{GraphId, NodeId, ParamId};
 pub use system::System;

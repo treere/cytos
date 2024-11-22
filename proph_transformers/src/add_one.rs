@@ -1,19 +1,24 @@
-use proph::architecture::{InputProp, OutputProp, Result, Stepper};
+use proph::architecture::{Prop, Result, Stepper};
 use proph_derive::ProphNode;
 
 #[derive(ProphNode)]
 pub struct AddValue {
-    input: InputProp<u64>,
-    increment: InputProp<u64>,
-    output: OutputProp<u64>,
+    #[input]
+    input: Prop<u64>,
+
+    #[input]
+    increment: Prop<u64>,
+
+    #[output]
+    output: Prop<u64>,
 }
 
 impl Default for AddValue {
     fn default() -> Self {
         AddValue {
-            input: InputProp::default(),
-            increment: InputProp::new(1),
-            output: OutputProp::default(),
+            input: Prop::default(),
+            increment: Prop::new(1),
+            output: Prop::default(),
         }
     }
 }

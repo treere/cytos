@@ -1,9 +1,10 @@
-use proph::architecture::{OutputProp, Result, Stepper};
+use proph::architecture::{Prop, Result, Stepper};
 use proph_derive::ProphNode;
 
 #[derive(ProphNode, Default)]
 pub struct IncrementalGenerator {
-    output: OutputProp<u64>,
+    #[output]
+    output: Prop<u64>,
 }
 
 impl Stepper for IncrementalGenerator {

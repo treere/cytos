@@ -1,4 +1,4 @@
-use proph::architecture::{props::Ownable, InputProp, OutputProp, Result, Stepper};
+use proph::architecture::{props::Ownable, Prop, Result, Stepper};
 use proph_derive::ProphNode;
 use serde::{Deserialize, Serialize};
 
@@ -51,9 +51,11 @@ impl Ownable for Image {
 
 #[derive(ProphNode, Default)]
 pub struct ImageDecoder {
-    frame: InputProp<Frame>,
+    #[input]
+    frame: Prop<Frame>,
 
-    decoded: OutputProp<Image>,
+    #[output]
+    decoded: Prop<Image>,
 }
 
 impl Stepper for ImageDecoder {

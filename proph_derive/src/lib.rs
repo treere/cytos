@@ -1,14 +1,12 @@
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use quote::quote;
-use syn::{
-    parse_macro_input, Data, DataStruct, DeriveInput, Field, Fields, LitInt, Type, TypePath,
-};
+use syn::{parse_macro_input, Data, DataStruct, DeriveInput, Field, Fields, LitInt};
 
-const INPUT_PROP_TYPE: &[&str] = &["InputProp"];
-const OUTPUT_PROP_TYPE: &[&str] = &["OutputProp"];
+const INPUT_PROP_TYPE: &str = "input";
+const OUTPUT_PROP_TYPE: &str = "output";
 
-#[proc_macro_derive(ProphNode)]
+#[proc_macro_derive(ProphNode, attributes(input, output))]
 pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
     let DeriveInput {
         ident,
@@ -64,7 +62,7 @@ fn create_link(fields: &Fields) -> proc_macro2::TokenStream {
         .collect::<Vec<_>>();
 
     quote! {
-        fn link(&mut self, name: proph::architecture::ParamId, val: proph::architecture::props::GenericOutputProp)
+        fn link(&mut self, name: proph::architecture::ParamId, val: proph::architecture::props::GenericProp)
                 -> proph::architecture::Result<()> {
             match name {
                 #(#inputs)*
@@ -189,7 +187,7 @@ fn create_input(fields: &Fields) -> proc_macro2::TokenStream {
 
     quote! {
         fn input(&self, val: proph::architecture::ParamId)
-                 -> Option<proph::architecture::props::GenericInputProp> {
+                 -> Option<proph::architecture::props::GenericProp> {
             match val {
                 #(#inputs)*
                 _ => None,
@@ -226,7 +224,7 @@ fn create_output(fields: &Fields) -> proc_macro2::TokenStream {
 
     quote! {
         fn output(&self, val: proph::architecture::ParamId)
-                  -> Option<proph::architecture::props::GenericOutputProp> {
+                  -> Option<proph::architecture::props::GenericProp> {
             match val {
                 #(#outputs)*
                 _ => None,
@@ -254,24 +252,11 @@ fn create_output_names(fields: &Fields) -> proc_macro2::TokenStream {
 
 fn filter_fields_by_type<'a>(
     fields: &'a Fields,
-    types: &'a [&'_ str],
+    types: &'a str,
 ) -> impl Iterator<Item = &'a Field> {
-    fields.iter().filter(|field| is_of_type(&field.ty, types))
-}
-
-fn is_of_type(ty: &Type, types: &[&str]) -> bool {
-    match ty {
-        syn::Type::Path(TypePath { path, .. }) => {
-            let s = path
-                .segments
-                .iter()
-                .map(|segment| segment.ident.to_string())
-                .collect::<Vec<_>>()
-                .join(":");
-            types.contains(&s.as_str())
-        }
-        _ => false,
-    }
+    fields
+        .iter()
+        .filter(|field| field.attrs.iter().any(|attr| attr.path().is_ident(types)))
 }
 
 fn ident_to_lit(ident: &'_ Option<Ident>) -> proc_macro2::TokenStream {

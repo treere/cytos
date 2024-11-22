@@ -1,4 +1,4 @@
-use proph::architecture::{InputProp, OutputProp, Result, Stepper};
+use proph::architecture::{Prop, Result, Stepper};
 use proph_derive::ProphNode;
 use rscam::Camera;
 
@@ -6,11 +6,15 @@ use crate::types::Frame;
 
 #[derive(ProphNode)]
 pub struct Rscam {
-    filename: InputProp<String>,
-    interval: InputProp<(u32, u32)>,
-    resolution: InputProp<(u32, u32)>,
+    #[input]
+    filename: Prop<String>,
+    #[input]
+    interval: Prop<(u32, u32)>,
+    #[input]
+    resolution: Prop<(u32, u32)>,
 
-    frame: OutputProp<Frame>,
+    #[output]
+    frame: Prop<Frame>,
 
     camera: Option<Camera>,
 }
@@ -18,10 +22,10 @@ pub struct Rscam {
 impl Default for Rscam {
     fn default() -> Self {
         Self {
-            filename: InputProp::new("/dev/video0".to_owned()),
-            interval: InputProp::new((1, 30)),
-            resolution: InputProp::new((1280, 720)),
-            frame: OutputProp::new(Frame::default()),
+            filename: Prop::new("/dev/video0".to_owned()),
+            interval: Prop::new((1, 30)),
+            resolution: Prop::new((1280, 720)),
+            frame: Prop::new(Frame::default()),
             camera: None,
         }
     }

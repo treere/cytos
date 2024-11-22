@@ -1,12 +1,15 @@
-use proph::architecture::{InputProp, OutputProp, Result, Stepper};
+use proph::architecture::{Prop, Result, Stepper};
 use proph_derive::ProphNode;
 
 use crate::decoder::Image;
 
 #[derive(ProphNode, Default)]
 pub struct Mean {
-    input: InputProp<Image>,
-    output: OutputProp<f64>,
+    #[input]
+    input: Prop<Image>,
+
+    #[output]
+    output: Prop<f64>,
 }
 
 impl Stepper for Mean {

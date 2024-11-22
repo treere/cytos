@@ -1,11 +1,12 @@
 use std::time::{Duration, Instant};
 
-use proph::architecture::{OutputProp, Stepper};
+use proph::architecture::{Prop, Stepper};
 use proph_derive::ProphNode;
 
 #[derive(ProphNode)]
 pub struct Timer {
-    output: OutputProp<Duration>,
+    #[output]
+    output: Prop<Duration>,
 
     timer: Instant,
     count: u64,
@@ -14,7 +15,7 @@ pub struct Timer {
 impl Default for Timer {
     fn default() -> Self {
         Self {
-            output: OutputProp::new(Duration::ZERO),
+            output: Prop::new(Duration::ZERO),
             timer: Instant::now(),
             count: 0,
         }

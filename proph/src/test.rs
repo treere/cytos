@@ -1,7 +1,5 @@
-use crate::architecture::props::{GenericInputProp, GenericOutputProp};
-use crate::architecture::{
-    GenericOwnedProp, InputProp, OutputProp, ParamId, Result, Stepper, Transformer, Value,
-};
+use crate::architecture::props::GenericProp;
+use crate::architecture::{GenericOwnedProp, ParamId, Prop, Result, Stepper, Transformer, Value};
 
 #[derive(Default)]
 pub struct Empty {}
@@ -13,7 +11,7 @@ impl Stepper for Empty {
 }
 
 impl Transformer for Empty {
-    fn link(&mut self, _name: ParamId, _val: GenericOutputProp) -> Result<()> {
+    fn link(&mut self, _name: ParamId, _val: GenericProp) -> Result<()> {
         Err("no link".into())
     }
 
@@ -33,11 +31,11 @@ impl Transformer for Empty {
         Err("no data".into())
     }
 
-    fn output(&self, _val: ParamId) -> Option<GenericOutputProp> {
+    fn output(&self, _val: ParamId) -> Option<GenericProp> {
         None
     }
 
-    fn input(&self, _val: ParamId) -> Option<GenericInputProp> {
+    fn input(&self, _val: ParamId) -> Option<GenericProp> {
         None
     }
 
@@ -52,8 +50,8 @@ impl Transformer for Empty {
 
 #[derive(Default)]
 pub struct Constant {
-    input: InputProp<i32>,
-    output: OutputProp<i32>,
+    input: Prop<i32>,
+    output: Prop<i32>,
 }
 
 impl Stepper for Constant {
@@ -64,7 +62,7 @@ impl Stepper for Constant {
 }
 
 impl Transformer for Constant {
-    fn link(&mut self, name: ParamId, val: GenericOutputProp) -> Result<()> {
+    fn link(&mut self, name: ParamId, val: GenericProp) -> Result<()> {
         match name {
             ParamId(0) => self.input.link_value(val),
             _ => Err("".into()),
@@ -101,14 +99,14 @@ impl Transformer for Constant {
         }
     }
 
-    fn output(&self, name: ParamId) -> Option<GenericOutputProp> {
+    fn output(&self, name: ParamId) -> Option<GenericProp> {
         match name {
             ParamId(1) => Some(self.output.as_generic()),
             _ => None,
         }
     }
 
-    fn input(&self, name: ParamId) -> Option<GenericInputProp> {
+    fn input(&self, name: ParamId) -> Option<GenericProp> {
         match name {
             ParamId(0) => Some(self.input.as_generic()),
             _ => None,
