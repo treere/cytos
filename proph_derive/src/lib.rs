@@ -22,10 +22,13 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
     };
 
     let link = create_link(fields);
-    let assign = create_assign(fields);
+
     let load = create_load(fields);
+    let assign = create_assign(fields);
     let dump = create_dump(fields);
+
     let load_owned = create_load_owned(fields);
+    let assign_owned = create_assign_owned(fields);
     let dump_owned = create_dump_owned(fields);
 
     let input = create_input(fields);
@@ -38,12 +41,13 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
         impl  #generics proph::architecture::Transformer for #ident #generics  #gwhere  {
             #link
 
-            #assign
 
             #load
+            #assign
             #dump
 
             #load_owned
+            #assign_owned
             #dump_owned
 
             #input
@@ -166,6 +170,32 @@ fn create_load_owned(fields: &Fields) -> proc_macro2::TokenStream {
     {
         quote!(
             fn load_owned(
+                &mut self,
+                name: proph::architecture::ParamId,
+                value: proph::architecture::GenericOwnedProp,
+            ) -> proph::architecture::Result<()> {
+                match name {
+                    #(#inputs)*
+                    _ => Err("parameter not found".into()),
+                }
+
+            }
+        )
+    }
+}
+
+fn create_assign_owned(fields: &Fields) -> proc_macro2::TokenStream {
+    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
+        .map(|field| {
+            let i = &field.ident;
+            let f = ident_to_lit(i);
+            quote! {#f => self.#i.assign_owned_generic(value),}
+        })
+        .collect::<Vec<_>>();
+
+    {
+        quote!(
+            fn assign_owned(
                 &mut self,
                 name: proph::architecture::ParamId,
                 value: proph::architecture::GenericOwnedProp,

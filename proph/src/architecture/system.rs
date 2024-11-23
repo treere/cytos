@@ -239,15 +239,17 @@ pub enum Command {
     ListInputs(NodeId),
     /// List the outputs of a node
     ListOutputs(NodeId),
-    /// Multi load command
-    MultiAssign(Vec<(NodeId, ParamId, Value)>),
     /// Multi dump command
     MultiDump(Vec<(NodeId, ParamId)>),
+    /// Multi assign command
+    MultiAssign(Vec<(NodeId, ParamId, Value)>),
     /// Multi load command
     MultiLoad(Vec<(NodeId, ParamId, Value)>),
     /// Multi owned dump command
     MultiOwnedDump(Vec<(NodeId, ParamId)>),
-    /// Multi load command
+    /// Multi assign owned command
+    MultiOwnedAssign(Vec<(NodeId, ParamId, GenericOwnedProp)>),
+    /// Multi load owned command
     MultiOwnedLoad(Vec<(NodeId, ParamId, GenericOwnedProp)>),
 }
 
@@ -405,6 +407,13 @@ impl InternalRunner {
                     .collect();
                 message.send_value(p)
             }
+            Command::MultiOwnedAssign(vec) => {
+                let p: Result<Vec<_>> = vec
+                    .into_iter()
+                    .map(|(n, p, v)| self.graph.assign_owned((n, p), v))
+                    .collect();
+                message.send_value(p)
+            }
         }
     }
 
@@ -440,6 +449,13 @@ impl InternalRunner {
                     .map(|(n, p, v)| self.graph.load_owned((n, p), v))
                     .collect();
                 message.send_value(loads)
+            }
+            Command::MultiOwnedAssign(vec) => {
+                let p: Result<Vec<_>> = vec
+                    .into_iter()
+                    .map(|(n, p, v)| self.graph.assign_owned((n, p), v))
+                    .collect();
+                message.send_value(p)
             }
         }
     }

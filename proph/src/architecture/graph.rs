@@ -165,6 +165,15 @@ impl Graph {
         self.get_node_mut(node_id)?.load_owned(param_id, value)
     }
 
+    /// Assign an owned value into the param of a node
+    pub fn assign_owned(
+        &mut self,
+        (node_id, param_id): (NodeId, ParamId),
+        value: GenericOwnedProp,
+    ) -> Result<()> {
+        self.get_node_mut(node_id)?.assign_owned(param_id, value)
+    }
+
     /// Dump the param as owned of a node
     pub fn dump_owned(&self, (node_id, param_id): (NodeId, ParamId)) -> Result<GenericOwnedProp> {
         self.get_node(node_id)?.dump_owned(param_id)

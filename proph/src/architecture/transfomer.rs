@@ -27,16 +27,19 @@ pub trait Transformer: Stepper {
     /// Load
     fn load(&mut self, name: ParamId, val: Value) -> Result<()>;
 
-    /// assign
+    /// Assign
     fn assign(&mut self, name: ParamId, val: Value) -> Result<()>;
 
     /// Dump
     fn dump(&self, name: ParamId) -> Result<Value>;
 
-    /// Load
+    /// Load owned
     fn load_owned(&mut self, name: ParamId, val: GenericOwnedProp) -> Result<()>;
 
-    /// Dump
+    /// Assign owned
+    fn assign_owned(&mut self, name: ParamId, val: GenericOwnedProp) -> Result<()>;
+
+    /// Dump owned
     fn dump_owned(&self, name: ParamId) -> Result<GenericOwnedProp>;
 
     /// Get ouput by name

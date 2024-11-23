@@ -160,6 +160,16 @@ impl<T: Ownable> Prop<T> {
             Err("invalid type".into())
         }
     }
+
+    pub fn assign_owned_generic(&mut self, val: GenericOwnedProp) -> Result<()> {
+        if let Ok(v) = val.0.downcast::<T::Value>() {
+            *std::ops::DerefMut::deref_mut(self) = Ownable::from_owned(&*v);
+
+            Ok(())
+        } else {
+            Err("invalid type".into())
+        }
+    }
 }
 
 impl<T> std::ops::Deref for Prop<T> {
