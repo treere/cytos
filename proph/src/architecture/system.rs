@@ -474,7 +474,7 @@ impl InternalRunner {
                 })?;
 
             for (internal, response) in internals.iter().zip(response) {
-                self.graph.load_owned(*internal, response)?;
+                self.graph.assign_owned(*internal, response)?;
             }
         }
         Ok(())
@@ -490,7 +490,7 @@ impl InternalRunner {
                 .zip(external_nodes)
                 .map(|(v, (n, p))| v.map(|val| (*n, *p, val)))
                 .collect::<Result<Vec<_>>>()?;
-            sender.send((Command::MultiOwnedLoad(loads), message.clone()))?;
+            sender.send((Command::MultiOwnedAssign(loads), message.clone()))?;
         }
         Ok(())
     }
