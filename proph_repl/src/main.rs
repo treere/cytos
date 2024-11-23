@@ -217,6 +217,26 @@ fn node_load(
     Ok(CommandStatus::Done)
 }
 
+fn node_assign(
+    status: Rc<Mutex<Status>>,
+    graph_id: String,
+    node_id: String,
+    param_id: String,
+    value: String,
+) -> Result<CommandStatus, anyhow::Error> {
+    let value: Value = serde_json::from_str(&value).map_err(|x| anyhow!(x))?;
+
+    let status = status.lock().or(Err(anyhow!("cannot lock")))?;
+    let result = status.system.command(
+        graph_id.into(),
+        RCommand::MultiAssign(vec![(node_id.into(), param_id.into(), value)]),
+    );
+
+    println!("{result:?}");
+
+    Ok(CommandStatus::Done)
+}
+
 fn system_load_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Load a system from a configuration",
@@ -315,6 +335,13 @@ fn node_load_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
+fn node_assign_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+    command! {
+        "Assign to an input/output of a graph node",
+        (graph: String, node: String, param: String, value: String) => |graph: String, node:String, param:String, value: String| node_assign(status.clone(), graph, node, param, value)
+    }
+}
+
 fn main() -> Result<(), &'static str> {
     let matches = clap::Command::new("rep")
         .about("start a proph repl")
@@ -346,6 +373,7 @@ fn main() -> Result<(), &'static str> {
         .add("node_outputs", node_outputs_command(status.clone()))
         .add("node_dump", node_dump_command(status.clone()))
         .add("node_load", node_load_command(status.clone()))
+        .add("node_assign", node_assign_command(status.clone()))
         .add(
             "exit",
             command! { "Exit program", () => || Ok(CommandStatus::Quit) },
