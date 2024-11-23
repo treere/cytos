@@ -61,6 +61,10 @@ async fn main() {
             post(node_param_load),
         )
         .route(
+            "/graphs/:graph_id/nodes/:node_id/params/:param_id/assign",
+            post(node_param_assign),
+        )
+        .route(
             "/graphs/:graph_id/nodes/:node_id/params/:param_id/dump",
             get(node_param_dump),
         )
@@ -136,6 +140,20 @@ async fn node_param_load(
         .command(
             graph_id.into(),
             Command::MultiLoad(vec![(node_id.into(), param_id.into(), value)]),
+        )
+        .unwrap();
+    Json(json!(result))
+}
+
+async fn node_param_assign(
+    Path((graph_id, node_id, param_id)): Path<(String, String, String)>,
+    State(system): State<WebSystem>,
+    Json(value): Json<proph::architecture::Value>,
+) -> Json<Value> {
+    let result = system
+        .command(
+            graph_id.into(),
+            Command::MultiAssign(vec![(node_id.into(), param_id.into(), value)]),
         )
         .unwrap();
     Json(json!(result))
