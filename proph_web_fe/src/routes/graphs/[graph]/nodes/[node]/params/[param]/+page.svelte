@@ -20,6 +20,20 @@
 		}
 	};
 
+	const assign = () => {
+		if (content !== undefined && 'text' in content && content.text !== undefined) {
+			fetch(`/api/graphs/${data.graph}/nodes/${data.node}/params/${data.param}/assign`, {
+				method: 'POST',
+				body: content.text,
+				headers: {
+					'Content-Type': 'application/json'
+				}
+			});
+		} else {
+			console.log('Invalid content');
+		}
+	};
+
 	const update = () => {
 		invalidateAll();
 	};
@@ -43,6 +57,12 @@
 			class="my-3 mr-2 rounded-lg bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
 		>
 			Update
+		</button>
+		<button
+			onclick={assign}
+			class="my-3 mr-2 rounded-lg bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
+		>
+			Assign
 		</button>
 		<button
 			onclick={load}
