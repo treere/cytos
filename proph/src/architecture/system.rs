@@ -461,36 +461,40 @@ impl InternalRunner {
     }
 
     fn request_values(&mut self) -> Result<()> {
-        let (message, receiver) = Response::new();
-        for ((sender, nodes), internals) in &self.requests {
-            let response: Vec<_> =
-                match sender.send((Command::MultiOwnedDump(nodes.clone()), message.clone())) {
-                    Ok(()) => receiver.recv()?,
-                    Err(_) => Err("Cannot send".into()),
-                }
-                .map(|r| match r {
-                    Internal::Value(_) => unreachable!(),
-                    Internal::Prop(v) => v,
-                })?;
+        if !self.requests.is_empty() {
+            let (message, receiver) = Response::new();
+            for ((sender, nodes), internals) in &self.requests {
+                let response: Vec<_> =
+                    match sender.send((Command::MultiOwnedDump(nodes.clone()), message.clone())) {
+                        Ok(()) => receiver.recv()?,
+                        Err(_) => Err("Cannot send".into()),
+                    }
+                    .map(|r| match r {
+                        Internal::Value(_) => unreachable!(),
+                        Internal::Prop(v) => v,
+                    })?;
 
-            for (internal, response) in internals.iter().zip(response) {
-                self.graph.assign_owned(*internal, response)?;
+                for (internal, response) in internals.iter().zip(response) {
+                    self.graph.assign_owned(*internal, response)?;
+                }
             }
         }
         Ok(())
     }
 
     fn send_values(&mut self) -> Result<()> {
-        let (message, _receiver) = Response::new();
+        if !self.sends.is_empty() {
+            let (message, _receiver) = Response::new();
 
-        for ((sender, external_nodes), internal_props) in &self.sends {
-            let loads = internal_props
-                .iter()
-                .map(|node| self.graph.dump_owned(*node))
-                .zip(external_nodes)
-                .map(|(v, (n, p))| v.map(|val| (*n, *p, val)))
-                .collect::<Result<Vec<_>>>()?;
-            sender.send((Command::MultiOwnedAssign(loads), message.clone()))?;
+            for ((sender, external_nodes), internal_props) in &self.sends {
+                let loads = internal_props
+                    .iter()
+                    .map(|node| self.graph.dump_owned(*node))
+                    .zip(external_nodes)
+                    .map(|(v, (n, p))| v.map(|val| (*n, *p, val)))
+                    .collect::<Result<Vec<_>>>()?;
+                sender.send((Command::MultiOwnedAssign(loads), message.clone()))?;
+            }
         }
         Ok(())
     }
