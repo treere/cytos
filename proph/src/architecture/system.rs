@@ -239,6 +239,8 @@ pub enum Command {
     ListInputs(NodeId),
     /// List the outputs of a node
     ListOutputs(NodeId),
+    /// Multi load command
+    MultiAssign(Vec<(NodeId, ParamId, Value)>),
     /// Multi dump command
     MultiDump(Vec<(NodeId, ParamId)>),
     /// Multi load command
@@ -373,6 +375,13 @@ impl InternalRunner {
             Command::ListNodes => message.send_value(Ok(self.graph.list_nodes())),
             Command::ListInputs(node) => message.send_value(self.graph.list_node_inputs(node)),
             Command::ListOutputs(node) => message.send_value(self.graph.list_node_outputs(node)),
+            Command::MultiAssign(vec) => {
+                let p: Result<Vec<_>> = vec
+                    .into_iter()
+                    .map(|(n, p, v)| self.graph.assign((n, p), v))
+                    .collect();
+                message.send_value(p)
+            }
             Command::MultiDump(vec) => {
                 let dump: Result<Vec<_>> = vec.into_iter().map(|c| self.graph.dump(c)).collect();
                 message.send_value(dump)
@@ -404,6 +413,13 @@ impl InternalRunner {
             Command::ListNodes => message.send_value(Ok(self.graph.list_nodes())),
             Command::ListInputs(node) => message.send_value(self.graph.list_node_inputs(node)),
             Command::ListOutputs(node) => message.send_value(self.graph.list_node_outputs(node)),
+            Command::MultiAssign(vec) => {
+                let p: Result<Vec<_>> = vec
+                    .into_iter()
+                    .map(|(n, p, v)| self.graph.assign((n, p), v))
+                    .collect();
+                message.send_value(p)
+            }
             Command::MultiDump(_) => {
                 self.queue.push((command, message));
             }

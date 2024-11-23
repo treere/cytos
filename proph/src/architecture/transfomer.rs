@@ -27,6 +27,9 @@ pub trait Transformer: Stepper {
     /// Load
     fn load(&mut self, name: ParamId, val: Value) -> Result<()>;
 
+    /// assign
+    fn assign(&mut self, name: ParamId, val: Value) -> Result<()>;
+
     /// Dump
     fn dump(&self, name: ParamId) -> Result<Value>;
 

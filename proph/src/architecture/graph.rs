@@ -142,6 +142,11 @@ impl Graph {
     }
 
     /// Load a value into the param of a node
+    pub fn assign(&mut self, (node_id, param_id): (NodeId, ParamId), value: Value) -> Result<()> {
+        self.get_node_mut(node_id)?.assign(param_id, value)
+    }
+
+    /// Load a value into the param of a node
     pub fn load(&mut self, (node_id, param_id): (NodeId, ParamId), value: Value) -> Result<()> {
         self.get_node_mut(node_id)?.load(param_id, value)
     }

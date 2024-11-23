@@ -22,6 +22,7 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
     };
 
     let link = create_link(fields);
+    let assign = create_assign(fields);
     let load = create_load(fields);
     let dump = create_dump(fields);
     let load_owned = create_load_owned(fields);
@@ -36,6 +37,9 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
     quote! {
         impl  #generics proph::architecture::Transformer for #ident #generics  #gwhere  {
             #link
+
+            #assign
+
             #load
             #dump
 
@@ -69,6 +73,32 @@ fn create_link(fields: &Fields) -> proc_macro2::TokenStream {
                 _ => Err("missing input link data".into()),
             }
         }
+    }
+}
+
+fn create_assign(fields: &Fields) -> proc_macro2::TokenStream {
+    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
+        .map(|field| {
+            let i = &field.ident;
+            let f = ident_to_lit(i);
+            quote! {#f => self.#i.assign(value),}
+        })
+        .collect::<Vec<_>>();
+
+    {
+        quote!(
+            fn assign(
+                &mut self,
+                name: proph::architecture::ParamId,
+                value: proph::architecture::Value,
+            ) -> proph::architecture::Result<()> {
+                match name {
+                    #(#inputs)*
+                    _ => Err("parameter not found".into()),
+                }
+
+            }
+        )
     }
 }
 

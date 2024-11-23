@@ -15,6 +15,10 @@ impl Transformer for Empty {
         Err("no link".into())
     }
 
+    fn assign(&mut self, _name: ParamId, _val: Value) -> Result<()> {
+        Err("load".into())
+    }
+
     fn load(&mut self, _name: ParamId, _val: Value) -> Result<()> {
         Err("load".into())
     }
@@ -65,6 +69,13 @@ impl Transformer for Constant {
     fn link(&mut self, name: ParamId, val: GenericProp) -> Result<()> {
         match name {
             ParamId(0) => self.input.link_value(val),
+            _ => Err("".into()),
+        }
+    }
+
+    fn assign(&mut self, name: ParamId, val: Value) -> Result<()> {
+        match name {
+            ParamId(0) => self.input.assign(val),
             _ => Err("".into()),
         }
     }
