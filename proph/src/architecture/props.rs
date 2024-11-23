@@ -183,6 +183,14 @@ impl<T: 'static + DeserializeOwned> Prop<T> {
         self.0 = Rc::new(UnsafeCell::new(value));
         Ok(())
     }
+
+    /// Assign a value into a prop
+    pub fn assign(&mut self, val: Value) -> Result<()> {
+        let value = val.dump::<T>()?;
+        *std::ops::DerefMut::deref_mut(self) = value;
+
+        Ok(())
+    }
 }
 
 impl<T: 'static + Serialize> Prop<T> {
