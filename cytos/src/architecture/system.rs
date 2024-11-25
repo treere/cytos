@@ -374,7 +374,6 @@ impl InternalRunner {
 
     fn done_dispatch_command(&mut self, message: Response, command: Command) {
         match command {
-            Command::Kill | Command::Start | Command::Stop | Command::Status => unreachable!(),
             Command::MultiDump(vec) => {
                 let dump: Result<Vec<_>> = vec
                     .into_iter()
@@ -392,57 +391,24 @@ impl InternalRunner {
 
                 message.send_prop(dump)
             }
-            Command::ListNodes => message.send_value(Ok(self.graph.list_nodes())),
-            Command::ListInputs(node) => {
-                message.send_value(self.graph.get_node(node).map(|n| n.input_names()))
-            }
-            Command::ListOutputs(node) => {
-                message.send_value(self.graph.get_node(node).map(|n| n.output_names()))
-            }
-            Command::MultiAssign(vec) => {
-                let p: Result<Vec<_>> = vec
-                    .into_iter()
-                    .map(|(n, p, v)| self.graph.get_node_mut(n).and_then(|n| n.assign(p, v)))
-                    .collect();
-                message.send_value(p)
-            }
-            Command::MultiLoad(vec) => {
-                let p: Result<Vec<_>> = vec
-                    .into_iter()
-                    .map(|(n, p, v)| self.graph.get_node_mut(n).and_then(|n| n.load(p, v)))
-                    .collect();
-                message.send_value(p)
-            }
-            Command::MultiOwnedLoad(vec) => {
-                let p: Result<Vec<_>> = vec
-                    .into_iter()
-                    .map(|(n, p, v)| self.graph.get_node_mut(n).and_then(|n| n.load_owned(p, v)))
-                    .collect();
-                message.send_value(p)
-            }
-            Command::MultiOwnedAssign(vec) => {
-                let p: Result<Vec<_>> = vec
-                    .into_iter()
-                    .map(|(n, p, v)| {
-                        self.graph
-                            .get_node_mut(n)
-                            .and_then(|n| n.assign_owned(p, v))
-                    })
-                    .collect();
-                message.send_value(p)
-            }
+            command => self.common_dispatch_command(message, command),
         }
     }
 
     fn skip_dispatch_command(&mut self, message: Response, command: Command) {
         match command {
-            Command::Kill | Command::Start | Command::Stop | Command::Status => unreachable!(),
             Command::MultiDump(_) => {
                 self.queue.push((command, message));
             }
             Command::MultiOwnedDump(_) => {
                 self.queue.push((command, message));
             }
+            command => self.common_dispatch_command(message, command),
+        }
+    }
+
+    fn common_dispatch_command(&mut self, message: Response, command: Command) {
+        match command {
             Command::ListNodes => message.send_value(Ok(self.graph.list_nodes())),
             Command::ListInputs(node) => {
                 message.send_value(self.graph.get_node(node).map(|n| n.input_names()))
@@ -482,6 +448,7 @@ impl InternalRunner {
                     .collect();
                 message.send_value(p)
             }
+            _ => unreachable!(),
         }
     }
 
