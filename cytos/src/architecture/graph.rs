@@ -1,12 +1,11 @@
-use crate::loader::Registry;
-
-use super::{
-    node::{Node, NodeRepr},
-    NodeId, ParamId, Result,
+use crate::{
+    loader::Registry,
+    repr::{GraphLink, GraphRepr, OnError},
 };
 
+use super::{node::Node, NodeId, ParamId, Result};
+
 use indexmap::IndexMap;
-use serde::Deserialize;
 
 /// Result of a step
 #[derive(Debug)]
@@ -15,51 +14,6 @@ pub enum StepResult {
     Done,
     /// Is skipping the processing
     Skip,
-}
-
-/// Graph behaviour on node failure
-#[derive(Debug, Deserialize)]
-enum OnError {
-    /// Skip this processing
-    Skip,
-
-    /// Continue processing the fraph
-    Continue,
-
-    /// Forward the error
-    Fail,
-}
-
-impl Default for OnError {
-    fn default() -> Self {
-        Self::Fail
-    }
-}
-
-/// Node depresentation from the braph point
-#[derive(Deserialize, Debug)]
-pub struct InternalNodeRepr {
-    /// Name
-    name: NodeId,
-
-    /// Node repr
-    #[serde(flatten)]
-    node: NodeRepr,
-
-    /// On error expect behaviour
-    #[serde(default)]
-    on_error: OnError,
-}
-
-/// Graph representatio to be loaded
-#[derive(Deserialize, Debug)]
-pub struct GraphRepr {
-    /// List of links between nodes
-    #[serde(default)]
-    links: Vec<Link>,
-
-    /// Map of nodes with it's id
-    nodes: Vec<InternalNodeRepr>,
 }
 
 impl GraphRepr {
@@ -81,21 +35,11 @@ impl GraphRepr {
 
         let mut graph = Graph { nodes, on_errors };
 
-        for Link { src, dst } in self.links {
+        for GraphLink { src, dst } in self.links {
             graph.link(src, dst)?;
         }
         Ok(graph)
     }
-}
-
-/// Link between nodes
-#[derive(Deserialize, Debug)]
-struct Link {
-    /// Source node param
-    src: (NodeId, ParamId),
-
-    /// Destination node param
-    dst: (NodeId, ParamId),
 }
 
 /// Graph.

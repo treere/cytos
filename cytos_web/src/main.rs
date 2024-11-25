@@ -8,7 +8,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use cytos::architecture::system::SystemRepr;
+use cytos::repr::SystemRepr;
 use cytos::{architecture::System, loader::Registry};
 use serde_json::{json, Value};
 

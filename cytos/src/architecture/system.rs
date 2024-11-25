@@ -7,46 +7,25 @@ use crossbeam::channel::unbounded;
 use crossbeam::channel::Receiver;
 use crossbeam::channel::Sender;
 use indexmap::IndexMap;
-use serde::Deserialize;
+
 use serde::Serialize;
 
 use crate::loader::Registry;
+use crate::repr::GraphRepr;
+use crate::repr::SystemLink;
+use crate::repr::SystemRepr;
 
+use super::graph::Graph;
 use super::graph::StepResult;
-use super::graph::{Graph, GraphRepr};
 
 use super::GenericOwnedProp;
 use super::{GraphId, NodeId, ParamId, Result, Value};
 
-use std::collections::HashMap;
 use std::thread::{Builder, JoinHandle};
 
 type InternalCommand = (Command, Response);
 
-/// SystemRepr
-///
-/// Deserializable System Representation
-#[derive(Deserialize, Debug)]
-pub struct SystemRepr {
-    /// Graphs by name
-    #[serde(default)]
-    graphs: HashMap<GraphId, GraphRepr>,
-
-    #[serde(default)]
-    /// Request between graphs
-    requests: Vec<Link>,
-
-    #[serde(default)]
-    /// Send between graphs
-    sends: Vec<Link>,
-}
-
 impl SystemRepr {
-    /// Create a SystemRepr loading a file
-    pub fn from_json(file: &str) -> Result<Self> {
-        serde_json::from_str(file).map_err(|v| format!("cannot read file: {v}").into())
-    }
-
     /// Convert a system representation into a System
     pub fn to_system(self, registry: &Registry) -> Result<System> {
         // From the map of id, reprs create a map of ip, repr and receiver
@@ -95,8 +74,8 @@ impl SystemRepr {
         receiver: Receiver<InternalCommand>,
         senders: IndexMap<GraphId, Sender<InternalCommand>>,
         registry: Registry,
-        requests: &[Link],
-        sends: &[Link],
+        requests: &[SystemLink],
+        sends: &[SystemLink],
     ) -> Result<JoinHandle<()>> {
         let requests = Self::create_requests(id, &senders, requests)?;
         let sends = Self::create_sends(id, &senders, sends)?;
@@ -121,7 +100,7 @@ impl SystemRepr {
     fn create_sends(
         graph_id: GraphId,
         senders: &IndexMap<GraphId, Sender<InternalCommand>>,
-        sends: &[Link],
+        sends: &[SystemLink],
     ) -> Result<Vec<(ExternalDestination, Vec<Destination>)>> {
         let mut requests: Vec<_> = sends.iter().filter(|l| l.src.0 == graph_id).collect();
 
@@ -153,7 +132,7 @@ impl SystemRepr {
     fn create_requests(
         id: GraphId,
         senders: &IndexMap<GraphId, Sender<InternalCommand>>,
-        requests: &[Link],
+        requests: &[SystemLink],
     ) -> Result<Vec<(ExternalDestination, Vec<Destination>)>> {
         let mut requests: Vec<_> = requests.iter().filter(|l| l.dst.0 == id).collect();
 
@@ -181,16 +160,6 @@ impl SystemRepr {
             .collect::<Option<Vec<_>>>()
             .ok_or("missin sender".into())
     }
-}
-
-/// Link between params of different graphs
-#[derive(Deserialize, Debug, Clone)]
-struct Link {
-    /// Source node
-    src: (GraphId, NodeId, ParamId),
-
-    /// Destination node
-    dst: (GraphId, NodeId, ParamId),
 }
 
 /// System

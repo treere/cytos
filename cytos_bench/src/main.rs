@@ -1,6 +1,6 @@
 use clap::{value_parser, Arg, Command};
-use cytos::architecture::graph::GraphRepr;
 use cytos::loader::Registry;
+use cytos::repr::GraphRepr;
 use cytos::utils::execution_time;
 use std::fs::File;
 use std::io::Read;

@@ -1,9 +1,9 @@
 use anyhow::anyhow;
 use easy_repl::{command, Command, CommandStatus, Repl};
 
-use cytos::architecture::system::SystemRepr;
 use cytos::architecture::{NodeId, ParamId, System, Value};
 use cytos::loader::Registry;
+use cytos::repr::SystemRepr;
 
 use std::collections::HashSet;
 
