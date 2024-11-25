@@ -1,9 +1,18 @@
 use clap::{value_parser, Arg, Command};
 use cytos::loader::Registry;
 use cytos::repr::GraphRepr;
-use cytos::utils::execution_time;
 use std::fs::File;
 use std::io::Read;
+use std::time::Instant;
+
+pub fn execution_time<T: FnMut()>(mut f: T) -> f64 {
+    let now = Instant::now();
+
+    f();
+
+    let elapsed_time = now.elapsed();
+    elapsed_time.as_secs_f64()
+}
 
 fn main() -> Result<(), String> {
     let mut loader = Registry::default();
