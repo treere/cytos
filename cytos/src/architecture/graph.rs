@@ -2,7 +2,7 @@ use crate::loader::Registry;
 
 use super::{
     node::{Node, NodeRepr},
-    GenericOwnedProp, NodeId, ParamId, Result, Value,
+    NodeId, ParamId, Result,
 };
 
 use indexmap::IndexMap;
@@ -141,57 +141,9 @@ impl Graph {
         Ok(())
     }
 
-    /// Load a value into the param of a node
-    pub fn assign(&mut self, (node_id, param_id): (NodeId, ParamId), value: Value) -> Result<()> {
-        self.get_node_mut(node_id)?.assign(param_id, value)
-    }
-
-    /// Load a value into the param of a node
-    pub fn load(&mut self, (node_id, param_id): (NodeId, ParamId), value: Value) -> Result<()> {
-        self.get_node_mut(node_id)?.load(param_id, value)
-    }
-
-    /// Dump the param of a node
-    pub fn dump(&self, (node_id, param_id): (NodeId, ParamId)) -> Result<Value> {
-        self.get_node(node_id)?.dump(param_id)
-    }
-
-    /// Load an owned value into the param of a node
-    pub fn load_owned(
-        &mut self,
-        (node_id, param_id): (NodeId, ParamId),
-        value: GenericOwnedProp,
-    ) -> Result<()> {
-        self.get_node_mut(node_id)?.load_owned(param_id, value)
-    }
-
-    /// Assign an owned value into the param of a node
-    pub fn assign_owned(
-        &mut self,
-        (node_id, param_id): (NodeId, ParamId),
-        value: GenericOwnedProp,
-    ) -> Result<()> {
-        self.get_node_mut(node_id)?.assign_owned(param_id, value)
-    }
-
-    /// Dump the param as owned of a node
-    pub fn dump_owned(&self, (node_id, param_id): (NodeId, ParamId)) -> Result<GenericOwnedProp> {
-        self.get_node(node_id)?.dump_owned(param_id)
-    }
-
     /// List nodes
     pub fn list_nodes(&self) -> Vec<NodeId> {
         self.nodes.keys().copied().collect()
-    }
-
-    /// List node inputs
-    pub fn list_node_inputs(&self, node_id: NodeId) -> Result<Vec<ParamId>> {
-        self.get_node(node_id).map(|n| n.input_names())
-    }
-
-    /// List node outputs
-    pub fn list_node_outputs(&self, node_id: NodeId) -> Result<Vec<ParamId>> {
-        self.get_node(node_id).map(|n| n.output_names())
     }
 
     /// Connects a output data to an input one.
@@ -210,11 +162,11 @@ impl Graph {
         Ok(())
     }
 
-    fn get_node(&self, node_id: NodeId) -> Result<&Node> {
+    pub fn get_node(&self, node_id: NodeId) -> Result<&Node> {
         self.nodes.get(&node_id).ok_or("missing node".into())
     }
 
-    fn get_node_mut(&mut self, node_id: NodeId) -> Result<&mut Node> {
+    pub fn get_node_mut(&mut self, node_id: NodeId) -> Result<&mut Node> {
         self.nodes.get_mut(&node_id).ok_or("missing node".into())
     }
 }
@@ -223,7 +175,10 @@ impl Graph {
 mod tests {
     use super::*;
 
-    use crate::test::{Constant, Empty};
+    use crate::{
+        architecture::Value,
+        test::{Constant, Empty},
+    };
 
     #[test]
     fn test_default_graph() {
@@ -243,8 +198,22 @@ mod tests {
         };
 
         assert_eq!(1, graph.list_nodes().len());
-        assert_eq!(0, graph.list_node_inputs(node_id).expect("nodes").len());
-        assert_eq!(0, graph.list_node_outputs(node_id).expect("nodes").len());
+        assert_eq!(
+            0,
+            graph
+                .get_node(node_id)
+                .expect("missing node")
+                .input_names()
+                .len()
+        );
+        assert_eq!(
+            0,
+            graph
+                .get_node(node_id)
+                .expect("missing node")
+                .output_names()
+                .len()
+        );
     }
 
     #[test]
@@ -265,28 +234,38 @@ mod tests {
         assert_eq!(vec![node_id], graph.list_nodes());
         assert_eq!(
             vec![ParamId(0)],
-            graph.list_node_inputs(node_id).expect("no node")
+            graph.get_node(node_id).expect("missing node").input_names()
         );
         assert_eq!(
             vec![ParamId(1)],
-            graph.list_node_outputs(node_id).expect("no node")
+            graph
+                .get_node(node_id)
+                .expect("missing node")
+                .output_names()
         );
 
         let one = Value::load(&1).expect("cannot load");
-        assert!(graph.load((node_id, ParamId(0)), one).is_ok());
+        assert!(graph
+            .get_node_mut(node_id)
+            .and_then(|n| n.load(ParamId(0), one))
+            .is_ok());
 
         assert!(graph.initialize().is_ok());
         assert!(graph.step().is_ok());
         assert!(graph.terminate().is_ok());
 
         let input: i32 = graph
-            .dump((node_id, ParamId(0)))
+            .get_node(node_id)
+            .expect("missing node")
+            .dump(ParamId(0))
             .expect("dump")
             .dump()
             .expect("value");
 
         let output: i32 = graph
-            .dump((node_id, ParamId(1)))
+            .get_node(node_id)
+            .expect("missing node")
+            .dump(ParamId(1))
             .expect("dump")
             .dump()
             .expect("value");

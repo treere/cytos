@@ -374,43 +374,60 @@ impl InternalRunner {
 
     fn done_dispatch_command(&mut self, message: Response, command: Command) {
         match command {
+            Command::Kill | Command::Start | Command::Stop | Command::Status => unreachable!(),
+            Command::MultiDump(vec) => {
+                let dump: Result<Vec<_>> = vec
+                    .into_iter()
+                    .map(|(node, param)| self.graph.get_node(node).and_then(|n| n.dump(param)))
+                    .collect();
+                message.send_value(dump)
+            }
+            Command::MultiOwnedDump(vec) => {
+                let dump: Result<Vec<_>> = vec
+                    .into_iter()
+                    .map(|(node, param)| {
+                        self.graph.get_node(node).and_then(|n| n.dump_owned(param))
+                    })
+                    .collect();
+
+                message.send_prop(dump)
+            }
             Command::ListNodes => message.send_value(Ok(self.graph.list_nodes())),
-            Command::ListInputs(node) => message.send_value(self.graph.list_node_inputs(node)),
-            Command::ListOutputs(node) => message.send_value(self.graph.list_node_outputs(node)),
+            Command::ListInputs(node) => {
+                message.send_value(self.graph.get_node(node).map(|n| n.input_names()))
+            }
+            Command::ListOutputs(node) => {
+                message.send_value(self.graph.get_node(node).map(|n| n.output_names()))
+            }
             Command::MultiAssign(vec) => {
                 let p: Result<Vec<_>> = vec
                     .into_iter()
-                    .map(|(n, p, v)| self.graph.assign((n, p), v))
+                    .map(|(n, p, v)| self.graph.get_node_mut(n).and_then(|n| n.assign(p, v)))
                     .collect();
                 message.send_value(p)
-            }
-            Command::MultiDump(vec) => {
-                let dump: Result<Vec<_>> = vec.into_iter().map(|c| self.graph.dump(c)).collect();
-                message.send_value(dump)
             }
             Command::MultiLoad(vec) => {
                 let p: Result<Vec<_>> = vec
                     .into_iter()
-                    .map(|(n, p, v)| self.graph.load((n, p), v))
+                    .map(|(n, p, v)| self.graph.get_node_mut(n).and_then(|n| n.load(p, v)))
                     .collect();
                 message.send_value(p)
-            }
-            Command::Kill | Command::Start | Command::Stop | Command::Status => unreachable!(),
-            Command::MultiOwnedDump(vec) => {
-                let p: Result<Vec<_>> = vec.into_iter().map(|c| self.graph.dump_owned(c)).collect();
-                message.send_prop(p)
             }
             Command::MultiOwnedLoad(vec) => {
                 let p: Result<Vec<_>> = vec
                     .into_iter()
-                    .map(|(n, p, v)| self.graph.load_owned((n, p), v))
+                    .map(|(n, p, v)| self.graph.get_node_mut(n).and_then(|n| n.load_owned(p, v)))
                     .collect();
                 message.send_value(p)
             }
             Command::MultiOwnedAssign(vec) => {
                 let p: Result<Vec<_>> = vec
                     .into_iter()
-                    .map(|(n, p, v)| self.graph.assign_owned((n, p), v))
+                    .map(|(n, p, v)| {
+                        self.graph
+                            .get_node_mut(n)
+                            .and_then(|n| n.assign_owned(p, v))
+                    })
                     .collect();
                 message.send_value(p)
             }
@@ -419,41 +436,49 @@ impl InternalRunner {
 
     fn skip_dispatch_command(&mut self, message: Response, command: Command) {
         match command {
+            Command::Kill | Command::Start | Command::Stop | Command::Status => unreachable!(),
+            Command::MultiDump(_) => {
+                self.queue.push((command, message));
+            }
+            Command::MultiOwnedDump(_) => {
+                self.queue.push((command, message));
+            }
             Command::ListNodes => message.send_value(Ok(self.graph.list_nodes())),
-            Command::ListInputs(node) => message.send_value(self.graph.list_node_inputs(node)),
-            Command::ListOutputs(node) => message.send_value(self.graph.list_node_outputs(node)),
+            Command::ListInputs(node) => {
+                message.send_value(self.graph.get_node(node).map(|n| n.input_names()))
+            }
+            Command::ListOutputs(node) => {
+                message.send_value(self.graph.get_node(node).map(|n| n.output_names()))
+            }
             Command::MultiAssign(vec) => {
                 let p: Result<Vec<_>> = vec
                     .into_iter()
-                    .map(|(n, p, v)| self.graph.assign((n, p), v))
+                    .map(|(n, p, v)| self.graph.get_node_mut(n).and_then(|n| n.assign(p, v)))
                     .collect();
                 message.send_value(p)
-            }
-            Command::MultiDump(_) => {
-                self.queue.push((command, message));
             }
             Command::MultiLoad(vec) => {
                 let p: Result<Vec<_>> = vec
                     .into_iter()
-                    .map(|(n, p, v)| self.graph.load((n, p), v))
+                    .map(|(n, p, v)| self.graph.get_node_mut(n).and_then(|n| n.load(p, v)))
                     .collect();
                 message.send_value(p)
             }
-            Command::Kill | Command::Start | Command::Stop | Command::Status => unreachable!(),
-            Command::MultiOwnedDump(_) => {
-                self.queue.push((command, message));
-            }
             Command::MultiOwnedLoad(vec) => {
-                let loads: Result<Vec<_>> = vec
+                let p: Result<Vec<_>> = vec
                     .into_iter()
-                    .map(|(n, p, v)| self.graph.load_owned((n, p), v))
+                    .map(|(n, p, v)| self.graph.get_node_mut(n).and_then(|n| n.load_owned(p, v)))
                     .collect();
-                message.send_value(loads)
+                message.send_value(p)
             }
             Command::MultiOwnedAssign(vec) => {
                 let p: Result<Vec<_>> = vec
                     .into_iter()
-                    .map(|(n, p, v)| self.graph.assign_owned((n, p), v))
+                    .map(|(n, p, v)| {
+                        self.graph
+                            .get_node_mut(n)
+                            .and_then(|n| n.assign_owned(p, v))
+                    })
                     .collect();
                 message.send_value(p)
             }
@@ -474,8 +499,10 @@ impl InternalRunner {
                         Internal::Prop(v) => v,
                     })?;
 
-                for (internal, response) in internals.iter().zip(response) {
-                    self.graph.assign_owned(*internal, response)?;
+                for ((node_id, param_id), response) in internals.iter().zip(response) {
+                    self.graph
+                        .get_node_mut(*node_id)
+                        .and_then(|n| n.assign_owned(*param_id, response))?;
                 }
             }
         }
@@ -489,7 +516,11 @@ impl InternalRunner {
             for ((sender, external_nodes), internal_props) in &self.sends {
                 let loads = internal_props
                     .iter()
-                    .map(|node| self.graph.dump_owned(*node))
+                    .map(|(node_id, param_id)| {
+                        self.graph
+                            .get_node(*node_id)
+                            .and_then(|n| n.dump_owned(*param_id))
+                    })
                     .zip(external_nodes)
                     .map(|(v, (n, p))| v.map(|val| (*n, *p, val)))
                     .collect::<Result<Vec<_>>>()?;

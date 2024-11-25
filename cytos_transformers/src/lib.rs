@@ -12,11 +12,11 @@ mod timer;
 mod types;
 
 use add_one::AddValue;
+use cytos::loader::DynamicLoadingRegistryWrapper;
 use decoder::ImageDecoder;
 use incremental::IncrementalGenerator;
 use mean::Mean;
 use print::Print;
-use cytos::loader::DynamicLoadingRegistryWrapper;
 use source::Rscam;
 use timer::Timer;
 
