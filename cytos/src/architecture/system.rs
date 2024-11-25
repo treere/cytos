@@ -201,30 +201,62 @@ pub struct System {
 }
 
 impl System {
-    /// Send a command to a runner
-    pub fn command(&self, graph: GraphId, command: Command) -> Result<Value> {
-        self.internal_command(graph, command).and_then(|r| match r {
-            Internal::Value(value) => Ok(value),
-            Internal::Prop(_generic_owned_prop) => Err("cannot return owned".into()),
-        })
-    }
-
-    /// Send a command to a runner
-    fn internal_command(&self, graph: GraphId, command: Command) -> Result<Internal> {
-        self.runners
-            .get(&graph)
-            .ok_or("not found")?
-            .command(command)
-    }
-
     /// Iterator on graph names
     pub fn graphs(&self) -> impl Iterator<Item = &GraphId> {
         self.runners.keys()
     }
+
+    pub fn graph(&self, graph: GraphId) -> Result<GraphView<'_>> {
+        let r = self.runners.get(&graph).ok_or("not found")?;
+        Ok(GraphView { r })
+    }
+}
+
+pub struct GraphView<'a> {
+    r: &'a Runner,
+}
+
+impl GraphView<'_> {
+    fn command(&self, command: Command) -> Result<Value> {
+        self.r.command(command).and_then(|r| match r {
+            Internal::Value(value) => Ok(value),
+            Internal::Prop(_generic_owned_prop) => Err("cannot return owned".into()),
+        })
+    }
+    pub fn kill(&self) -> Result<Value> {
+        self.command(Command::Kill)
+    }
+    pub fn start(&self) -> Result<Value> {
+        self.command(Command::Start)
+    }
+    pub fn stop(&self) -> Result<Value> {
+        self.command(Command::Stop)
+    }
+    pub fn status(&self) -> Result<Value> {
+        self.command(Command::Status)
+    }
+    pub fn list_nodes(&self) -> Result<Value> {
+        self.command(Command::ListNodes)
+    }
+    pub fn list_inputs(&self, node_id: NodeId) -> Result<Value> {
+        self.command(Command::ListInputs(node_id))
+    }
+    pub fn list_outputs(&self, node_id: NodeId) -> Result<Value> {
+        self.command(Command::ListOutputs(node_id))
+    }
+    pub fn dump(&self, data: Vec<(NodeId, ParamId)>) -> Result<Value> {
+        self.command(Command::MultiDump(data))
+    }
+    pub fn assign(&self, data: Vec<(NodeId, ParamId, Value)>) -> Result<Value> {
+        self.command(Command::MultiAssign(data))
+    }
+    pub fn load(&self, data: Vec<(NodeId, ParamId, Value)>) -> Result<Value> {
+        self.command(Command::MultiLoad(data))
+    }
 }
 
 /// Commands that a runner can send
-pub enum Command {
+enum Command {
     /// Kill the runner
     Kill,
     /// Start the runner
@@ -249,8 +281,6 @@ pub enum Command {
     MultiOwnedDump(Vec<(NodeId, ParamId)>),
     /// Multi assign owned command
     MultiOwnedAssign(Vec<(NodeId, ParamId, GenericOwnedProp)>),
-    /// Multi load owned command
-    MultiOwnedLoad(Vec<(NodeId, ParamId, GenericOwnedProp)>),
 }
 
 enum Internal {
@@ -430,13 +460,6 @@ impl InternalRunner {
                     .collect();
                 message.send_value(p)
             }
-            Command::MultiOwnedLoad(vec) => {
-                let p: Result<Vec<_>> = vec
-                    .into_iter()
-                    .map(|(n, p, v)| self.graph.get_node_mut(n).and_then(|n| n.load_owned(p, v)))
-                    .collect();
-                message.send_value(p)
-            }
             Command::MultiOwnedAssign(vec) => {
                 let p: Result<Vec<_>> = vec
                     .into_iter()
@@ -508,7 +531,7 @@ struct Runner {
 
 impl Runner {
     /// Send a command to the internal runner
-    pub fn command(&self, command: Command) -> Result<Internal> {
+    fn command(&self, command: Command) -> Result<Internal> {
         let (message, receiver) = Response::new();
 
         match self.sender.send((command, message)) {

@@ -8,7 +8,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use cytos::architecture::system::{Command, SystemRepr};
+use cytos::architecture::system::SystemRepr;
 use cytos::{architecture::System, loader::Registry};
 use serde_json::{json, Value};
 
@@ -86,19 +86,19 @@ async fn graph_status(
     Path(graph_id): Path<String>,
     State(system): State<WebSystem>,
 ) -> Json<Value> {
-    let result = system.command(graph_id.into(), Command::Status).unwrap();
+    let result = system.graph(graph_id.into()).unwrap().status().unwrap();
     Json(json!(result))
 }
 async fn graph_start(Path(graph_id): Path<String>, State(system): State<WebSystem>) -> Json<Value> {
-    let result = system.command(graph_id.into(), Command::Start).unwrap();
+    let result = system.graph(graph_id.into()).unwrap().start().unwrap();
     Json(json!(result))
 }
 async fn graph_stop(Path(graph_id): Path<String>, State(system): State<WebSystem>) -> Json<Value> {
-    let result = system.command(graph_id.into(), Command::Stop).unwrap();
+    let result = system.graph(graph_id.into()).unwrap().stop().unwrap();
     Json(json!(result))
 }
 async fn node_list(Path(graph_id): Path<String>, State(system): State<WebSystem>) -> Json<Value> {
-    let result = system.command(graph_id.into(), Command::ListNodes).unwrap();
+    let result = system.graph(graph_id.into()).unwrap().list_nodes().unwrap();
     Json(json!(result))
 }
 async fn node_inputs(
@@ -106,7 +106,9 @@ async fn node_inputs(
     State(system): State<WebSystem>,
 ) -> Json<Value> {
     let result = system
-        .command(graph_id.into(), Command::ListInputs(node_id.into()))
+        .graph(graph_id.into())
+        .unwrap()
+        .list_inputs(node_id.into())
         .unwrap();
     Json(json!(result))
 }
@@ -115,7 +117,9 @@ async fn node_outputs(
     State(system): State<WebSystem>,
 ) -> Json<Value> {
     let result = system
-        .command(graph_id.into(), Command::ListOutputs(node_id.into()))
+        .graph(graph_id.into())
+        .unwrap()
+        .list_outputs(node_id.into())
         .unwrap();
     Json(json!(result))
 }
@@ -124,10 +128,9 @@ async fn node_param_dump(
     State(system): State<WebSystem>,
 ) -> Json<Value> {
     let result = system
-        .command(
-            graph_id.into(),
-            Command::MultiDump(vec![(node_id.into(), param_id.into())]),
-        )
+        .graph(graph_id.into())
+        .unwrap()
+        .dump(vec![(node_id.into(), param_id.into())])
         .unwrap();
     Json(json!(result))
 }
@@ -137,10 +140,9 @@ async fn node_param_load(
     Json(value): Json<cytos::architecture::Value>,
 ) -> Json<Value> {
     let result = system
-        .command(
-            graph_id.into(),
-            Command::MultiLoad(vec![(node_id.into(), param_id.into(), value)]),
-        )
+        .graph(graph_id.into())
+        .unwrap()
+        .load(vec![(node_id.into(), param_id.into(), value)])
         .unwrap();
     Json(json!(result))
 }
@@ -151,10 +153,9 @@ async fn node_param_assign(
     Json(value): Json<cytos::architecture::Value>,
 ) -> Json<Value> {
     let result = system
-        .command(
-            graph_id.into(),
-            Command::MultiAssign(vec![(node_id.into(), param_id.into(), value)]),
-        )
+        .graph(graph_id.into())
+        .unwrap()
+        .assign(vec![(node_id.into(), param_id.into(), value)])
         .unwrap();
     Json(json!(result))
 }

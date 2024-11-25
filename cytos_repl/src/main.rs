@@ -1,7 +1,7 @@
 use anyhow::anyhow;
 use easy_repl::{command, Command, CommandStatus, Repl};
 
-use cytos::architecture::system::{Command as RCommand, SystemRepr};
+use cytos::architecture::system::SystemRepr;
 use cytos::architecture::{NodeId, ParamId, System, Value};
 use cytos::loader::Registry;
 
@@ -62,7 +62,7 @@ fn graph_start(
     graph_id: String,
 ) -> Result<CommandStatus, anyhow::Error> {
     let status = status.lock().or(Err(anyhow!("cannot lock")))?;
-    let result = status.system.command(graph_id.into(), RCommand::Start);
+    let result = status.system.graph(graph_id.into()).unwrap().start();
     println!("{result:?}");
 
     Ok(CommandStatus::Done)
@@ -70,7 +70,7 @@ fn graph_start(
 
 fn graph_stop(status: Rc<Mutex<Status>>, graph_id: String) -> Result<CommandStatus, anyhow::Error> {
     let status = status.lock().or(Err(anyhow!("cannot lock")))?;
-    let result = status.system.command(graph_id.into(), RCommand::Stop);
+    let result = status.system.graph(graph_id.into()).unwrap().stop();
 
     println!("{result:?}");
 
@@ -82,7 +82,12 @@ fn graph_status(
     graph_id: String,
 ) -> Result<CommandStatus, anyhow::Error> {
     let status = status.lock().or(Err(anyhow!("cannot lock")))?;
-    let result = status.system.command(graph_id.into(), RCommand::Status);
+    let result = status
+        .system
+        .graph(graph_id.into())
+        .unwrap()
+        .status()
+        .unwrap();
 
     println!(">> {result:?}");
 
@@ -140,7 +145,9 @@ fn node_list(status: Rc<Mutex<Status>>, graph_id: String) -> Result<CommandStatu
     let status = status.lock().or(Err(anyhow!("cannot lock")))?;
     let result = status
         .system
-        .command(graph_id.into(), RCommand::ListNodes)
+        .graph(graph_id.into())
+        .unwrap()
+        .list_nodes()
         .and_then(|x| x.dump::<Vec<NodeId>>())
         .map_err(|x| anyhow!(x.to_string()))?;
 
@@ -156,7 +163,9 @@ fn node_inputs(
     let status = status.lock().or(Err(anyhow!("cannot lock")))?;
     let result = status
         .system
-        .command(graph_id.into(), RCommand::ListInputs(node_id.into()))
+        .graph(graph_id.into())
+        .unwrap()
+        .list_inputs(node_id.into())
         .and_then(|val| val.dump::<Vec<ParamId>>())
         .map_err(|x| anyhow!(x.to_string()))?;
 
@@ -172,7 +181,9 @@ fn node_outputs(
     let status = status.lock().or(Err(anyhow!("cannot lock")))?;
     let result = status
         .system
-        .command(graph_id.into(), RCommand::ListOutputs(node_id.into()))
+        .graph(graph_id.into())
+        .unwrap()
+        .list_outputs(node_id.into())
         .and_then(|val| val.dump::<Vec<NodeId>>())
         .map_err(|x| anyhow!(x.to_string()))?;
 
@@ -187,10 +198,11 @@ fn node_dump(
     param_id: String,
 ) -> Result<CommandStatus, anyhow::Error> {
     let status = status.lock().or(Err(anyhow!("cannot lock")))?;
-    let result = status.system.command(
-        graph_id.into(),
-        RCommand::MultiDump(vec![(node_id.into(), param_id.into())]),
-    );
+    let result = status
+        .system
+        .graph(graph_id.into())
+        .unwrap()
+        .dump(vec![(node_id.into(), param_id.into())]);
 
     println!("{result:?}");
 
@@ -207,10 +219,11 @@ fn node_load(
     let value: Value = serde_json::from_str(&value).map_err(|x| anyhow!(x))?;
 
     let status = status.lock().or(Err(anyhow!("cannot lock")))?;
-    let result = status.system.command(
-        graph_id.into(),
-        RCommand::MultiLoad(vec![(node_id.into(), param_id.into(), value)]),
-    );
+    let result = status.system.graph(graph_id.into()).unwrap().load(vec![(
+        node_id.into(),
+        param_id.into(),
+        value,
+    )]);
 
     println!("{result:?}");
 
@@ -227,10 +240,11 @@ fn node_assign(
     let value: Value = serde_json::from_str(&value).map_err(|x| anyhow!(x))?;
 
     let status = status.lock().or(Err(anyhow!("cannot lock")))?;
-    let result = status.system.command(
-        graph_id.into(),
-        RCommand::MultiAssign(vec![(node_id.into(), param_id.into(), value)]),
-    );
+    let result = status.system.graph(graph_id.into()).unwrap().assign(vec![(
+        node_id.into(),
+        param_id.into(),
+        value,
+    )]);
 
     println!("{result:?}");
 
@@ -240,7 +254,7 @@ fn node_assign(
 fn system_load_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Load a system from a configuration",
-        (filename: String) =>   |filename| system_load(status.clone(), filename)
+        (filename: String) => |filename| system_load(status.clone(), filename)
     }
 }
 
