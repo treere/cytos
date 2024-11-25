@@ -1,5 +1,5 @@
 [workspace]
-members = ["proph","proph_bench","proph_derive","proph_repl","proph_transformers", "proph_web"]
+members = ["cytos","cytos_bench","cytos_derive","cytos_repl","cytos_transformers", "cytos_web"]
 resolver = "2"
 
 [profile.release]

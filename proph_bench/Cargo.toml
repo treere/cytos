@@ -1,8 +1,0 @@
-[package]
-name = "proph_bench"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-proph = { path = "../proph" }
-clap = "4.4.6"

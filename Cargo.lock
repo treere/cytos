@@ -420,6 +420,70 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
 
 [[package]]
+name = "cytos"
+version = "0.1.0"
+dependencies = [
+ "crossbeam",
+ "indexmap",
+ "libloading",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "cytos_bench"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "cytos",
+]
+
+[[package]]
+name = "cytos_derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.87",
+]
+
+[[package]]
+name = "cytos_repl"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "cytos",
+ "easy-repl",
+ "serde_json",
+]
+
+[[package]]
+name = "cytos_transformers"
+version = "0.1.0"
+dependencies = [
+ "cytos",
+ "cytos_derive",
+ "image",
+ "rscam",
+ "serde",
+]
+
+[[package]]
+name = "cytos_web"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "clap",
+ "cytos",
+ "scopeguard",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "dirs-next"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1184,70 +1248,6 @@ checksum = "a65f2e60fbf1063868558d69c6beacf412dc755f9fc020f514b7955fc914fe30"
 dependencies = [
  "quote",
  "syn 2.0.87",
-]
-
-[[package]]
-name = "proph"
-version = "0.1.0"
-dependencies = [
- "crossbeam",
- "indexmap",
- "libloading",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "proph_bench"
-version = "0.1.0"
-dependencies = [
- "clap",
- "proph",
-]
-
-[[package]]
-name = "proph_derive"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.87",
-]
-
-[[package]]
-name = "proph_repl"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "easy-repl",
- "proph",
- "serde_json",
-]
-
-[[package]]
-name = "proph_transformers"
-version = "0.1.0"
-dependencies = [
- "image",
- "proph",
- "proph_derive",
- "rscam",
- "serde",
-]
-
-[[package]]
-name = "proph_web"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "clap",
- "proph",
- "scopeguard",
- "serde",
- "serde_json",
- "tokio",
 ]
 
 [[package]]
