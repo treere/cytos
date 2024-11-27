@@ -1,3 +1,0 @@
-#!/bin/bash
-
-sudo bpftrace -e 'uprobe:./cytos_repl:trace_node_step { @node[comm] = arg1; @start[comm] = nsecs} uretprobe:./cytos_repl:trace_node_step /@start[comm]/ { $n = @node[comm]; @ns[comm, $n] = hist(nsecs - @start[comm]); delete(@start[comm]); delete(@node[comm]) }'
