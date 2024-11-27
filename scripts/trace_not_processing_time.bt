@@ -1,0 +1,9 @@
+uretprobe:$1:trace_node_step  {
+  @start[comm] = nsecs;
+}
+
+uprobe:$1:trace_node_step /@start[comm]/ {
+  @ns[comm] = hist(nsecs - @start[comm]);
+  delete(@start[comm]);
+}
+
