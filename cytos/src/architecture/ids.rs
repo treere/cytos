@@ -1,6 +1,8 @@
 //! Index module
 
-use serde::de::Error;
+use super::Result;
+use serde::de::Error as DeError;
+use serde::ser::Error as SerError;
 
 /// Macro to create an index struct
 macro_rules! create_ids {
@@ -13,7 +15,8 @@ macro_rules! create_ids {
             where
                 S: serde::Serializer,
             {
-                let value = format_radix(self.0, 36);
+                let value = format_radix(self.0, 36)
+                    .map_err(|v| <S as serde::Serializer>::Error::custom(v))?;
 
                 serializer.serialize_str(&value)
             }
@@ -34,13 +37,14 @@ macro_rules! create_ids {
 
         impl std::fmt::Debug for $struct_name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                write!(f, "{}", format_radix(self.0, 36))
+                let v = format_radix(self.0, 36).unwrap();
+                write!(f, "{}", v)
             }
         }
 
         impl std::fmt::Display for $struct_name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                write!(f, "{}", format_radix(self.0, 36))
+                write!(f, "{}", format_radix(self.0, 36).unwrap())
             }
         }
 
@@ -53,21 +57,28 @@ macro_rules! create_ids {
     };
 }
 
+pub fn id_number_to_string(x: u64) -> Result<String> {
+    format_radix(x, 36)
+}
+
+pub fn id_string_to_number(value: &str) -> Result<u64> {
+    u64::from_str_radix(value, 36).map_err(|x| x.into())
+}
+
 /// Format an u64 using a given radix
-fn format_radix(mut x: u64, radix: u32) -> String {
+fn format_radix(mut x: u64, radix: u32) -> Result<String> {
     let mut result = vec![];
     let r = u64::from(radix);
     loop {
         let m = x % r;
         x /= r;
 
-        // will panic if you use a bad radix (< 2 or > 36).
-        result.push(std::char::from_digit(u32::try_from(m).unwrap(), radix).unwrap());
+        result.push(std::char::from_digit(u32::try_from(m)?, radix).ok_or("cannot convert")?);
         if x == 0 {
             break;
         }
     }
-    result.into_iter().rev().collect()
+    Ok(result.into_iter().rev().collect())
 }
 
 create_ids!(GraphId);
@@ -80,8 +91,8 @@ mod tests {
 
     #[test]
     fn test_format_radix() {
-        assert_eq!(format_radix(120, 10), "120".to_owned());
-        assert_eq!(format_radix(8, 2), "1000".to_owned());
+        assert_eq!(format_radix(120, 10).unwrap(), "120".to_owned());
+        assert_eq!(format_radix(8, 2).unwrap(), "1000".to_owned());
     }
 
     #[test]

@@ -1,7 +1,9 @@
 use anyhow::anyhow;
 use easy_repl::{command, Command, CommandStatus, Repl};
 
-use cytos::architecture::{NodeId, ParamId, System, Value};
+use cytos::architecture::{
+    id_number_to_string, id_string_to_number, NodeId, ParamId, System, Value,
+};
 use cytos::loader::Registry;
 use cytos::repr::SystemRepr;
 
@@ -388,6 +390,24 @@ fn main() -> Result<(), &'static str> {
         .add("node_dump", node_dump_command(status.clone()))
         .add("node_load", node_load_command(status.clone()))
         .add("node_assign", node_assign_command(status.clone()))
+        .add(
+            "id_s2n",
+            command! {
+            "Convert id from string to number",
+            (s: String) => |s: String| {
+                println!("-> {}",id_string_to_number(&s).map_err(|x| anyhow!(x.to_string()))?);
+                Ok(CommandStatus::Done)
+            }},
+        )
+        .add(
+            "id_n2s",
+            command! {
+            "Convert id from number to string",
+            (s: u64) => |s: u64| {
+                println!("-> {}",id_number_to_string(s).map_err(|x| anyhow!(x.to_string()))?);
+                Ok(CommandStatus::Done)
+            }},
+        )
         .add(
             "exit",
             command! { "Exit program", () => || Ok(CommandStatus::Quit) },

@@ -54,7 +54,7 @@ pub struct Graph {
 
 #[no_mangle]
 #[inline(never)]
-pub fn trace_node_step<'a>(_node_id: u64, node: &'a mut Node) ->  Result<()> {
+pub fn trace_node_step(_node_id: u64, node: &mut Node) -> Result<()> {
     node.step()
 }
 
