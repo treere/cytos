@@ -52,6 +52,12 @@ pub struct Graph {
     on_errors: IndexMap<NodeId, OnError>,
 }
 
+#[no_mangle]
+#[inline(never)]
+pub fn trace_node_step<'a>(_node_id: u64, node: &'a mut Node) ->  Result<()> {
+    node.step()
+}
+
 impl Graph {
     /// Initialize the nodes
     pub fn initialize(&mut self) -> Result<()> {
@@ -64,7 +70,7 @@ impl Graph {
     /// Compute one step of processing
     pub fn step(&mut self) -> Result<StepResult> {
         for (node_id, node) in self.nodes.iter_mut() {
-            match node.step() {
+            match trace_node_step(node_id.0, node) {
                 Ok(_) => continue,
                 Err(x) => match self.on_errors.get(node_id).unwrap_or(&OnError::Fail) {
                     OnError::Skip => return Ok(StepResult::Skip),
