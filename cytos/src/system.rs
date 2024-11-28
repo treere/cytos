@@ -23,6 +23,82 @@ use super::{GraphId, NodeId, ParamId, Result, Value};
 
 use std::thread::{Builder, JoinHandle};
 
+fn create_runner(
+    repr: GraphRepr,
+    receiver: Receiver<InternalCommand>,
+    senders: IndexMap<GraphId, Sender<InternalCommand>>,
+    registry: Registry,
+    requests: Vec<&SystemLink>,
+    sends: Vec<&SystemLink>,
+) -> Result<impl FnOnce()> {
+    let requests = create_requests(&senders, requests)?;
+    let sends = create_sends(&senders, sends)?;
+
+    Ok(move || {
+        let graph = repr.into_graph(&registry).expect("Cannot build graph");
+
+        Worker::new(graph, receiver, requests, sends).run();
+    })
+}
+
+fn create_sends(
+    senders: &IndexMap<GraphId, Sender<InternalCommand>>,
+    mut sends: Vec<&SystemLink>,
+) -> Result<LinkToExternal> {
+    sends.sort_by_key(|x| x.dst.0);
+
+    sends[..]
+        .chunk_by(|a, b| a.dst.0 == b.dst.0)
+        .map(|requests| {
+            let g = requests[0].dst.0;
+            let (sources, destinations) = requests
+                .iter()
+                .map(|request| {
+                    (
+                        (request.src.1, request.src.2),
+                        (request.dst.1, request.dst.2),
+                    )
+                })
+                .unzip();
+
+            senders
+                .get(&g)
+                .cloned()
+                .map(|sender| ((sender, destinations), sources))
+        })
+        .collect::<Option<Vec<_>>>()
+        .ok_or("missin sender".into())
+}
+
+fn create_requests(
+    senders: &IndexMap<GraphId, Sender<InternalCommand>>,
+    mut requests: Vec<&SystemLink>,
+) -> Result<LinkToExternal> {
+    requests.sort_by_key(|x| x.src.0);
+
+    requests[..]
+        .chunk_by(|a, b| a.src.0 == b.src.0)
+        .map(|requests| {
+            let g = requests[0].src.0;
+            let (sources, destinations) = requests
+                .iter()
+                .map(|request| {
+                    (
+                        (request.src.1, request.src.2),
+                        (request.dst.1, request.dst.2),
+                    )
+                })
+                .unzip();
+
+            senders
+                .get(&g)
+                .cloned()
+                .map(|sender| ((sender, sources), destinations))
+        })
+        .collect::<Option<Vec<_>>>()
+        .ok_or("missin sender".into())
+}
+
 impl SystemRepr {
     /// Convert a system representation into a System
     pub fn to_system(self, registry: &Registry) -> Result<System> {
@@ -43,7 +119,7 @@ impl SystemRepr {
                 let requests = self.requests.iter().filter(|l| l.dst.0 == id).collect();
                 let sends = self.sends.iter().filter(|l| l.src.0 == id).collect();
 
-                Self::create_runner(
+                create_runner(
                     repr,
                     receiver,
                     senders.clone(),
@@ -62,82 +138,6 @@ impl SystemRepr {
             .collect::<Result<IndexMap<_, _>>>()?;
 
         Ok(System { runners, senders })
-    }
-
-    fn create_runner(
-        repr: GraphRepr,
-        receiver: Receiver<InternalCommand>,
-        senders: IndexMap<GraphId, Sender<InternalCommand>>,
-        registry: Registry,
-        requests: Vec<&SystemLink>,
-        sends: Vec<&SystemLink>,
-    ) -> Result<impl FnOnce()> {
-        let requests = Self::create_requests(&senders, requests)?;
-        let sends = Self::create_sends(&senders, sends)?;
-
-        Ok(move || {
-            let graph = repr.into_graph(&registry).expect("Cannot build graph");
-
-            Worker::new(graph, receiver, requests, sends).run();
-        })
-    }
-
-    fn create_sends(
-        senders: &IndexMap<GraphId, Sender<InternalCommand>>,
-        mut sends: Vec<&SystemLink>,
-    ) -> Result<LinkToExternal> {
-        sends.sort_by_key(|x| x.dst.0);
-
-        sends[..]
-            .chunk_by(|a, b| a.dst.0 == b.dst.0)
-            .map(|requests| {
-                let g = requests[0].dst.0;
-                let (sources, destinations) = requests
-                    .iter()
-                    .map(|request| {
-                        (
-                            (request.src.1, request.src.2),
-                            (request.dst.1, request.dst.2),
-                        )
-                    })
-                    .unzip();
-
-                senders
-                    .get(&g)
-                    .cloned()
-                    .map(|sender| ((sender, destinations), sources))
-            })
-            .collect::<Option<Vec<_>>>()
-            .ok_or("missin sender".into())
-    }
-
-    fn create_requests(
-        senders: &IndexMap<GraphId, Sender<InternalCommand>>,
-        mut requests: Vec<&SystemLink>,
-    ) -> Result<LinkToExternal> {
-        requests.sort_by_key(|x| x.src.0);
-
-        requests[..]
-            .chunk_by(|a, b| a.src.0 == b.src.0)
-            .map(|requests| {
-                let g = requests[0].src.0;
-                let (sources, destinations) = requests
-                    .iter()
-                    .map(|request| {
-                        (
-                            (request.src.1, request.src.2),
-                            (request.dst.1, request.dst.2),
-                        )
-                    })
-                    .unzip();
-
-                senders
-                    .get(&g)
-                    .cloned()
-                    .map(|sender| ((sender, sources), destinations))
-            })
-            .collect::<Option<Vec<_>>>()
-            .ok_or("missin sender".into())
     }
 }
 
