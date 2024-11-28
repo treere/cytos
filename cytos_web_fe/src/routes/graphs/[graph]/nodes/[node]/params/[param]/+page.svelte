@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { JSONEditor, Mode, type Content } from 'svelte-jsoneditor';
-	import { invalidateAll } from '$app/navigation';
+	import { invalidate } from '$app/navigation';
 	import ImageViewer from '$lib/image_viewer.svelte';
 	let { data } = $props();
 
@@ -35,7 +35,7 @@
 	};
 
 	const update = () => {
-		invalidateAll();
+		invalidate(`/api/graphs/${data.graph}/nodes/${data.node}/params/${data.param}/dump`);
 	};
 </script>
 
