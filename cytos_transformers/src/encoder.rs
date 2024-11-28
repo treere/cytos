@@ -1,4 +1,4 @@
-use cytos::architecture::{Prop, Result, Stepper};
+use cytos::{Prop, Result, Stepper};
 use cytos_derive::CytosNode;
 
 use crate::decoder::Image;

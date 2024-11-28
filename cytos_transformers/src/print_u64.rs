@@ -1,4 +1,4 @@
-use cytos::architecture::{Done, InputProp, Stepper};
+use cytos::{Done, InputProp, Stepper};
 use cytos_derive::CytosNode;
 
 #[derive(CytosNode, Default)]

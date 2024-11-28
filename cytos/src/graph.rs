@@ -126,7 +126,7 @@ mod tests {
     use super::*;
 
     use crate::{
-        architecture::Value,
+        Value,
         test::{Constant, Empty},
     };
 

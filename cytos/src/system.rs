@@ -23,8 +23,6 @@ use super::{GraphId, NodeId, ParamId, Result, Value};
 
 use std::thread::{Builder, JoinHandle};
 
-type InternalCommand = (Command, Response);
-
 impl SystemRepr {
     /// Convert a system representation into a System
     pub fn to_system(self, registry: &Registry) -> Result<System> {
@@ -181,129 +179,41 @@ impl System {
     }
 }
 
-pub struct GraphView<'a> {
-    r: &'a Runner,
+/// Runner that wraps the internal runner
+struct Runner {
+    /// Thread with the internal runner inside
+    thread: Option<JoinHandle<()>>,
+    /// Sender to the internal runner
+    sender: Sender<InternalCommand>,
 }
 
-impl GraphView<'_> {
-    fn command(&self, command: Command) -> Result<Value> {
-        self.r.command(command).and_then(|r| match r {
-            Internal::Value(value) => Ok(value),
-            Internal::Prop(_generic_owned_prop) => Err("cannot return owned".into()),
-        })
-    }
-    pub fn kill(&self) -> Result<Value> {
-        self.command(Command::Kill)
-    }
-    pub fn start(&self) -> Result<Value> {
-        self.command(Command::Start)
-    }
-    pub fn stop(&self) -> Result<Value> {
-        self.command(Command::Stop)
-    }
-    pub fn status(&self) -> Result<Value> {
-        self.command(Command::Status)
-    }
-    pub fn list_nodes(&self) -> Result<Value> {
-        self.command(Command::ListNodes)
-    }
-    pub fn list_inputs(&self, node_id: NodeId) -> Result<Value> {
-        self.command(Command::ListInputs(node_id))
-    }
-    pub fn list_outputs(&self, node_id: NodeId) -> Result<Value> {
-        self.command(Command::ListOutputs(node_id))
-    }
-    pub fn dump(&self, data: Vec<(NodeId, ParamId)>) -> Result<Value> {
-        self.command(Command::MultiDump(data))
-    }
-    pub fn assign(&self, data: Vec<(NodeId, ParamId, Value)>) -> Result<Value> {
-        self.command(Command::MultiAssign(data))
-    }
-    pub fn load(&self, data: Vec<(NodeId, ParamId, Value)>) -> Result<Value> {
-        self.command(Command::MultiLoad(data))
-    }
-}
+impl Runner {
+    /// Send a command to the internal runner
+    fn command(&self, command: Command) -> Result<Internal> {
+        let (message, receiver) = Response::new();
 
-/// Commands that a runner can send
-enum Command {
-    /// Kill the runner
-    Kill,
-    /// Start the runner
-    Start,
-    /// Stop the runner
-    Stop,
-    /// Receive the runner status
-    Status,
-    /// List the nodes of the graph inside the runner
-    ListNodes,
-    /// List the inputs of a node
-    ListInputs(NodeId),
-    /// List the outputs of a node
-    ListOutputs(NodeId),
-    /// Multi dump command
-    MultiDump(Vec<(NodeId, ParamId)>),
-    /// Multi assign command
-    MultiAssign(Vec<(NodeId, ParamId, Value)>),
-    /// Multi load command
-    MultiLoad(Vec<(NodeId, ParamId, Value)>),
-    /// Multi owned dump command
-    MultiOwnedDump(Vec<(NodeId, ParamId)>),
-    /// Multi assign owned command
-    MultiOwnedAssign(Vec<(NodeId, ParamId, GenericOwnedProp)>),
-}
-
-enum Internal {
-    Value(Value),
-    Prop(Vec<GenericOwnedProp>),
-}
-
-impl std::fmt::Debug for Internal {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Internal::Value(value) => write!(f, "{:?}", value),
-            Internal::Prop(_generic_owned_prop) => write!(f, "GenericOwnedProp"),
+        match self.sender.send((command, message)) {
+            Ok(()) => receiver
+                .recv()
+                .unwrap_or(Ok(Internal::Value(Value::load(&())?)))
+                .map_err(Into::into),
+            Err(_) => Err("Cannot send".into()),
         }
     }
 }
 
-type ResponseResult = std::result::Result<Internal, String>;
+impl Drop for Runner {
+    fn drop(&mut self) {
+        if let Some(t) = self.thread.take() {
+            let (message, _receiver) = Response::new();
+            self.sender
+                .send((Command::Kill, message))
+                .expect("cannot send");
 
-/// Reponse is a letter that contains an sender which can be used to set a response
-#[derive(Clone)]
-pub struct Response {
-    sender: Sender<ResponseResult>,
-}
-
-impl Response {
-    /// Creates a message and returns the received where it is possible to listen to the response
-    fn new() -> (Self, Receiver<ResponseResult>) {
-        let (sender, receiver) = bounded::<ResponseResult>(0);
-
-        (Self { sender }, receiver)
-    }
-
-    /// Set the response and consume the message
-    fn send_value<T: Serialize>(self, resp: Result<T>) {
-        let resp = resp
-            .and_then(|v| Value::load(&v))
-            .map(Internal::Value)
-            .map_err(|r| r.to_string());
-
-        self.sender.send(resp).expect("cannot send");
-    }
-
-    fn send_prop(self, resp: Result<Vec<GenericOwnedProp>>) {
-        let resp = resp.map(Internal::Prop).map_err(|r| r.to_string());
-
-        self.sender.send(resp).expect("cannot send");
+            t.join().expect("cannot join");
+        }
     }
 }
-
-/// Internal address
-type Destination = (NodeId, ParamId);
-
-/// External address
-type ExternalDestination = (Sender<InternalCommand>, Vec<Destination>);
 
 /// The runner worker
 struct InternalRunner {
@@ -490,38 +400,128 @@ impl InternalRunner {
     }
 }
 
-/// Runner that wraps the internal runner
-struct Runner {
-    /// Thread with the internal runner inside
-    thread: Option<JoinHandle<()>>,
-    /// Sender to the internal runner
-    sender: Sender<InternalCommand>,
+type InternalCommand = (Command, Response);
+
+pub struct GraphView<'a> {
+    r: &'a Runner,
 }
 
-impl Runner {
-    /// Send a command to the internal runner
-    fn command(&self, command: Command) -> Result<Internal> {
-        let (message, receiver) = Response::new();
+impl GraphView<'_> {
+    fn command(&self, command: Command) -> Result<Value> {
+        self.r.command(command).and_then(|r| match r {
+            Internal::Value(value) => Ok(value),
+            Internal::Prop(_generic_owned_prop) => Err("cannot return owned".into()),
+        })
+    }
+    pub fn kill(&self) -> Result<Value> {
+        self.command(Command::Kill)
+    }
+    pub fn start(&self) -> Result<Value> {
+        self.command(Command::Start)
+    }
+    pub fn stop(&self) -> Result<Value> {
+        self.command(Command::Stop)
+    }
+    pub fn status(&self) -> Result<Value> {
+        self.command(Command::Status)
+    }
+    pub fn list_nodes(&self) -> Result<Value> {
+        self.command(Command::ListNodes)
+    }
+    pub fn list_inputs(&self, node_id: NodeId) -> Result<Value> {
+        self.command(Command::ListInputs(node_id))
+    }
+    pub fn list_outputs(&self, node_id: NodeId) -> Result<Value> {
+        self.command(Command::ListOutputs(node_id))
+    }
+    pub fn dump(&self, data: Vec<(NodeId, ParamId)>) -> Result<Value> {
+        self.command(Command::MultiDump(data))
+    }
+    pub fn assign(&self, data: Vec<(NodeId, ParamId, Value)>) -> Result<Value> {
+        self.command(Command::MultiAssign(data))
+    }
+    pub fn load(&self, data: Vec<(NodeId, ParamId, Value)>) -> Result<Value> {
+        self.command(Command::MultiLoad(data))
+    }
+}
 
-        match self.sender.send((command, message)) {
-            Ok(()) => receiver
-                .recv()
-                .unwrap_or(Ok(Internal::Value(Value::load(&())?)))
-                .map_err(Into::into),
-            Err(_) => Err("Cannot send".into()),
+/// Commands that a runner can send
+enum Command {
+    /// Kill the runner
+    Kill,
+    /// Start the runner
+    Start,
+    /// Stop the runner
+    Stop,
+    /// Receive the runner status
+    Status,
+    /// List the nodes of the graph inside the runner
+    ListNodes,
+    /// List the inputs of a node
+    ListInputs(NodeId),
+    /// List the outputs of a node
+    ListOutputs(NodeId),
+    /// Multi dump command
+    MultiDump(Vec<(NodeId, ParamId)>),
+    /// Multi assign command
+    MultiAssign(Vec<(NodeId, ParamId, Value)>),
+    /// Multi load command
+    MultiLoad(Vec<(NodeId, ParamId, Value)>),
+    /// Multi owned dump command
+    MultiOwnedDump(Vec<(NodeId, ParamId)>),
+    /// Multi assign owned command
+    MultiOwnedAssign(Vec<(NodeId, ParamId, GenericOwnedProp)>),
+}
+
+enum Internal {
+    Value(Value),
+    Prop(Vec<GenericOwnedProp>),
+}
+
+impl std::fmt::Debug for Internal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Internal::Value(value) => write!(f, "{:?}", value),
+            Internal::Prop(_generic_owned_prop) => write!(f, "GenericOwnedProp"),
         }
     }
 }
 
-impl Drop for Runner {
-    fn drop(&mut self) {
-        if let Some(t) = self.thread.take() {
-            let (message, _receiver) = Response::new();
-            self.sender
-                .send((Command::Kill, message))
-                .expect("cannot send");
+type ResponseResult = std::result::Result<Internal, String>;
 
-            t.join().expect("cannot join");
-        }
+/// Reponse is a letter that contains an sender which can be used to set a response
+#[derive(Clone)]
+pub struct Response {
+    sender: Sender<ResponseResult>,
+}
+
+impl Response {
+    /// Creates a message and returns the received where it is possible to listen to the response
+    fn new() -> (Self, Receiver<ResponseResult>) {
+        let (sender, receiver) = bounded::<ResponseResult>(0);
+
+        (Self { sender }, receiver)
+    }
+
+    /// Set the response and consume the message
+    fn send_value<T: Serialize>(self, resp: Result<T>) {
+        let resp = resp
+            .and_then(|v| Value::load(&v))
+            .map(Internal::Value)
+            .map_err(|r| r.to_string());
+
+        self.sender.send(resp).expect("cannot send");
+    }
+
+    fn send_prop(self, resp: Result<Vec<GenericOwnedProp>>) {
+        let resp = resp.map(Internal::Prop).map_err(|r| r.to_string());
+
+        self.sender.send(resp).expect("cannot send");
     }
 }
+
+/// Internal address
+type Destination = (NodeId, ParamId);
+
+/// External address
+type ExternalDestination = (Sender<InternalCommand>, Vec<Destination>);

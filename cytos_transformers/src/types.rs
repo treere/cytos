@@ -1,4 +1,4 @@
-use cytos::architecture::props::Ownable;
+use cytos::props::Ownable;
 use serde::{ser::SerializeSeq, Deserialize, Serialize};
 
 enum FrameKind {
@@ -109,7 +109,7 @@ impl Ownable for Frame {
 
 #[cfg(test)]
 mod tests {
-    use cytos::architecture::Value;
+    use cytos::Value;
 
     use super::*;
 

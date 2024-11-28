@@ -38,7 +38,7 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
     let output_names = create_output_names(fields);
 
     quote! {
-        impl  #generics cytos::architecture::Transformer for #ident #generics  #gwhere  {
+        impl  #generics cytos::Transformer for #ident #generics  #gwhere  {
             #link
 
 
@@ -70,8 +70,8 @@ fn create_link(fields: &Fields) -> proc_macro2::TokenStream {
         .collect::<Vec<_>>();
 
     quote! {
-        fn link(&mut self, name: cytos::architecture::ParamId, val: cytos::architecture::props::GenericProp)
-                -> cytos::architecture::Result<()> {
+        fn link(&mut self, name: cytos::ParamId, val: cytos::props::GenericProp)
+                -> cytos::Result<()> {
             match name {
                 #(#inputs)*
                 _ => Err("missing input link data".into()),
@@ -93,9 +93,9 @@ fn create_assign(fields: &Fields) -> proc_macro2::TokenStream {
         quote!(
             fn assign(
                 &mut self,
-                name: cytos::architecture::ParamId,
-                value: cytos::architecture::Value,
-            ) -> cytos::architecture::Result<()> {
+                name: cytos::ParamId,
+                value: cytos::Value,
+            ) -> cytos::Result<()> {
                 match name {
                     #(#inputs)*
                     _ => Err("parameter not found".into()),
@@ -119,9 +119,9 @@ fn create_load(fields: &Fields) -> proc_macro2::TokenStream {
         quote!(
             fn load(
                 &mut self,
-                name: cytos::architecture::ParamId,
-                value: cytos::architecture::Value,
-            ) -> cytos::architecture::Result<()> {
+                name: cytos::ParamId,
+                value: cytos::Value,
+            ) -> cytos::Result<()> {
                 match name {
                     #(#inputs)*
                     _ => Err("parameter not found".into()),
@@ -146,8 +146,8 @@ fn create_dump(fields: &Fields) -> proc_macro2::TokenStream {
         quote!(
             fn dump(
                 & self,
-                name: cytos::architecture::ParamId
-            ) -> cytos::architecture::Result<cytos::architecture::Value> {
+                name: cytos::ParamId
+            ) -> cytos::Result<cytos::Value> {
                 match name {
                     #(#inputs)*
                     _ => Err("parameter not found".into()),
@@ -171,9 +171,9 @@ fn create_load_owned(fields: &Fields) -> proc_macro2::TokenStream {
         quote!(
             fn load_owned(
                 &mut self,
-                name: cytos::architecture::ParamId,
-                value: cytos::architecture::GenericOwnedProp,
-            ) -> cytos::architecture::Result<()> {
+                name: cytos::ParamId,
+                value: cytos::GenericOwnedProp,
+            ) -> cytos::Result<()> {
                 match name {
                     #(#inputs)*
                     _ => Err("parameter not found".into()),
@@ -197,9 +197,9 @@ fn create_assign_owned(fields: &Fields) -> proc_macro2::TokenStream {
         quote!(
             fn assign_owned(
                 &mut self,
-                name: cytos::architecture::ParamId,
-                value: cytos::architecture::GenericOwnedProp,
-            ) -> cytos::architecture::Result<()> {
+                name: cytos::ParamId,
+                value: cytos::GenericOwnedProp,
+            ) -> cytos::Result<()> {
                 match name {
                     #(#inputs)*
                     _ => Err("parameter not found".into()),
@@ -224,8 +224,8 @@ fn create_dump_owned(fields: &Fields) -> proc_macro2::TokenStream {
         quote!(
             fn dump_owned(
                 & self,
-                name: cytos::architecture::ParamId
-            ) -> cytos::architecture::Result<cytos::architecture::GenericOwnedProp> {
+                name: cytos::ParamId
+            ) -> cytos::Result<cytos::GenericOwnedProp> {
                 match name {
                     #(#inputs)*
                     _ => Err("parameter not found".into()),
@@ -246,8 +246,8 @@ fn create_input(fields: &Fields) -> proc_macro2::TokenStream {
         .collect::<Vec<_>>();
 
     quote! {
-        fn input(&self, val: cytos::architecture::ParamId)
-                 -> Option<cytos::architecture::props::GenericProp> {
+        fn input(&self, val: cytos::ParamId)
+                 -> Option<cytos::props::GenericProp> {
             match val {
                 #(#inputs)*
                 _ => None,
@@ -265,7 +265,7 @@ fn create_input_names(fields: &Fields) -> proc_macro2::TokenStream {
         .collect::<Vec<_>>();
 
     quote! {
-        fn input_names(&self) -> Vec<cytos::architecture::ParamId> {
+        fn input_names(&self) -> Vec<cytos::ParamId> {
             vec![
                 #(#input_names),*
             ]
@@ -283,8 +283,8 @@ fn create_output(fields: &Fields) -> proc_macro2::TokenStream {
         .collect::<Vec<_>>();
 
     quote! {
-        fn output(&self, val: cytos::architecture::ParamId)
-                  -> Option<cytos::architecture::props::GenericProp> {
+        fn output(&self, val: cytos::ParamId)
+                  -> Option<cytos::props::GenericProp> {
             match val {
                 #(#outputs)*
                 _ => None,
@@ -302,7 +302,7 @@ fn create_output_names(fields: &Fields) -> proc_macro2::TokenStream {
         .collect::<Vec<_>>();
 
     quote! {
-        fn output_names(&self) -> Vec<cytos::architecture::ParamId> {
+        fn output_names(&self) -> Vec<cytos::ParamId> {
             vec![
                 #(#output_names),*
             ]
@@ -327,6 +327,6 @@ fn ident_to_lit(ident: &'_ Option<Ident>) -> proc_macro2::TokenStream {
     );
     let l = LitInt::new(&lit, Span::call_site());
     quote! {
-        cytos::architecture::ParamId(#l)
+        cytos::ParamId(#l)
     }
 }

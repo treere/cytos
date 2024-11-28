@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::architecture::{GraphId, NodeId, ParamId, Value};
+use crate::{GraphId, NodeId, ParamId, Value};
 use serde::Deserialize;
 
 /// Node deserializable rapresentation

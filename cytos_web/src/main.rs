@@ -9,7 +9,7 @@ use axum::{
     Router,
 };
 use cytos::repr::SystemRepr;
-use cytos::{architecture::System, loader::Registry};
+use cytos::{System, loader::Registry};
 use serde_json::{json, Value};
 
 type WebSystem = Arc<System>;
@@ -137,7 +137,7 @@ async fn node_param_dump(
 async fn node_param_load(
     Path((graph_id, node_id, param_id)): Path<(String, String, String)>,
     State(system): State<WebSystem>,
-    Json(value): Json<cytos::architecture::Value>,
+    Json(value): Json<cytos::Value>,
 ) -> Json<Value> {
     let result = system
         .graph(graph_id.into())
@@ -150,7 +150,7 @@ async fn node_param_load(
 async fn node_param_assign(
     Path((graph_id, node_id, param_id)): Path<(String, String, String)>,
     State(system): State<WebSystem>,
-    Json(value): Json<cytos::architecture::Value>,
+    Json(value): Json<cytos::Value>,
 ) -> Json<Value> {
     let result = system
         .graph(graph_id.into())

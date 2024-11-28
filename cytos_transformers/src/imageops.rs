@@ -1,5 +1,5 @@
 use crate::decoder::Image;
-use cytos::architecture::{Prop, Result, Stepper};
+use cytos::{Prop, Result, Stepper};
 use cytos_derive::CytosNode;
 
 macro_rules! define_function {

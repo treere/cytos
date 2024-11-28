@@ -1,5 +1,5 @@
-use crate::architecture::props::GenericProp;
-use crate::architecture::{GenericOwnedProp, ParamId, Prop, Result, Stepper, Transformer, Value};
+use crate::props::GenericProp;
+use crate::{GenericOwnedProp, ParamId, Prop, Result, Stepper, Transformer, Value};
 
 #[derive(Default)]
 pub struct Empty {}

@@ -1,6 +1,6 @@
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::architecture::Result;
+use crate::Result;
 
 /// Generic value
 #[derive(Serialize, Deserialize, Debug, Clone)]

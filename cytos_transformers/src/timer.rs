@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use cytos::architecture::{Prop, Stepper};
+use cytos::{Prop, Stepper};
 use cytos_derive::CytosNode;
 
 #[derive(CytosNode)]
@@ -23,7 +23,7 @@ impl Default for Timer {
 }
 
 impl Stepper for Timer {
-    fn step(&mut self) -> cytos::architecture::Result<()> {
+    fn step(&mut self) -> cytos::Result<()> {
         if self.count == 0 {
             *self.output = self.timer.elapsed();
 

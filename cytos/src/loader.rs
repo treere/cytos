@@ -1,6 +1,6 @@
 //! Module to handle dynamic library loading
 
-use crate::architecture::{Result, Transformer};
+use crate::{Result, Transformer};
 
 use libloading::{Library, Symbol};
 

@@ -1,4 +1,4 @@
-use cytos::architecture::{props::Ownable, Prop, Result, Stepper};
+use cytos::{props::Ownable, Prop, Result, Stepper};
 use cytos_derive::CytosNode;
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Display;
