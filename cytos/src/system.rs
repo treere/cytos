@@ -339,6 +339,26 @@ impl Worker {
 
                 message.send_value(Ok(()))
             }
+            Command::Sender((ss, r)) => {
+                if let Some(x) = self.sends.iter_mut().find(|(s, _)| ss.0.same_channel(&s.0)) {
+                    x.0 .1.push(ss.1);
+                    x.1.push(r)
+                } else {
+                    self.sends.push(((ss.0, vec![ss.1]), vec![r]));
+                }
+            }
+            Command::Request((ss, r)) => {
+                if let Some(x) = self
+                    .requests
+                    .iter_mut()
+                    .find(|(s, _)| ss.0.same_channel(&s.0))
+                {
+                    x.0 .1.push(ss.1);
+                    x.1.push(r)
+                } else {
+                    self.requests.push(((ss.0, vec![ss.1]), vec![r]));
+                }
+            }
             _ => unreachable!(),
         }
     }
@@ -444,6 +464,23 @@ impl GraphView<'_> {
     pub fn link(&self, src: (NodeId, ParamId), dst: (NodeId, ParamId)) -> Result<Value> {
         self.command(Command::Link((src, dst)))
     }
+
+    pub fn add_sender(
+        &self,
+        src: (NodeId, ParamId),
+        dst: (GraphId, NodeId, ParamId),
+    ) -> Result<Value> {
+        let sender = self.senders.get(&dst.0).ok_or("not found")?;
+        self.command(Command::Sender(((sender.clone(), (dst.1, dst.2)), src)))
+    }
+    pub fn add_request(
+        &self,
+        src: (GraphId, NodeId, ParamId),
+        dst: (NodeId, ParamId),
+    ) -> Result<Value> {
+        let sender = self.senders.get(&src.0).ok_or("not found")?;
+        self.command(Command::Request(((sender.clone(), (src.1, src.2)), dst)))
+    }
 }
 
 /// Commands that a runner can send
@@ -474,6 +511,20 @@ enum Command {
     MultiOwnedAssign(Vec<(NodeId, ParamId, GenericOwnedProp)>),
     /// Link nodes
     Link(((NodeId, ParamId), (NodeId, ParamId))),
+    /// Add sender
+    Sender(
+        (
+            (Sender<InternalCommand>, (NodeId, ParamId)),
+            (NodeId, ParamId),
+        ),
+    ),
+    /// Add a request
+    Request(
+        (
+            (Sender<InternalCommand>, (NodeId, ParamId)),
+            (NodeId, ParamId),
+        ),
+    ),
 }
 
 enum Internal {
