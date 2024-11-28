@@ -21,6 +21,7 @@ use super::graph::StepResult;
 use super::GenericOwnedProp;
 use super::{GraphId, NodeId, ParamId, Result, Value};
 
+use std::ops::Deref;
 use std::thread::{Builder, JoinHandle};
 
 impl SystemRepr {
@@ -62,7 +63,7 @@ impl SystemRepr {
             })
             .collect::<Result<IndexMap<_, _>>>()?;
 
-        Ok(System { runners })
+        Ok(System { runners, senders })
     }
 
     fn create_runner(
@@ -147,6 +148,8 @@ impl SystemRepr {
 pub struct System {
     /// Runners where there is a runner per graph
     runners: IndexMap<GraphId, Runner>,
+    /// Senders to communicate to graphs
+    senders: IndexMap<GraphId, Sender<(Command, Response)>>,
 }
 
 impl System {
@@ -156,8 +159,8 @@ impl System {
     }
 
     pub fn graph(&self, graph: GraphId) -> Result<GraphView<'_>> {
-        let r = self.runners.get(&graph).ok_or("not found")?;
-        Ok(GraphView { r })
+        let sender = self.senders.get(&graph).ok_or("not found")?;
+        Ok(GraphView { sender })
     }
 }
 
@@ -176,18 +179,6 @@ impl Runner {
             sender,
         }
     }
-    /// Send a command to the internal runner
-    fn command(&self, command: Command) -> Result<Internal> {
-        let (message, receiver) = Response::new();
-
-        match self.sender.send((command, message)) {
-            Ok(()) => receiver
-                .recv()
-                .unwrap_or(Ok(Internal::Value(Value::load(&())?)))
-                .map_err(Into::into),
-            Err(_) => Err("Cannot send".into()),
-        }
-    }
 }
 
 impl Drop for Runner {
@@ -197,7 +188,6 @@ impl Drop for Runner {
             self.sender
                 .send((Command::Kill, message))
                 .expect("cannot send");
-
             t.join().expect("cannot join");
         }
     }
@@ -403,12 +393,21 @@ impl InternalRunner {
 }
 
 pub struct GraphView<'a> {
-    r: &'a Runner,
+    sender: &'a Sender<(Command, Response)>,
 }
 
 impl GraphView<'_> {
     fn command(&self, command: Command) -> Result<Value> {
-        self.r.command(command).and_then(|r| match r {
+        let (message, receiver) = Response::new();
+
+        match self.sender.send((command, message)) {
+            Ok(()) => receiver
+                .recv()
+                .unwrap_or(Ok(Internal::Value(Value::load(&())?)))
+                .map_err(Into::into),
+            Err(_) => Err("Cannot send".into()),
+        }
+        .and_then(|r| match r {
             Internal::Value(value) => Ok(value),
             Internal::Prop(_generic_owned_prop) => Err("cannot return owned".into()),
         })
@@ -527,7 +526,6 @@ type Destination = (NodeId, ParamId);
 
 /// External address
 type ExternalDestination = (Sender<InternalCommand>, Vec<Destination>);
-
 
 /// Link between an external and an internal resource
 type LinkToExternal = Vec<(ExternalDestination, Vec<Destination>)>;
