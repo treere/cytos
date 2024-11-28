@@ -126,8 +126,8 @@ mod tests {
     use super::*;
 
     use crate::{
-        Value,
         test::{Constant, Empty},
+        Value,
     };
 
     #[test]

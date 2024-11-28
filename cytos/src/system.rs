@@ -41,24 +41,23 @@ impl SystemRepr {
             .into_iter()
             .map(|(id, (repr, receiver))| {
                 let sender = senders.get(&id).ok_or("missing sender")?.clone();
+                let requests = self.requests.iter().filter(|l| l.dst.0 == id).collect();
+                let sends = self.sends.iter().filter(|l| l.src.0 == id).collect();
 
                 Self::create_runner(
-                    id,
                     repr,
                     receiver,
                     senders.clone(),
                     registry.clone(),
-                    &self.requests,
-                    &self.sends,
+                    requests,
+                    sends,
                 )
-                .map(|thread| {
-                    (
-                        id,
-                        Runner {
-                            thread: Some(thread),
-                            sender,
-                        },
-                    )
+                .and_then(|thread| -> Result<(GraphId, Runner)> {
+                    Builder::new()
+                        .name(id.to_string())
+                        .spawn(thread)
+                        .map(|thread| (id, Runner::new(thread, sender)))
+                        .map_err(|x| x.into())
                 })
             })
             .collect::<Result<IndexMap<_, _>>>()?;
@@ -67,44 +66,30 @@ impl SystemRepr {
     }
 
     fn create_runner(
-        id: GraphId,
         repr: GraphRepr,
         receiver: Receiver<InternalCommand>,
         senders: IndexMap<GraphId, Sender<InternalCommand>>,
         registry: Registry,
-        requests: &[SystemLink],
-        sends: &[SystemLink],
-    ) -> Result<JoinHandle<()>> {
-        let requests = Self::create_requests(id, &senders, requests)?;
-        let sends = Self::create_sends(id, &senders, sends)?;
+        requests: Vec<&SystemLink>,
+        sends: Vec<&SystemLink>,
+    ) -> Result<impl FnOnce()> {
+        let requests = Self::create_requests(&senders, requests)?;
+        let sends = Self::create_sends(&senders, sends)?;
 
-        Builder::new()
-            .name(id.to_string())
-            .spawn(move || {
-                let graph = repr.into_graph(&registry).expect("Cannot build graph");
+        Ok(move || {
+            let graph = repr.into_graph(&registry).expect("Cannot build graph");
 
-                InternalRunner {
-                    graph,
-                    receiver,
-                    requests,
-                    sends,
-                    queue: Vec::default(),
-                }
-                .run();
-            })
-            .or(Err("cannot run thread".into()))
+            InternalRunner::new(graph, receiver, requests, sends).run();
+        })
     }
 
     fn create_sends(
-        graph_id: GraphId,
         senders: &IndexMap<GraphId, Sender<InternalCommand>>,
-        sends: &[SystemLink],
-    ) -> Result<Vec<(ExternalDestination, Vec<Destination>)>> {
-        let mut requests: Vec<_> = sends.iter().filter(|l| l.src.0 == graph_id).collect();
+        mut sends: Vec<&SystemLink>,
+    ) -> Result<LinkToExternal> {
+        sends.sort_by_key(|x| x.dst.0);
 
-        requests.sort_by_key(|x| x.dst.0);
-
-        requests[..]
+        sends[..]
             .chunk_by(|a, b| a.dst.0 == b.dst.0)
             .map(|requests| {
                 let g = requests[0].dst.0;
@@ -128,12 +113,9 @@ impl SystemRepr {
     }
 
     fn create_requests(
-        id: GraphId,
         senders: &IndexMap<GraphId, Sender<InternalCommand>>,
-        requests: &[SystemLink],
-    ) -> Result<Vec<(ExternalDestination, Vec<Destination>)>> {
-        let mut requests: Vec<_> = requests.iter().filter(|l| l.dst.0 == id).collect();
-
+        mut requests: Vec<&SystemLink>,
+    ) -> Result<LinkToExternal> {
         requests.sort_by_key(|x| x.src.0);
 
         requests[..]
@@ -188,6 +170,12 @@ struct Runner {
 }
 
 impl Runner {
+    fn new(thread: JoinHandle<()>, sender: Sender<InternalCommand>) -> Self {
+        Runner {
+            thread: Some(thread),
+            sender,
+        }
+    }
     /// Send a command to the internal runner
     fn command(&self, command: Command) -> Result<Internal> {
         let (message, receiver) = Response::new();
@@ -222,14 +210,28 @@ struct InternalRunner {
     /// A receiver for the commands
     receiver: Receiver<InternalCommand>,
     /// Requests between graphs
-    requests: Vec<(ExternalDestination, Vec<Destination>)>,
+    requests: LinkToExternal,
     /// Sends between graphs
-    sends: Vec<(ExternalDestination, Vec<Destination>)>,
+    sends: LinkToExternal,
     /// Queue
     queue: Vec<InternalCommand>,
 }
 
 impl InternalRunner {
+    fn new(
+        graph: Graph,
+        receiver: Receiver<InternalCommand>,
+        requests: LinkToExternal,
+        sends: LinkToExternal,
+    ) -> Self {
+        InternalRunner {
+            graph,
+            receiver,
+            requests,
+            sends,
+            queue: Vec::default(),
+        }
+    }
     /// Run the internal runner
     fn run(mut self) {
         'main: loop {
@@ -400,8 +402,6 @@ impl InternalRunner {
     }
 }
 
-type InternalCommand = (Command, Response);
-
 pub struct GraphView<'a> {
     r: &'a Runner,
 }
@@ -520,8 +520,14 @@ impl Response {
     }
 }
 
+type InternalCommand = (Command, Response);
+
 /// Internal address
 type Destination = (NodeId, ParamId);
 
 /// External address
 type ExternalDestination = (Sender<InternalCommand>, Vec<Destination>);
+
+
+/// Link between an external and an internal resource
+type LinkToExternal = Vec<(ExternalDestination, Vec<Destination>)>;

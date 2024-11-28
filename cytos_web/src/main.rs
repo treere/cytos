@@ -9,7 +9,7 @@ use axum::{
     Router,
 };
 use cytos::repr::SystemRepr;
-use cytos::{System, loader::Registry};
+use cytos::{loader::Registry, System};
 use serde_json::{json, Value};
 
 type WebSystem = Arc<System>;
