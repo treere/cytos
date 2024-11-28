@@ -78,7 +78,7 @@ impl SystemRepr {
         Ok(move || {
             let graph = repr.into_graph(&registry).expect("Cannot build graph");
 
-            InternalRunner::new(graph, receiver, requests, sends).run();
+            Worker::new(graph, receiver, requests, sends).run();
         })
     }
 
@@ -178,7 +178,7 @@ impl Drop for System {
 }
 
 /// The runner worker
-struct InternalRunner {
+struct Worker {
     /// The graph
     graph: Graph,
     /// A receiver for the commands
@@ -191,14 +191,14 @@ struct InternalRunner {
     queue: Vec<InternalCommand>,
 }
 
-impl InternalRunner {
+impl Worker {
     fn new(
         graph: Graph,
         receiver: Receiver<InternalCommand>,
         requests: LinkToExternal,
         sends: LinkToExternal,
     ) -> Self {
-        InternalRunner {
+        Worker {
             graph,
             receiver,
             requests,
