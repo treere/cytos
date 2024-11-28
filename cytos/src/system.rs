@@ -157,8 +157,10 @@ impl System {
     }
 
     pub fn graph(&self, graph: GraphId) -> Result<GraphView<'_>> {
-        let sender = self.senders.get(&graph).ok_or("not found")?;
-        Ok(GraphView { sender })
+        Ok(GraphView {
+            senders: &self.senders,
+            graph,
+        })
     }
 }
 
@@ -388,14 +390,16 @@ impl Worker {
 }
 
 pub struct GraphView<'a> {
-    sender: &'a Sender<(Command, Response)>,
+    senders: &'a IndexMap<GraphId, Sender<(Command, Response)>>,
+    graph: GraphId,
 }
 
 impl GraphView<'_> {
     fn command(&self, command: Command) -> Result<Value> {
+        let sender = self.senders.get(&self.graph).ok_or("not found")?;
         let (message, receiver) = Response::new();
 
-        match self.sender.send((command, message)) {
+        match sender.send((command, message)) {
             Ok(()) => receiver
                 .recv()
                 .unwrap_or(Ok(Internal::Value(Value::load(&())?)))
