@@ -21,7 +21,6 @@ use super::graph::StepResult;
 use super::GenericOwnedProp;
 use super::{GraphId, NodeId, ParamId, Result, Value};
 
-use std::ops::Deref;
 use std::thread::{Builder, JoinHandle};
 
 impl SystemRepr {
@@ -41,7 +40,6 @@ impl SystemRepr {
         let runners = graphs
             .into_iter()
             .map(|(id, (repr, receiver))| {
-                let sender = senders.get(&id).ok_or("missing sender")?.clone();
                 let requests = self.requests.iter().filter(|l| l.dst.0 == id).collect();
                 let sends = self.sends.iter().filter(|l| l.src.0 == id).collect();
 
@@ -53,11 +51,11 @@ impl SystemRepr {
                     requests,
                     sends,
                 )
-                .and_then(|thread| -> Result<(GraphId, Runner)> {
+                .and_then(|thread| -> Result<(GraphId, JoinHandle<()>)> {
                     Builder::new()
                         .name(id.to_string())
                         .spawn(thread)
-                        .map(|thread| (id, Runner::new(thread, sender)))
+                        .map(|thread| (id, thread))
                         .map_err(|x| x.into())
                 })
             })
@@ -147,7 +145,7 @@ impl SystemRepr {
 #[derive(Default)]
 pub struct System {
     /// Runners where there is a runner per graph
-    runners: IndexMap<GraphId, Runner>,
+    runners: IndexMap<GraphId, JoinHandle<()>>,
     /// Senders to communicate to graphs
     senders: IndexMap<GraphId, Sender<(Command, Response)>>,
 }
@@ -164,32 +162,18 @@ impl System {
     }
 }
 
-/// Runner that wraps the internal runner
-struct Runner {
-    /// Thread with the internal runner inside
-    thread: Option<JoinHandle<()>>,
-    /// Sender to the internal runner
-    sender: Sender<InternalCommand>,
-}
-
-impl Runner {
-    fn new(thread: JoinHandle<()>, sender: Sender<InternalCommand>) -> Self {
-        Runner {
-            thread: Some(thread),
-            sender,
-        }
-    }
-}
-
-impl Drop for Runner {
+impl Drop for System {
     fn drop(&mut self) {
-        if let Some(t) = self.thread.take() {
+        self.senders.values().for_each(|s| {
             let (message, _receiver) = Response::new();
-            self.sender
-                .send((Command::Kill, message))
-                .expect("cannot send");
-            t.join().expect("cannot join");
-        }
+            s.send((Command::Kill, message)).expect("cannot send");
+        });
+
+        let mut queue = IndexMap::default();
+        std::mem::swap(&mut self.runners, &mut queue);
+        queue.into_iter().for_each(|(_, t)| {
+            let _ = t.join();
+        });
     }
 }
 
