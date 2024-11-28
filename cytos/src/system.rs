@@ -326,6 +326,17 @@ impl Worker {
                     .collect();
                 message.send_value(p)
             }
+            Command::Link((src, dst)) => {
+                let s = self.graph.get_node(src.0).unwrap();
+                let s = (*s).output(src.1).unwrap();
+                self.graph
+                    .get_node_mut(dst.0)
+                    .unwrap()
+                    .link(dst.1, s)
+                    .unwrap();
+
+                message.send_value(Ok(()))
+            }
             _ => unreachable!(),
         }
     }
@@ -426,6 +437,9 @@ impl GraphView<'_> {
     pub fn load(&self, data: Vec<(NodeId, ParamId, Value)>) -> Result<Value> {
         self.command(Command::MultiLoad(data))
     }
+    pub fn link(&self, src: (NodeId, ParamId), dst: (NodeId, ParamId)) -> Result<Value> {
+        self.command(Command::Link((src, dst)))
+    }
 }
 
 /// Commands that a runner can send
@@ -454,6 +468,8 @@ enum Command {
     MultiOwnedDump(Vec<(NodeId, ParamId)>),
     /// Multi assign owned command
     MultiOwnedAssign(Vec<(NodeId, ParamId, GenericOwnedProp)>),
+    /// Link nodes
+    Link(((NodeId, ParamId), (NodeId, ParamId))),
 }
 
 enum Internal {
