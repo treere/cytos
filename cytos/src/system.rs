@@ -44,7 +44,7 @@ fn create_runner(
 fn create_sends(
     senders: &IndexMap<GraphId, Sender<InternalCommand>>,
     mut sends: Vec<&SystemLink>,
-) -> Result<LinkToExternal> {
+) -> Result<LinksToExternal> {
     sends.sort_by_key(|x| x.dst.0);
 
     sends[..]
@@ -73,7 +73,7 @@ fn create_sends(
 fn create_requests(
     senders: &IndexMap<GraphId, Sender<InternalCommand>>,
     mut requests: Vec<&SystemLink>,
-) -> Result<LinkToExternal> {
+) -> Result<LinksToExternal> {
     requests.sort_by_key(|x| x.src.0);
 
     requests[..]
@@ -186,9 +186,9 @@ struct Worker {
     /// A receiver for the commands
     receiver: Receiver<InternalCommand>,
     /// Requests between graphs
-    requests: LinkToExternal,
+    requests: LinksToExternal,
     /// Sends between graphs
-    sends: LinkToExternal,
+    sends: LinksToExternal,
     /// Queue
     queue: Vec<InternalCommand>,
 }
@@ -197,8 +197,8 @@ impl Worker {
     fn new(
         graph: Graph,
         receiver: Receiver<InternalCommand>,
-        requests: LinkToExternal,
-        sends: LinkToExternal,
+        requests: LinksToExternal,
+        sends: LinksToExternal,
     ) -> Self {
         Worker {
             graph,
@@ -512,19 +512,9 @@ enum Command {
     /// Link nodes
     Link(((NodeId, ParamId), (NodeId, ParamId))),
     /// Add sender
-    Sender(
-        (
-            (Sender<InternalCommand>, (NodeId, ParamId)),
-            (NodeId, ParamId),
-        ),
-    ),
+    Sender((ExternalDestination, Destination)),
     /// Add a request
-    Request(
-        (
-            (Sender<InternalCommand>, (NodeId, ParamId)),
-            (NodeId, ParamId),
-        ),
-    ),
+    Request((ExternalDestination, Destination)),
 }
 
 enum Internal {
@@ -580,7 +570,10 @@ type InternalCommand = (Command, Response);
 type Destination = (NodeId, ParamId);
 
 /// External address
-type ExternalDestination = (Sender<InternalCommand>, Vec<Destination>);
+type ExternalDestination = (Sender<InternalCommand>, Destination);
+
+/// External addresses
+type ExternalDestinations = (Sender<InternalCommand>, Vec<Destination>);
 
 /// Link between an external and an internal resource
-type LinkToExternal = Vec<(ExternalDestination, Vec<Destination>)>;
+type LinksToExternal = Vec<(ExternalDestinations, Vec<Destination>)>;
