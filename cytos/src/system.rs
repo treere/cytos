@@ -464,7 +464,6 @@ impl GraphView<'_> {
     pub fn link(&self, src: (NodeId, ParamId), dst: (NodeId, ParamId)) -> Result<Value> {
         self.command(Command::Link((src, dst)))
     }
-
     pub fn add_sender(
         &self,
         src: (NodeId, ParamId),

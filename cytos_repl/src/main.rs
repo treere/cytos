@@ -251,6 +251,64 @@ fn node_assign(
     Ok(CommandStatus::Done)
 }
 
+fn link_nodes(
+    status: Rc<Mutex<Status>>,
+    graph_id: String,
+    (src_node, src_param): (String, String),
+    (dst_node, dst_param): (String, String),
+) -> Result<CommandStatus, anyhow::Error> {
+    let status = status.lock().or(Err(anyhow!("cannot lock")))?;
+    status
+        .system
+        .graph(graph_id.into())
+        .unwrap()
+        .link(
+            (src_node.into(), src_param.into()),
+            (dst_node.into(), dst_param.into()),
+        )
+        .unwrap();
+
+    Ok(CommandStatus::Done)
+}
+
+fn add_sender(
+    status: Rc<Mutex<Status>>,
+    (src_graph, src_node, src_param): (String, String, String),
+    (dst_graph, dst_node, dst_param): (String, String, String),
+) -> Result<CommandStatus, anyhow::Error> {
+    let status = status.lock().or(Err(anyhow!("cannot lock")))?;
+    status
+        .system
+        .graph(src_graph.into())
+        .unwrap()
+        .add_sender(
+            (src_node.into(), src_param.into()),
+            (dst_graph.into(), dst_node.into(), dst_param.into()),
+        )
+        .unwrap();
+
+    Ok(CommandStatus::Done)
+}
+
+fn add_receiver(
+    status: Rc<Mutex<Status>>,
+    (src_graph, src_node, src_param): (String, String, String),
+    (dst_graph, dst_node, dst_param): (String, String, String),
+) -> Result<CommandStatus, anyhow::Error> {
+    let status = status.lock().or(Err(anyhow!("cannot lock")))?;
+    status
+        .system
+        .graph(src_graph.into())
+        .unwrap()
+        .add_request(
+            (dst_graph.into(), dst_node.into(), dst_param.into()),
+            (src_node.into(), src_param.into()),
+        )
+        .unwrap();
+
+    Ok(CommandStatus::Done)
+}
+
 fn system_load_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Load a system from a configuration",
@@ -356,6 +414,27 @@ fn node_assign_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
+fn link_nodes_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+    command! {
+        "Link two nodes of the same graph",
+        (graph: String, src_node: String, src_param: String, dst_node: String, dst_param: String) => |graph: String, src_node:String, src_param:String, dst_node: String, dst_param: String| link_nodes(status.clone(), graph, (src_node, src_param), (dst_node, dst_param))
+    }
+}
+
+fn add_sender_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+    command! {
+        "Add a sender to a graph",
+        (src_graph: String, src_node: String, src_param: String, dst_graph: String, dst_node: String, dst_param: String) => |src_graph: String, src_node:String, src_param:String, dst_graph: String, dst_node: String, dst_param: String| add_sender(status.clone(), (src_graph, src_node, src_param), (dst_graph, dst_node, dst_param))
+    }
+}
+
+fn add_receiver_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+    command! {
+        "Add a receiver to a graph",
+        (src_graph: String, src_node: String, src_param: String, dst_graph: String, dst_node: String, dst_param: String) => |src_graph: String, src_node:String, src_param:String, dst_graph: String, dst_node: String, dst_param: String| add_receiver(status.clone(), (src_graph, src_node, src_param), (dst_graph, dst_node, dst_param))
+    }
+}
+
 fn main() -> Result<(), &'static str> {
     let matches = clap::Command::new("rep")
         .about("start a cytos repl")
@@ -388,6 +467,9 @@ fn main() -> Result<(), &'static str> {
         .add("node_dump", node_dump_command(status.clone()))
         .add("node_load", node_load_command(status.clone()))
         .add("node_assign", node_assign_command(status.clone()))
+        .add("link_nodes", link_nodes_command(status.clone()))
+        .add("add_sender", add_sender_command(status.clone()))
+        .add("add_receiver", add_receiver_command(status.clone()))
         .add(
             "id_s2n",
             command! {
