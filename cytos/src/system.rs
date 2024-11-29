@@ -303,6 +303,7 @@ impl Worker {
             Command::ListOutputs(node) => {
                 message.send_value(self.graph.get_node(node).map(|n| n.output_names()))
             }
+            Command::RemoveNode(node) => message.send_value(self.graph.remove(node)),
             Command::MultiAssign(vec) => {
                 let p: Result<Vec<_>> = vec
                     .into_iter()
@@ -353,6 +354,7 @@ impl Worker {
                         vec![destination],
                     ));
                 }
+                message.send_value(Ok(()))
             }
             Command::RemoveSender(((external_sender, external_destination), destination)) => {
                 if let Some(((_, external), internal)) = self
@@ -364,7 +366,8 @@ impl Worker {
                     internal.retain(|n| *n != destination);
                 }
 
-                self.sends.retain(|(_, internal)| !internal.is_empty())
+                self.sends.retain(|(_, internal)| !internal.is_empty());
+                message.send_value(Ok(()))
             }
 
             Command::AddReceiver(((external_sender, external_destination), destination)) => {
@@ -381,6 +384,7 @@ impl Worker {
                         vec![destination],
                     ));
                 }
+                message.send_value(Ok(()))
             }
             Command::RemoveReceiver(((external_sender, external_destination), destination)) => {
                 if let Some(((_, external), internal)) = self
@@ -392,7 +396,8 @@ impl Worker {
                     internal.retain(|n| *n != destination);
                 }
 
-                self.requests.retain(|(_, internal)| !internal.is_empty())
+                self.requests.retain(|(_, internal)| !internal.is_empty());
+                message.send_value(Ok(()))
             }
             _ => unreachable!(),
         }
@@ -487,6 +492,9 @@ impl GraphView<'_> {
     pub fn list_outputs(&self, node_id: NodeId) -> Result<Value> {
         self.command(Command::ListOutputs(node_id))
     }
+    pub fn remove_node(&self, node_id: NodeId) -> Result<Value> {
+        self.command(Command::RemoveNode(node_id))
+    }
     pub fn dump(&self, data: Vec<(NodeId, ParamId)>) -> Result<Value> {
         self.command(Command::MultiDump(data))
     }
@@ -558,6 +566,8 @@ enum Command {
     ListInputs(NodeId),
     /// List the outputs of a node
     ListOutputs(NodeId),
+    /// Remove a node
+    RemoveNode(NodeId),
     /// Multi dump command
     MultiDump(Vec<(NodeId, ParamId)>),
     /// Multi assign command

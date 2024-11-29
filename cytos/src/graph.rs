@@ -119,6 +119,13 @@ impl Graph {
     pub fn get_node_mut(&mut self, node_id: NodeId) -> Result<&mut Node> {
         self.nodes.get_mut(&node_id).ok_or("missing node".into())
     }
+
+    pub fn remove(&mut self, node_id: NodeId) -> Result<()> {
+        self.nodes
+            .shift_remove(&node_id)
+            .and(Some(()))
+            .ok_or("missing_node".into())
+    }
 }
 
 #[cfg(test)]
