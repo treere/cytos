@@ -339,25 +339,60 @@ impl Worker {
 
                 message.send_value(Ok(()))
             }
-            Command::Sender((ss, r)) => {
-                if let Some(x) = self.sends.iter_mut().find(|(s, _)| ss.0.same_channel(&s.0)) {
-                    x.0 .1.push(ss.1);
-                    x.1.push(r)
+            Command::AddSender(((external_sender, external_destination), destination)) => {
+                if let Some(((_, external), internal)) = self
+                    .sends
+                    .iter_mut()
+                    .find(|((sender, _), _)| external_sender.same_channel(sender))
+                {
+                    external.push(external_destination);
+                    internal.push(destination)
                 } else {
-                    self.sends.push(((ss.0, vec![ss.1]), vec![r]));
+                    self.sends.push((
+                        (external_sender, vec![external_destination]),
+                        vec![destination],
+                    ));
                 }
             }
-            Command::Request((ss, r)) => {
-                if let Some(x) = self
+            Command::RemoveSender(((external_sender, external_destination), destination)) => {
+                if let Some(((_, external), internal)) = self
+                    .sends
+                    .iter_mut()
+                    .find(|((sender, _), _)| external_sender.same_channel(sender))
+                {
+                    external.retain(|n| *n != external_destination);
+                    internal.retain(|n| *n != destination);
+                }
+
+                self.sends.retain(|(_, internal)| !internal.is_empty())
+            }
+
+            Command::AddReceiver(((external_sender, external_destination), destination)) => {
+                if let Some(((_, external), internal)) = self
                     .requests
                     .iter_mut()
-                    .find(|(s, _)| ss.0.same_channel(&s.0))
+                    .find(|((sender, _), _)| external_sender.same_channel(sender))
                 {
-                    x.0 .1.push(ss.1);
-                    x.1.push(r)
+                    external.push(external_destination);
+                    internal.push(destination)
                 } else {
-                    self.requests.push(((ss.0, vec![ss.1]), vec![r]));
+                    self.requests.push((
+                        (external_sender, vec![external_destination]),
+                        vec![destination],
+                    ));
                 }
+            }
+            Command::RemoveReceiver(((external_sender, external_destination), destination)) => {
+                if let Some(((_, external), internal)) = self
+                    .requests
+                    .iter_mut()
+                    .find(|((sender, _), _)| external_sender.same_channel(sender))
+                {
+                    external.retain(|n| *n != external_destination);
+                    internal.retain(|n| *n != destination);
+                }
+
+                self.requests.retain(|(_, internal)| !internal.is_empty())
             }
             _ => unreachable!(),
         }
@@ -470,15 +505,40 @@ impl GraphView<'_> {
         dst: (GraphId, NodeId, ParamId),
     ) -> Result<Value> {
         let sender = self.senders.get(&dst.0).ok_or("not found")?;
-        self.command(Command::Sender(((sender.clone(), (dst.1, dst.2)), src)))
+        self.command(Command::AddSender(((sender.clone(), (dst.1, dst.2)), src)))
     }
-    pub fn add_request(
+    pub fn remove_sender(
+        &self,
+        src: (NodeId, ParamId),
+        dst: (GraphId, NodeId, ParamId),
+    ) -> Result<Value> {
+        let sender = self.senders.get(&dst.0).ok_or("not found")?;
+        self.command(Command::RemoveSender((
+            (sender.clone(), (dst.1, dst.2)),
+            src,
+        )))
+    }
+    pub fn add_receiver(
         &self,
         src: (GraphId, NodeId, ParamId),
         dst: (NodeId, ParamId),
     ) -> Result<Value> {
         let sender = self.senders.get(&src.0).ok_or("not found")?;
-        self.command(Command::Request(((sender.clone(), (src.1, src.2)), dst)))
+        self.command(Command::AddReceiver((
+            (sender.clone(), (src.1, src.2)),
+            dst,
+        )))
+    }
+    pub fn remove_receiver(
+        &self,
+        src: (GraphId, NodeId, ParamId),
+        dst: (NodeId, ParamId),
+    ) -> Result<Value> {
+        let sender = self.senders.get(&src.0).ok_or("not found")?;
+        self.command(Command::RemoveReceiver((
+            (sender.clone(), (src.1, src.2)),
+            dst,
+        )))
     }
 }
 
@@ -511,9 +571,13 @@ enum Command {
     /// Link nodes
     Link(((NodeId, ParamId), (NodeId, ParamId))),
     /// Add sender
-    Sender((ExternalDestination, Destination)),
+    AddSender((ExternalDestination, Destination)),
+    /// Remove sender
+    RemoveSender((ExternalDestination, Destination)),
     /// Add a request
-    Request((ExternalDestination, Destination)),
+    AddReceiver((ExternalDestination, Destination)),
+    /// Remove a request
+    RemoveReceiver((ExternalDestination, Destination)),
 }
 
 enum Internal {
