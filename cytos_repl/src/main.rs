@@ -191,6 +191,23 @@ fn node_outputs(
     Ok(CommandStatus::Done)
 }
 
+fn node_remove(
+    status: Rc<Mutex<Status>>,
+    graph_id: String,
+    node_id: String,
+) -> Result<CommandStatus, anyhow::Error> {
+    let status = status.lock().or(Err(anyhow!("cannot lock")))?;
+    let result = status
+        .system
+        .graph(graph_id.into())
+        .unwrap()
+        .remove_node(node_id.into());
+
+    println!("{result:?}");
+
+    Ok(CommandStatus::Done)
+}
+
 fn node_dump(
     status: Rc<Mutex<Status>>,
     graph_id: String,
@@ -431,6 +448,13 @@ fn node_outputs_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
+fn node_remove_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+    command! {
+        "Remove a node from a graph",
+        (graph: String, node: String) => |graph: String, node:String| node_remove(status.clone(), graph, node)
+    }
+}
+
 fn node_dump_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Dump a input/output of a graph node",
@@ -516,6 +540,7 @@ fn main() -> Result<(), &'static str> {
         .add("node_list", node_list_command(status.clone()))
         .add("node_inputs", node_inputs_command(status.clone()))
         .add("node_outputs", node_outputs_command(status.clone()))
+        .add("node_remove", node_remove_command(status.clone()))
         .add("node_dump", node_dump_command(status.clone()))
         .add("node_load", node_load_command(status.clone()))
         .add("node_assign", node_assign_command(status.clone()))
