@@ -222,7 +222,7 @@ impl Worker {
                         self.dispatch_node_command(node_command, message)
                     }
                     Command::Structure(structure_command) => {
-                        self.dispatch_structure_command(structure_command, message)
+                        self.dispatch_structure_command(*structure_command, message)
                     }
                     Command::Param(param_command) => {
                         self.dispatch_param_command(param_command, message, &StepResult::Done)
@@ -248,7 +248,7 @@ impl Worker {
                                 self.dispatch_node_command(node_command, message)
                             }
                             Command::Structure(structure_command) => {
-                                self.dispatch_structure_command(structure_command, message)
+                                self.dispatch_structure_command(*structure_command, message)
                             }
 
                             Command::Param(param_command) => {
@@ -558,7 +558,9 @@ impl GraphView<'_> {
         self.command(Command::Param(ParamCommand::Load(data)))
     }
     pub fn link(&self, src: (NodeId, ParamId), dst: (NodeId, ParamId)) -> Result<Value> {
-        self.command(Command::Structure(StructureCommand::Link((src, dst))))
+        self.command(Command::Structure(Box::new(StructureCommand::Link((
+            src, dst,
+        )))))
     }
     pub fn add_sender(
         &self,
@@ -566,10 +568,10 @@ impl GraphView<'_> {
         dst: (GraphId, NodeId, ParamId),
     ) -> Result<Value> {
         let sender = self.senders.get(&dst.0).ok_or("not found")?;
-        self.command(Command::Structure(StructureCommand::AddSender((
+        self.command(Command::Structure(Box::new(StructureCommand::AddSender((
             (sender.clone(), (dst.1, dst.2)),
             src,
-        ))))
+        )))))
     }
     pub fn remove_sender(
         &self,
@@ -577,10 +579,9 @@ impl GraphView<'_> {
         dst: (GraphId, NodeId, ParamId),
     ) -> Result<Value> {
         let sender = self.senders.get(&dst.0).ok_or("not found")?;
-        self.command(Command::Structure(StructureCommand::RemoveSender((
-            (sender.clone(), (dst.1, dst.2)),
-            src,
-        ))))
+        self.command(Command::Structure(Box::new(
+            StructureCommand::RemoveSender(((sender.clone(), (dst.1, dst.2)), src)),
+        )))
     }
     pub fn add_receiver(
         &self,
@@ -588,9 +589,8 @@ impl GraphView<'_> {
         dst: (NodeId, ParamId),
     ) -> Result<Value> {
         let sender = self.senders.get(&src.0).ok_or("not found")?;
-        self.command(Command::Structure(StructureCommand::AddReceiver((
-            (sender.clone(), (src.1, src.2)),
-            dst,
+        self.command(Command::Structure(Box::new(StructureCommand::AddReceiver(
+            ((sender.clone(), (src.1, src.2)), dst),
         ))))
     }
     pub fn remove_receiver(
@@ -599,10 +599,9 @@ impl GraphView<'_> {
         dst: (NodeId, ParamId),
     ) -> Result<Value> {
         let sender = self.senders.get(&src.0).ok_or("not found")?;
-        self.command(Command::Structure(StructureCommand::RemoveReceiver((
-            (sender.clone(), (src.1, src.2)),
-            dst,
-        ))))
+        self.command(Command::Structure(Box::new(
+            StructureCommand::RemoveReceiver(((sender.clone(), (src.1, src.2)), dst)),
+        )))
     }
 }
 
@@ -660,7 +659,7 @@ enum Command {
     State(StateCommand),
     Node(NodeCommand),
     Param(ParamCommand),
-    Structure(StructureCommand),
+    Structure(Box<StructureCommand>),
 }
 
 enum Internal {
