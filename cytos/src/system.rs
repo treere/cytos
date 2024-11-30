@@ -337,6 +337,25 @@ impl Worker {
 
                 message.send_value(Ok(()))
             }
+            StructureCommand::ListSender(senders) => {
+                let senders: Vec<_> = self
+                    .sends
+                    .iter()
+                    .flat_map(|((s, v1), v2)| {
+                        let g = senders
+                            .iter()
+                            .find(|(_, s2)| s.same_channel(s2))
+                            .map(|(g, _)| *g)
+                            .unwrap();
+
+                        v1.iter()
+                            .zip(v2.iter())
+                            .map(|((n, p), (n2, p2))| ((g, *n, *p), (*n2, *p2)))
+                            .collect::<Vec<_>>()
+                    })
+                    .collect();
+                message.send_value(Ok(senders))
+            }
             StructureCommand::AddSender(((external_sender, external_destination), destination)) => {
                 if let Some(((_, external), internal)) = self
                     .sends
@@ -368,6 +387,25 @@ impl Worker {
 
                 self.sends.retain(|(_, internal)| !internal.is_empty());
                 message.send_value(Ok(()))
+            }
+            StructureCommand::ListReceiver(senders) => {
+                let senders: Vec<_> = self
+                    .requests
+                    .iter()
+                    .flat_map(|((s, v1), v2)| {
+                        let g = senders
+                            .iter()
+                            .find(|(_, s2)| s.same_channel(s2))
+                            .map(|(g, _)| *g)
+                            .unwrap();
+
+                        v1.iter()
+                            .zip(v2.iter())
+                            .map(|((n, p), (n2, p2))| ((g, *n, *p), (*n2, *p2)))
+                            .collect::<Vec<_>>()
+                    })
+                    .collect();
+                message.send_value(Ok(senders))
             }
 
             StructureCommand::AddReceiver((
@@ -567,6 +605,12 @@ impl GraphView<'_> {
             src, dst,
         )))))
     }
+    pub fn list_senders(&self) -> Result<Value> {
+        self.command(Command::Structure(Box::new(StructureCommand::ListSender(
+            self.senders.clone(),
+        ))))
+    }
+
     pub fn add_sender(
         &self,
         src: (NodeId, ParamId),
@@ -588,6 +632,12 @@ impl GraphView<'_> {
             StructureCommand::RemoveSender(((sender.clone(), (dst.1, dst.2)), src)),
         )))
     }
+    pub fn list_receivers(&self) -> Result<Value> {
+        self.command(Command::Structure(Box::new(
+            StructureCommand::ListReceiver(self.senders.clone()),
+        )))
+    }
+
     pub fn add_receiver(
         &self,
         src: (GraphId, NodeId, ParamId),
@@ -650,10 +700,14 @@ enum StructureCommand {
     ListLinks,
     /// Link nodes
     AddLink(((NodeId, ParamId), (NodeId, ParamId))),
+    /// List senders
+    ListSender(IndexMap<GraphId, Sender<(Command, Response)>>),
     /// Add sender
     AddSender((ExternalDestination, Destination)),
     /// Remove sender
     RemoveSender((ExternalDestination, Destination)),
+    /// List receivers
+    ListReceiver(IndexMap<GraphId, Sender<(Command, Response)>>),
     /// Add a request
     AddReceiver((ExternalDestination, Destination)),
     /// Remove a request
