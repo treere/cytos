@@ -191,7 +191,7 @@ struct Worker {
     /// Sends between graphs
     sends: LinksToExternal,
     /// Queue
-    queue: Vec<InternalCommand>,
+    queue: Vec<(ParamCommand, Response)>,
 }
 
 impl Worker {
@@ -218,7 +218,15 @@ impl Worker {
                     Command::State(StateCommand::Start) => break,
                     Command::State(StateCommand::Status) => message.send_value(Ok("Idle")),
                     Command::State(StateCommand::Stop) => (),
-                    command => self.dispatch_command(command, message, &StepResult::Done),
+                    Command::Node(node_command) => {
+                        self.dispatch_node_command(node_command, message)
+                    }
+                    Command::Structure(structure_command) => {
+                        self.dispatch_structure_command(structure_command, message)
+                    }
+                    Command::Param(param_command) => {
+                        self.dispatch_param_command(param_command, message, &StepResult::Done)
+                    }
                 }
             }
 
@@ -236,7 +244,16 @@ impl Worker {
                                 message.send_value(Ok("Running"))
                             }
                             Command::State(StateCommand::Start) => (),
-                            command => self.dispatch_command(command, message, &cause),
+                            Command::Node(node_command) => {
+                                self.dispatch_node_command(node_command, message)
+                            }
+                            Command::Structure(structure_command) => {
+                                self.dispatch_structure_command(structure_command, message)
+                            }
+
+                            Command::Param(param_command) => {
+                                self.dispatch_param_command(param_command, message, &cause)
+                            }
                         }
                     }
                 } else {
@@ -248,30 +265,35 @@ impl Worker {
     }
 
     /// Dispatch a command to the graph
-    fn dispatch_command(&mut self, command: Command, message: Response, cause: &StepResult) {
+    fn dispatch_param_command(
+        &mut self,
+        command: ParamCommand,
+        message: Response,
+        cause: &StepResult,
+    ) {
         match cause {
             StepResult::Done => {
                 let mut queue = vec![];
                 std::mem::swap(&mut self.queue, &mut queue);
-                queue
-                    .into_iter()
-                    .for_each(|(command, message)| self.done_dispatch_command(message, command));
-                self.done_dispatch_command(message, command)
+                queue.into_iter().for_each(|(command, message)| {
+                    self.dispatch_param_command_on_done(command, message)
+                });
+                self.dispatch_param_command_on_done(command, message)
             }
-            StepResult::Skip => self.skip_dispatch_command(message, command),
+            StepResult::Skip => self.dispatch_param_command_on_skip(command, message),
         }
     }
 
-    fn done_dispatch_command(&mut self, message: Response, command: Command) {
+    fn dispatch_param_command_on_done(&mut self, command: ParamCommand, message: Response) {
         match command {
-            Command::Param(ParamCommand::Dump(vec)) => {
+            ParamCommand::Dump(vec) => {
                 let dump: Result<Vec<_>> = vec
                     .into_iter()
                     .map(|(node, param)| self.graph.get_node(node).and_then(|n| n.dump(param)))
                     .collect();
                 message.send_value(dump)
             }
-            Command::Param(ParamCommand::OwnedDump(vec)) => {
+            ParamCommand::OwnedDump(vec) => {
                 let dump: Result<Vec<_>> = vec
                     .into_iter()
                     .map(|(node, param)| {
@@ -281,62 +303,29 @@ impl Worker {
 
                 message.send_prop(dump)
             }
-            command => self.common_dispatch_command(message, command),
+            command => self.common_dispatch_command(command, message),
         }
     }
 
-    fn skip_dispatch_command(&mut self, message: Response, command: Command) {
+    fn dispatch_param_command_on_skip(&mut self, command: ParamCommand, message: Response) {
         match command {
-            Command::Param(ParamCommand::Dump(_)) => {
+            ParamCommand::Dump(_) => {
                 self.queue.push((command, message));
             }
-            Command::Param(ParamCommand::OwnedDump(_)) => {
+            ParamCommand::OwnedDump(_) => {
                 self.queue.push((command, message));
             }
-            command => self.common_dispatch_command(message, command),
+            command => self.common_dispatch_command(command, message),
         }
     }
 
-    fn common_dispatch_command(&mut self, message: Response, command: Command) {
-        match command {
-            Command::Node(NodeCommand::ListNodes) => {
-                message.send_value(Ok(self.graph.list_nodes()))
-            }
-            Command::Node(NodeCommand::ListInputs(node)) => {
-                message.send_value(self.graph.get_node(node).map(|n| n.input_names()))
-            }
-            Command::Node(NodeCommand::ListOutputs(node)) => {
-                message.send_value(self.graph.get_node(node).map(|n| n.output_names()))
-            }
-            Command::Node(NodeCommand::RemoveNode(node)) => {
-                message.send_value(self.graph.remove(node))
-            }
-            Command::Param(ParamCommand::Assign(vec)) => {
-                let p: Result<Vec<_>> = vec
-                    .into_iter()
-                    .map(|(n, p, v)| self.graph.get_node_mut(n).and_then(|n| n.assign(p, v)))
-                    .collect();
-                message.send_value(p)
-            }
-            Command::Param(ParamCommand::Load(vec)) => {
-                let p: Result<Vec<_>> = vec
-                    .into_iter()
-                    .map(|(n, p, v)| self.graph.get_node_mut(n).and_then(|n| n.load(p, v)))
-                    .collect();
-                message.send_value(p)
-            }
-            Command::Param(ParamCommand::OwnedAssign(vec)) => {
-                let p: Result<Vec<_>> = vec
-                    .into_iter()
-                    .map(|(n, p, v)| {
-                        self.graph
-                            .get_node_mut(n)
-                            .and_then(|n| n.assign_owned(p, v))
-                    })
-                    .collect();
-                message.send_value(p)
-            }
-            Command::Structure(StructureCommand::Link((src, dst))) => {
+    fn dispatch_structure_command(
+        &mut self,
+        structure_command: StructureCommand,
+        message: Response,
+    ) {
+        match structure_command {
+            StructureCommand::Link((src, dst)) => {
                 let s = self.graph.get_node(src.0).unwrap();
                 let s = (*s).output(src.1).unwrap();
                 self.graph
@@ -347,10 +336,7 @@ impl Worker {
 
                 message.send_value(Ok(()))
             }
-            Command::Structure(StructureCommand::AddSender((
-                (external_sender, external_destination),
-                destination,
-            ))) => {
+            StructureCommand::AddSender(((external_sender, external_destination), destination)) => {
                 if let Some(((_, external), internal)) = self
                     .sends
                     .iter_mut()
@@ -366,10 +352,10 @@ impl Worker {
                 }
                 message.send_value(Ok(()))
             }
-            Command::Structure(StructureCommand::RemoveSender((
+            StructureCommand::RemoveSender((
                 (external_sender, external_destination),
                 destination,
-            ))) => {
+            )) => {
                 if let Some(((_, external), internal)) = self
                     .sends
                     .iter_mut()
@@ -383,10 +369,10 @@ impl Worker {
                 message.send_value(Ok(()))
             }
 
-            Command::Structure(StructureCommand::AddReceiver((
+            StructureCommand::AddReceiver((
                 (external_sender, external_destination),
                 destination,
-            ))) => {
+            )) => {
                 if let Some(((_, external), internal)) = self
                     .requests
                     .iter_mut()
@@ -402,10 +388,10 @@ impl Worker {
                 }
                 message.send_value(Ok(()))
             }
-            Command::Structure(StructureCommand::RemoveReceiver((
+            StructureCommand::RemoveReceiver((
                 (external_sender, external_destination),
                 destination,
-            ))) => {
+            )) => {
                 if let Some(((_, external), internal)) = self
                     .requests
                     .iter_mut()
@@ -417,6 +403,49 @@ impl Worker {
 
                 self.requests.retain(|(_, internal)| !internal.is_empty());
                 message.send_value(Ok(()))
+            }
+        }
+    }
+
+    fn dispatch_node_command(&mut self, node_command: NodeCommand, message: Response) {
+        match node_command {
+            NodeCommand::ListNodes => message.send_value(Ok(self.graph.list_nodes())),
+            NodeCommand::ListInputs(node) => {
+                message.send_value(self.graph.get_node(node).map(|n| n.input_names()))
+            }
+            NodeCommand::ListOutputs(node) => {
+                message.send_value(self.graph.get_node(node).map(|n| n.output_names()))
+            }
+            NodeCommand::RemoveNode(node) => message.send_value(self.graph.remove(node)),
+        }
+    }
+
+    fn common_dispatch_command(&mut self, command: ParamCommand, message: Response) {
+        match command {
+            ParamCommand::Assign(vec) => {
+                let p: Result<Vec<_>> = vec
+                    .into_iter()
+                    .map(|(n, p, v)| self.graph.get_node_mut(n).and_then(|n| n.assign(p, v)))
+                    .collect();
+                message.send_value(p)
+            }
+            ParamCommand::Load(vec) => {
+                let p: Result<Vec<_>> = vec
+                    .into_iter()
+                    .map(|(n, p, v)| self.graph.get_node_mut(n).and_then(|n| n.load(p, v)))
+                    .collect();
+                message.send_value(p)
+            }
+            ParamCommand::OwnedAssign(vec) => {
+                let p: Result<Vec<_>> = vec
+                    .into_iter()
+                    .map(|(n, p, v)| {
+                        self.graph
+                            .get_node_mut(n)
+                            .and_then(|n| n.assign_owned(p, v))
+                    })
+                    .collect();
+                message.send_value(p)
             }
             _ => unreachable!(),
         }
