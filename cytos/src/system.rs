@@ -168,7 +168,8 @@ impl Drop for System {
     fn drop(&mut self) {
         self.senders.values().for_each(|s| {
             let (message, _receiver) = Response::new();
-            s.send((Command::Kill, message)).expect("cannot send");
+            s.send((Command::State(StateCommand::Kill), message))
+                .expect("cannot send");
         });
 
         let mut queue = IndexMap::default();
@@ -213,10 +214,10 @@ impl Worker {
         'main: loop {
             while let Ok((command, message)) = self.receiver.recv() {
                 match command {
-                    Command::Kill => break 'main,
-                    Command::Start => break,
-                    Command::Status => message.send_value(Ok("Idle")),
-                    Command::Stop => (),
+                    Command::State(StateCommand::Kill) => break 'main,
+                    Command::State(StateCommand::Start) => break,
+                    Command::State(StateCommand::Status) => message.send_value(Ok("Idle")),
+                    Command::State(StateCommand::Stop) => (),
                     command => self.dispatch_command(command, message, &StepResult::Done),
                 }
             }
@@ -229,10 +230,12 @@ impl Worker {
                     self.send_values().expect("cannot send");
                     while let Ok((command, message)) = self.receiver.try_recv() {
                         match command {
-                            Command::Kill => break 'main,
-                            Command::Stop => break 'outer,
-                            Command::Status => message.send_value(Ok("Running")),
-                            Command::Start => (),
+                            Command::State(StateCommand::Kill) => break 'main,
+                            Command::State(StateCommand::Stop) => break 'outer,
+                            Command::State(StateCommand::Status) => {
+                                message.send_value(Ok("Running"))
+                            }
+                            Command::State(StateCommand::Start) => (),
                             command => self.dispatch_command(command, message, &cause),
                         }
                     }
@@ -261,14 +264,14 @@ impl Worker {
 
     fn done_dispatch_command(&mut self, message: Response, command: Command) {
         match command {
-            Command::MultiDump(vec) => {
+            Command::Param(ParamCommand::Dump(vec)) => {
                 let dump: Result<Vec<_>> = vec
                     .into_iter()
                     .map(|(node, param)| self.graph.get_node(node).and_then(|n| n.dump(param)))
                     .collect();
                 message.send_value(dump)
             }
-            Command::MultiOwnedDump(vec) => {
+            Command::Param(ParamCommand::OwnedDump(vec)) => {
                 let dump: Result<Vec<_>> = vec
                     .into_iter()
                     .map(|(node, param)| {
@@ -284,10 +287,10 @@ impl Worker {
 
     fn skip_dispatch_command(&mut self, message: Response, command: Command) {
         match command {
-            Command::MultiDump(_) => {
+            Command::Param(ParamCommand::Dump(_)) => {
                 self.queue.push((command, message));
             }
-            Command::MultiOwnedDump(_) => {
+            Command::Param(ParamCommand::OwnedDump(_)) => {
                 self.queue.push((command, message));
             }
             command => self.common_dispatch_command(message, command),
@@ -296,29 +299,33 @@ impl Worker {
 
     fn common_dispatch_command(&mut self, message: Response, command: Command) {
         match command {
-            Command::ListNodes => message.send_value(Ok(self.graph.list_nodes())),
-            Command::ListInputs(node) => {
+            Command::Node(NodeCommand::ListNodes) => {
+                message.send_value(Ok(self.graph.list_nodes()))
+            }
+            Command::Node(NodeCommand::ListInputs(node)) => {
                 message.send_value(self.graph.get_node(node).map(|n| n.input_names()))
             }
-            Command::ListOutputs(node) => {
+            Command::Node(NodeCommand::ListOutputs(node)) => {
                 message.send_value(self.graph.get_node(node).map(|n| n.output_names()))
             }
-            Command::RemoveNode(node) => message.send_value(self.graph.remove(node)),
-            Command::MultiAssign(vec) => {
+            Command::Node(NodeCommand::RemoveNode(node)) => {
+                message.send_value(self.graph.remove(node))
+            }
+            Command::Param(ParamCommand::Assign(vec)) => {
                 let p: Result<Vec<_>> = vec
                     .into_iter()
                     .map(|(n, p, v)| self.graph.get_node_mut(n).and_then(|n| n.assign(p, v)))
                     .collect();
                 message.send_value(p)
             }
-            Command::MultiLoad(vec) => {
+            Command::Param(ParamCommand::Load(vec)) => {
                 let p: Result<Vec<_>> = vec
                     .into_iter()
                     .map(|(n, p, v)| self.graph.get_node_mut(n).and_then(|n| n.load(p, v)))
                     .collect();
                 message.send_value(p)
             }
-            Command::MultiOwnedAssign(vec) => {
+            Command::Param(ParamCommand::OwnedAssign(vec)) => {
                 let p: Result<Vec<_>> = vec
                     .into_iter()
                     .map(|(n, p, v)| {
@@ -329,7 +336,7 @@ impl Worker {
                     .collect();
                 message.send_value(p)
             }
-            Command::Link((src, dst)) => {
+            Command::Structure(StructureCommand::Link((src, dst))) => {
                 let s = self.graph.get_node(src.0).unwrap();
                 let s = (*s).output(src.1).unwrap();
                 self.graph
@@ -340,7 +347,10 @@ impl Worker {
 
                 message.send_value(Ok(()))
             }
-            Command::AddSender(((external_sender, external_destination), destination)) => {
+            Command::Structure(StructureCommand::AddSender((
+                (external_sender, external_destination),
+                destination,
+            ))) => {
                 if let Some(((_, external), internal)) = self
                     .sends
                     .iter_mut()
@@ -356,7 +366,10 @@ impl Worker {
                 }
                 message.send_value(Ok(()))
             }
-            Command::RemoveSender(((external_sender, external_destination), destination)) => {
+            Command::Structure(StructureCommand::RemoveSender((
+                (external_sender, external_destination),
+                destination,
+            ))) => {
                 if let Some(((_, external), internal)) = self
                     .sends
                     .iter_mut()
@@ -370,7 +383,10 @@ impl Worker {
                 message.send_value(Ok(()))
             }
 
-            Command::AddReceiver(((external_sender, external_destination), destination)) => {
+            Command::Structure(StructureCommand::AddReceiver((
+                (external_sender, external_destination),
+                destination,
+            ))) => {
                 if let Some(((_, external), internal)) = self
                     .requests
                     .iter_mut()
@@ -386,7 +402,10 @@ impl Worker {
                 }
                 message.send_value(Ok(()))
             }
-            Command::RemoveReceiver(((external_sender, external_destination), destination)) => {
+            Command::Structure(StructureCommand::RemoveReceiver((
+                (external_sender, external_destination),
+                destination,
+            ))) => {
                 if let Some(((_, external), internal)) = self
                     .requests
                     .iter_mut()
@@ -407,15 +426,17 @@ impl Worker {
         if !self.requests.is_empty() {
             let (message, receiver) = Response::new();
             for ((sender, nodes), internals) in &self.requests {
-                let response: Vec<_> =
-                    match sender.send((Command::MultiOwnedDump(nodes.clone()), message.clone())) {
-                        Ok(()) => receiver.recv()?,
-                        Err(_) => Err("Cannot send".into()),
-                    }
-                    .map(|r| match r {
-                        Internal::Value(_) => unreachable!(),
-                        Internal::Prop(v) => v,
-                    })?;
+                let response: Vec<_> = match sender.send((
+                    Command::Param(ParamCommand::OwnedDump(nodes.clone())),
+                    message.clone(),
+                )) {
+                    Ok(()) => receiver.recv()?,
+                    Err(_) => Err("Cannot send".into()),
+                }
+                .map(|r| match r {
+                    Internal::Value(_) => unreachable!(),
+                    Internal::Prop(v) => v,
+                })?;
 
                 for ((node_id, param_id), response) in internals.iter().zip(response) {
                     self.graph
@@ -442,7 +463,10 @@ impl Worker {
                     .zip(external_nodes)
                     .map(|(v, (n, p))| v.map(|val| (*n, *p, val)))
                     .collect::<Result<Vec<_>>>()?;
-                sender.send((Command::MultiOwnedAssign(loads), message.clone()))?;
+                sender.send((
+                    Command::Param(ParamCommand::OwnedAssign(loads)),
+                    message.clone(),
+                ))?;
             }
         }
         Ok(())
@@ -472,40 +496,40 @@ impl GraphView<'_> {
         })
     }
     pub fn kill(&self) -> Result<Value> {
-        self.command(Command::Kill)
+        self.command(Command::State(StateCommand::Kill))
     }
     pub fn start(&self) -> Result<Value> {
-        self.command(Command::Start)
+        self.command(Command::State(StateCommand::Start))
     }
     pub fn stop(&self) -> Result<Value> {
-        self.command(Command::Stop)
+        self.command(Command::State(StateCommand::Stop))
     }
     pub fn status(&self) -> Result<Value> {
-        self.command(Command::Status)
+        self.command(Command::State(StateCommand::Status))
     }
     pub fn list_nodes(&self) -> Result<Value> {
-        self.command(Command::ListNodes)
+        self.command(Command::Node(NodeCommand::ListNodes))
     }
     pub fn list_inputs(&self, node_id: NodeId) -> Result<Value> {
-        self.command(Command::ListInputs(node_id))
+        self.command(Command::Node(NodeCommand::ListInputs(node_id)))
     }
     pub fn list_outputs(&self, node_id: NodeId) -> Result<Value> {
-        self.command(Command::ListOutputs(node_id))
+        self.command(Command::Node(NodeCommand::ListOutputs(node_id)))
     }
     pub fn remove_node(&self, node_id: NodeId) -> Result<Value> {
-        self.command(Command::RemoveNode(node_id))
+        self.command(Command::Node(NodeCommand::RemoveNode(node_id)))
     }
     pub fn dump(&self, data: Vec<(NodeId, ParamId)>) -> Result<Value> {
-        self.command(Command::MultiDump(data))
+        self.command(Command::Param(ParamCommand::Dump(data)))
     }
     pub fn assign(&self, data: Vec<(NodeId, ParamId, Value)>) -> Result<Value> {
-        self.command(Command::MultiAssign(data))
+        self.command(Command::Param(ParamCommand::Assign(data)))
     }
     pub fn load(&self, data: Vec<(NodeId, ParamId, Value)>) -> Result<Value> {
-        self.command(Command::MultiLoad(data))
+        self.command(Command::Param(ParamCommand::Load(data)))
     }
     pub fn link(&self, src: (NodeId, ParamId), dst: (NodeId, ParamId)) -> Result<Value> {
-        self.command(Command::Link((src, dst)))
+        self.command(Command::Structure(StructureCommand::Link((src, dst))))
     }
     pub fn add_sender(
         &self,
@@ -513,7 +537,10 @@ impl GraphView<'_> {
         dst: (GraphId, NodeId, ParamId),
     ) -> Result<Value> {
         let sender = self.senders.get(&dst.0).ok_or("not found")?;
-        self.command(Command::AddSender(((sender.clone(), (dst.1, dst.2)), src)))
+        self.command(Command::Structure(StructureCommand::AddSender((
+            (sender.clone(), (dst.1, dst.2)),
+            src,
+        ))))
     }
     pub fn remove_sender(
         &self,
@@ -521,10 +548,10 @@ impl GraphView<'_> {
         dst: (GraphId, NodeId, ParamId),
     ) -> Result<Value> {
         let sender = self.senders.get(&dst.0).ok_or("not found")?;
-        self.command(Command::RemoveSender((
+        self.command(Command::Structure(StructureCommand::RemoveSender((
             (sender.clone(), (dst.1, dst.2)),
             src,
-        )))
+        ))))
     }
     pub fn add_receiver(
         &self,
@@ -532,10 +559,10 @@ impl GraphView<'_> {
         dst: (NodeId, ParamId),
     ) -> Result<Value> {
         let sender = self.senders.get(&src.0).ok_or("not found")?;
-        self.command(Command::AddReceiver((
+        self.command(Command::Structure(StructureCommand::AddReceiver((
             (sender.clone(), (src.1, src.2)),
             dst,
-        )))
+        ))))
     }
     pub fn remove_receiver(
         &self,
@@ -543,15 +570,14 @@ impl GraphView<'_> {
         dst: (NodeId, ParamId),
     ) -> Result<Value> {
         let sender = self.senders.get(&src.0).ok_or("not found")?;
-        self.command(Command::RemoveReceiver((
+        self.command(Command::Structure(StructureCommand::RemoveReceiver((
             (sender.clone(), (src.1, src.2)),
             dst,
-        )))
+        ))))
     }
 }
 
-/// Commands that a runner can send
-enum Command {
+enum StateCommand {
     /// Kill the runner
     Kill,
     /// Start the runner
@@ -560,6 +586,9 @@ enum Command {
     Stop,
     /// Receive the runner status
     Status,
+}
+
+enum NodeCommand {
     /// List the nodes of the graph inside the runner
     ListNodes,
     /// List the inputs of a node
@@ -568,16 +597,22 @@ enum Command {
     ListOutputs(NodeId),
     /// Remove a node
     RemoveNode(NodeId),
+}
+
+enum ParamCommand {
     /// Multi dump command
-    MultiDump(Vec<(NodeId, ParamId)>),
+    Dump(Vec<(NodeId, ParamId)>),
     /// Multi assign command
-    MultiAssign(Vec<(NodeId, ParamId, Value)>),
+    Assign(Vec<(NodeId, ParamId, Value)>),
     /// Multi load command
-    MultiLoad(Vec<(NodeId, ParamId, Value)>),
+    Load(Vec<(NodeId, ParamId, Value)>),
     /// Multi owned dump command
-    MultiOwnedDump(Vec<(NodeId, ParamId)>),
+    OwnedDump(Vec<(NodeId, ParamId)>),
     /// Multi assign owned command
-    MultiOwnedAssign(Vec<(NodeId, ParamId, GenericOwnedProp)>),
+    OwnedAssign(Vec<(NodeId, ParamId, GenericOwnedProp)>),
+}
+
+enum StructureCommand {
     /// Link nodes
     Link(((NodeId, ParamId), (NodeId, ParamId))),
     /// Add sender
@@ -588,6 +623,15 @@ enum Command {
     AddReceiver((ExternalDestination, Destination)),
     /// Remove a request
     RemoveReceiver((ExternalDestination, Destination)),
+}
+
+/// Commands that a runner can send
+enum Command {
+    /// State command
+    State(StateCommand),
+    Node(NodeCommand),
+    Param(ParamCommand),
+    Structure(StructureCommand),
 }
 
 enum Internal {
