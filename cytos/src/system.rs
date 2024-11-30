@@ -325,7 +325,8 @@ impl Worker {
         message: Response,
     ) {
         match structure_command {
-            StructureCommand::Link((src, dst)) => {
+            StructureCommand::ListLinks => message.send_value(Ok(self.graph.collect_links())),
+            StructureCommand::AddLink((src, dst)) => {
                 let s = self.graph.get_node(src.0).unwrap();
                 let s = (*s).output(src.1).unwrap();
                 self.graph
@@ -557,8 +558,12 @@ impl GraphView<'_> {
     pub fn load(&self, data: Vec<(NodeId, ParamId, Value)>) -> Result<Value> {
         self.command(Command::Param(ParamCommand::Load(data)))
     }
-    pub fn link(&self, src: (NodeId, ParamId), dst: (NodeId, ParamId)) -> Result<Value> {
-        self.command(Command::Structure(Box::new(StructureCommand::Link((
+    pub fn list_links(&self) -> Result<Value> {
+        self.command(Command::Structure(Box::new(StructureCommand::ListLinks)))
+    }
+
+    pub fn add_link(&self, src: (NodeId, ParamId), dst: (NodeId, ParamId)) -> Result<Value> {
+        self.command(Command::Structure(Box::new(StructureCommand::AddLink((
             src, dst,
         )))))
     }
@@ -641,8 +646,10 @@ enum ParamCommand {
 }
 
 enum StructureCommand {
+    /// List links
+    ListLinks,
     /// Link nodes
-    Link(((NodeId, ParamId), (NodeId, ParamId))),
+    AddLink(((NodeId, ParamId), (NodeId, ParamId))),
     /// Add sender
     AddSender((ExternalDestination, Destination)),
     /// Remove sender

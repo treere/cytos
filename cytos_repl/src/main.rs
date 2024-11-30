@@ -268,6 +268,15 @@ fn node_assign(
     Ok(CommandStatus::Done)
 }
 
+fn link_list(status: Rc<Mutex<Status>>, graph_id: String) -> Result<CommandStatus, anyhow::Error> {
+    let status = status.lock().or(Err(anyhow!("cannot lock")))?;
+    let l = status.system.graph(graph_id.into()).unwrap().list_links();
+
+    println!("{:?}", l);
+
+    Ok(CommandStatus::Done)
+}
+
 fn link_nodes(
     status: Rc<Mutex<Status>>,
     graph_id: String,
@@ -279,7 +288,7 @@ fn link_nodes(
         .system
         .graph(graph_id.into())
         .unwrap()
-        .link(
+        .add_link(
             (src_node.into(), src_param.into()),
             (dst_node.into(), dst_param.into()),
         )
@@ -483,6 +492,13 @@ fn link_nodes_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
+fn link_list_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+    command! {
+        "Link two nodes of the same graph",
+        (graph: String) => |graph: String| link_list(status.clone(), graph)
+    }
+}
+
 fn add_sender_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Add a sender to a graph",
@@ -545,6 +561,7 @@ fn main() -> Result<(), &'static str> {
         .add("node_load", node_load_command(status.clone()))
         .add("node_assign", node_assign_command(status.clone()))
         .add("link_nodes", link_nodes_command(status.clone()))
+        .add("link_list", link_list_command(status.clone()))
         .add("add_sender", add_sender_command(status.clone()))
         .add("remove_sender", remove_sender_command(status.clone()))
         .add("add_receiver", add_receiver_command(status.clone()))
