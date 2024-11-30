@@ -277,7 +277,7 @@ fn link_list(status: Rc<Mutex<Status>>, graph_id: String) -> Result<CommandStatu
     Ok(CommandStatus::Done)
 }
 
-fn list_sender(
+fn sender_list(
     status: Rc<Mutex<Status>>,
     graph_id: String,
 ) -> Result<CommandStatus, anyhow::Error> {
@@ -309,7 +309,7 @@ fn link_nodes(
     Ok(CommandStatus::Done)
 }
 
-fn add_sender(
+fn sender_add(
     status: Rc<Mutex<Status>>,
     (src_graph, src_node, src_param): (String, String, String),
     (dst_graph, dst_node, dst_param): (String, String, String),
@@ -328,7 +328,7 @@ fn add_sender(
     Ok(CommandStatus::Done)
 }
 
-fn remove_sender(
+fn sender_remove(
     status: Rc<Mutex<Status>>,
     (src_graph, src_node, src_param): (String, String, String),
     (dst_graph, dst_node, dst_param): (String, String, String),
@@ -347,7 +347,7 @@ fn remove_sender(
     Ok(CommandStatus::Done)
 }
 
-fn list_receiver(
+fn receiver_list(
     status: Rc<Mutex<Status>>,
     graph_id: String,
 ) -> Result<CommandStatus, anyhow::Error> {
@@ -363,7 +363,7 @@ fn list_receiver(
     Ok(CommandStatus::Done)
 }
 
-fn add_receiver(
+fn receiver_add(
     status: Rc<Mutex<Status>>,
     (src_graph, src_node, src_param): (String, String, String),
     (dst_graph, dst_node, dst_param): (String, String, String),
@@ -382,7 +382,7 @@ fn add_receiver(
     Ok(CommandStatus::Done)
 }
 
-fn remove_receiver(
+fn receiver_remove(
     status: Rc<Mutex<Status>>,
     (src_graph, src_node, src_param): (String, String, String),
     (dst_graph, dst_node, dst_param): (String, String, String),
@@ -527,45 +527,45 @@ fn link_list_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn list_sender_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+fn sender_list_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List senders",
-        (graph: String) => |graph: String| list_sender(status.clone(), graph)
+        (graph: String) => |graph: String| sender_list(status.clone(), graph)
     }
 }
 
-fn add_sender_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+fn sender_add_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Add a sender to a graph",
-        (src_graph: String, src_node: String, src_param: String, dst_graph: String, dst_node: String, dst_param: String) => |src_graph: String, src_node:String, src_param:String, dst_graph: String, dst_node: String, dst_param: String| add_sender(status.clone(), (src_graph, src_node, src_param), (dst_graph, dst_node, dst_param))
+        (src_graph: String, src_node: String, src_param: String, dst_graph: String, dst_node: String, dst_param: String) => |src_graph: String, src_node:String, src_param:String, dst_graph: String, dst_node: String, dst_param: String| sender_add(status.clone(), (src_graph, src_node, src_param), (dst_graph, dst_node, dst_param))
     }
 }
 
-fn remove_sender_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+fn sender_remove_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Remove a sender to a graph",
-        (src_graph: String, src_node: String, src_param: String, dst_graph: String, dst_node: String, dst_param: String) => |src_graph: String, src_node:String, src_param:String, dst_graph: String, dst_node: String, dst_param: String| remove_sender(status.clone(), (src_graph, src_node, src_param), (dst_graph, dst_node, dst_param))
+        (src_graph: String, src_node: String, src_param: String, dst_graph: String, dst_node: String, dst_param: String) => |src_graph: String, src_node:String, src_param:String, dst_graph: String, dst_node: String, dst_param: String| sender_remove(status.clone(), (src_graph, src_node, src_param), (dst_graph, dst_node, dst_param))
     }
 }
 
-fn list_receiver_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+fn receiver_list_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "List receivers",
-        (graph: String) => |graph: String| list_receiver(status.clone(), graph)
+        (graph: String) => |graph: String| receiver_list(status.clone(), graph)
     }
 }
 
-fn add_receiver_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+fn receiver_add_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Add a receiver to a graph",
-        (src_graph: String, src_node: String, src_param: String, dst_graph: String, dst_node: String, dst_param: String) => |src_graph: String, src_node:String, src_param:String, dst_graph: String, dst_node: String, dst_param: String| add_receiver(status.clone(), (src_graph, src_node, src_param), (dst_graph, dst_node, dst_param))
+        (src_graph: String, src_node: String, src_param: String, dst_graph: String, dst_node: String, dst_param: String) => |src_graph: String, src_node:String, src_param:String, dst_graph: String, dst_node: String, dst_param: String| receiver_add(status.clone(), (src_graph, src_node, src_param), (dst_graph, dst_node, dst_param))
     }
 }
 
-fn remove_receiver_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+fn receiver_remove_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Remove a receiver to a graph",
-        (src_graph: String, src_node: String, src_param: String, dst_graph: String, dst_node: String, dst_param: String) => |src_graph: String, src_node:String, src_param:String, dst_graph: String, dst_node: String, dst_param: String| remove_receiver(status.clone(), (src_graph, src_node, src_param), (dst_graph, dst_node, dst_param))
+        (src_graph: String, src_node: String, src_param: String, dst_graph: String, dst_node: String, dst_param: String) => |src_graph: String, src_node:String, src_param:String, dst_graph: String, dst_node: String, dst_param: String| receiver_remove(status.clone(), (src_graph, src_node, src_param), (dst_graph, dst_node, dst_param))
     }
 }
 
@@ -604,12 +604,12 @@ fn main() -> Result<(), &'static str> {
         .add("node_assign", node_assign_command(status.clone()))
         .add("link_nodes", link_nodes_command(status.clone()))
         .add("link_list", link_list_command(status.clone()))
-        .add("list_sender", list_sender_command(status.clone()))
-        .add("add_sender", add_sender_command(status.clone()))
-        .add("remove_sender", remove_sender_command(status.clone()))
-        .add("list_receiver", list_receiver_command(status.clone()))
-        .add("add_receiver", add_receiver_command(status.clone()))
-        .add("remove_receiver", remove_receiver_command(status.clone()))
+        .add("sender_list", sender_list_command(status.clone()))
+        .add("sender_add", sender_add_command(status.clone()))
+        .add("sender_remove", sender_remove_command(status.clone()))
+        .add("receiver_list", receiver_list_command(status.clone()))
+        .add("receiver_add", receiver_add_command(status.clone()))
+        .add("receiver_remove", receiver_remove_command(status.clone()))
         .add(
             "id_s2n",
             command! {
