@@ -51,6 +51,9 @@ async fn main() {
         .route("/graphs/:graph_id/start", post(graph_start))
         .route("/graphs/:graph_id/stop", post(graph_stop))
         .route("/graphs/:graph_id/nodes", get(node_list))
+        .route("/graphs/:graph_id/links", get(link_list))
+        .route("/graphs/:graph_id/senders", get(senders_list))
+        .route("/graphs/:graph_id/receivers", get(receivers_list))
         .route("/graphs/:graph_id/nodes/:node_id/inputs", get(node_inputs))
         .route(
             "/graphs/:graph_id/nodes/:node_id/outputs",
@@ -99,6 +102,32 @@ async fn graph_stop(Path(graph_id): Path<String>, State(system): State<WebSystem
 }
 async fn node_list(Path(graph_id): Path<String>, State(system): State<WebSystem>) -> Json<Value> {
     let result = system.graph(graph_id.into()).unwrap().list_nodes().unwrap();
+    Json(json!(result))
+}
+async fn link_list(Path(graph_id): Path<String>, State(system): State<WebSystem>) -> Json<Value> {
+    let result = system.graph(graph_id.into()).unwrap().list_links().unwrap();
+    Json(json!(result))
+}
+async fn senders_list(
+    Path(graph_id): Path<String>,
+    State(system): State<WebSystem>,
+) -> Json<Value> {
+    let result = system
+        .graph(graph_id.into())
+        .unwrap()
+        .list_senders()
+        .unwrap();
+    Json(json!(result))
+}
+async fn receivers_list(
+    Path(graph_id): Path<String>,
+    State(system): State<WebSystem>,
+) -> Json<Value> {
+    let result = system
+        .graph(graph_id.into())
+        .unwrap()
+        .list_receivers()
+        .unwrap();
     Json(json!(result))
 }
 async fn node_inputs(
