@@ -277,6 +277,18 @@ fn link_list(status: Rc<Mutex<Status>>, graph_id: String) -> Result<CommandStatu
     Ok(CommandStatus::Done)
 }
 
+fn list_sender(
+    status: Rc<Mutex<Status>>,
+    graph_id: String,
+) -> Result<CommandStatus, anyhow::Error> {
+    let status = status.lock().or(Err(anyhow!("cannot lock")))?;
+    let l = status.system.graph(graph_id.into()).unwrap().list_senders();
+
+    println!("{:?}", l);
+
+    Ok(CommandStatus::Done)
+}
+
 fn link_nodes(
     status: Rc<Mutex<Status>>,
     graph_id: String,
@@ -331,6 +343,22 @@ fn remove_sender(
             (dst_graph.into(), dst_node.into(), dst_param.into()),
         )
         .unwrap();
+
+    Ok(CommandStatus::Done)
+}
+
+fn list_receiver(
+    status: Rc<Mutex<Status>>,
+    graph_id: String,
+) -> Result<CommandStatus, anyhow::Error> {
+    let status = status.lock().or(Err(anyhow!("cannot lock")))?;
+    let l = status
+        .system
+        .graph(graph_id.into())
+        .unwrap()
+        .list_receivers();
+
+    println!("{:?}", l);
 
     Ok(CommandStatus::Done)
 }
@@ -499,6 +527,13 @@ fn link_list_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
+fn list_sender_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+    command! {
+        "List senders",
+        (graph: String) => |graph: String| list_sender(status.clone(), graph)
+    }
+}
+
 fn add_sender_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Add a sender to a graph",
@@ -510,6 +545,13 @@ fn remove_sender_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Remove a sender to a graph",
         (src_graph: String, src_node: String, src_param: String, dst_graph: String, dst_node: String, dst_param: String) => |src_graph: String, src_node:String, src_param:String, dst_graph: String, dst_node: String, dst_param: String| remove_sender(status.clone(), (src_graph, src_node, src_param), (dst_graph, dst_node, dst_param))
+    }
+}
+
+fn list_receiver_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+    command! {
+        "List receivers",
+        (graph: String) => |graph: String| list_receiver(status.clone(), graph)
     }
 }
 
@@ -562,8 +604,10 @@ fn main() -> Result<(), &'static str> {
         .add("node_assign", node_assign_command(status.clone()))
         .add("link_nodes", link_nodes_command(status.clone()))
         .add("link_list", link_list_command(status.clone()))
+        .add("list_sender", list_sender_command(status.clone()))
         .add("add_sender", add_sender_command(status.clone()))
         .add("remove_sender", remove_sender_command(status.clone()))
+        .add("list_receiver", list_receiver_command(status.clone()))
         .add("add_receiver", add_receiver_command(status.clone()))
         .add("remove_receiver", remove_receiver_command(status.clone()))
         .add(
