@@ -1,5 +1,6 @@
 use crate::{
     loader::Registry,
+    props::GenericProp,
     repr::{GraphLink, GraphRepr, OnError},
 };
 
@@ -89,6 +90,40 @@ impl Graph {
             node.terminate()?;
         }
         Ok(())
+    }
+
+    pub fn collect_links(&self) -> Vec<Vec<(NodeId, ParamId)>> {
+        self.nodes
+            .iter()
+            .flat_map(|(n, p)| {
+                let output = p
+                    .output_names()
+                    .into_iter()
+                    .map(|q| (p.output(q).unwrap(), (*n, q)));
+                let input = p
+                    .input_names()
+                    .into_iter()
+                    .map(|q| (p.input(q).unwrap(), (*n, q)));
+
+                output.chain(input)
+            })
+            .fold(
+                vec![],
+                |mut links: Vec<(GenericProp, Vec<(NodeId, ParamId)>)>, (prop, vals)| {
+                    if let Some((_, ref mut arr)) = links
+                        .iter_mut()
+                        .find(|(key_prop, _)| key_prop.is_same(&prop))
+                    {
+                        arr.push(vals)
+                    } else {
+                        links.push((prop, vec![vals]))
+                    }
+                    links
+                },
+            )
+            .into_iter()
+            .map(|(_, v)| v)
+            .collect()
     }
 
     /// List nodes
