@@ -83,7 +83,7 @@ export const load: PageLoad = async ({ fetch }) => {
 
 		return {
 			data: { nodes: n, links: l },
-			nodeLabel: (n: GraphInputNode) => n.id,
+			nodeLabel: (n: GraphInputNode) => (n.id as string).split('/').at(-1),
 			nodeFill: (n: GraphInputNode) => {
 				switch ((n.id as string).split('/').length) {
 					case 1:
