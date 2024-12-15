@@ -16,6 +16,20 @@ export const load: PageLoad = async ({ fetch }) => {
 			)
 		).flatMap((x) => x);
 
+		const links = (
+			await Promise.all(
+				graphs.map(async (graph) => {
+					const data = await fetch(`/api/graphs/${graph}/links`);
+					const json: string[][][] = await data.json();
+
+					return json.map((x) => x.map((y) => `${graph}/${y.join('/')}`));
+				})
+			)
+		)
+			.flatMap((x) => x)
+			.filter((x) => x.length > 1)
+			.map(([a, b]) => ({ source: a, target: b }));
+
 		const inputs = (
 			await Promise.all(
 				processors.map(async (n) => {
@@ -48,7 +62,8 @@ export const load: PageLoad = async ({ fetch }) => {
 				const lastIndex = x.lastIndexOf('/');
 				const withoutLastPart = lastIndex !== -1 ? x.substring(0, lastIndex) : x;
 				return { source: withoutLastPart, target: x };
-			});
+			})
+			.concat(links);
 
 		return {
 			data: { nodes: n, links: l },
