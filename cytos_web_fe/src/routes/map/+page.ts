@@ -6,6 +6,22 @@ export const load: PageLoad = async ({ fetch }) => {
 		const data = await fetch('/api/graphs');
 		const graphs: string[] = await data.json();
 
+		const receivers = (
+			await Promise.all(
+				graphs.map(async (graph) => {
+					const data = await fetch(`/api/graphs/${graph}/receivers`);
+					const json: string[][][] = await data.json();
+
+					return json.map(([src, dst]) => {
+						return [src.join('/'), `${graph}/${dst.join('/')}`];
+					});
+				})
+			)
+		)
+			.flatMap((x) => x)
+
+			.map(([a, b]) => ({ source: a, target: b }));
+
 		const processors = (
 			await Promise.all(
 				graphs.map(async (graph) => {
@@ -63,7 +79,7 @@ export const load: PageLoad = async ({ fetch }) => {
 				const withoutLastPart = lastIndex !== -1 ? x.substring(0, lastIndex) : x;
 				return { source: withoutLastPart, target: x };
 			})
-			.concat(links);
+			.concat(links, receivers);
 
 		return {
 			data: { nodes: n, links: l },
