@@ -35,17 +35,29 @@ export const load: PageLoad = async ({ fetch }) => {
 			.flatMap((x) => x)
 			.map(([a, b]) => ({ source: a, target: b, color: '#0000ff' }));
 
-		const processors = (
-			await Promise.all(
-				graphs.map(async (graph) => {
-					const data = await fetch(`/api/graphs/${graph.id}/nodes`);
-					const json = (await data.json()) as string[];
-					return json.map((node) => ({ id: `${graph.id}/${node}`, color: '#00ff00', label: node }));
-				})
-			)
-		).flatMap((x) => x);
+		const processorsData: Node[][] = await Promise.all(
+			graphs.map(async (graph) => {
+				const data = await fetch(`/api/graphs/${graph.id}/nodes`);
+				const json = (await data.json()) as string[];
+				return json.map((node) => ({ id: `${graph.id}/${node}`, color: '#00ff00', label: node }));
+			})
+		);
 
-		const links: Link[] = (
+		const processors = processorsData.flatMap((x) => x);
+
+		const processorsLinks = processorsData.flatMap((group) => {
+			const links: Link[] = [];
+			if (group.length < 2) return [];
+			for (let i = 0; i < group.length - 1; i += 1) {
+				const [a, b] = group.slice(i, i + 2);
+				links.push({ source: a.id, target: b.id, color: '#00ffff' });
+			}
+			return links;
+		});
+
+		console.info(processorsLinks);
+
+		const linkGroups: string[][] = (
 			await Promise.all(
 				graphs.map(async (graph) => {
 					const data = await fetch(`/api/graphs/${graph.id}/links`);
@@ -56,8 +68,16 @@ export const load: PageLoad = async ({ fetch }) => {
 			)
 		)
 			.flatMap((x) => x)
-			.filter((x) => x.length > 1)
-			.map(([a, b]) => ({ source: a, target: b, color: '#00ff00' }));
+			.filter((x) => x.length > 1);
+
+		const links = linkGroups.flatMap((group) => {
+			const links: Link[] = [];
+			for (let i = 0; i < group.length - 1; i += 1) {
+				const [a, b] = group.slice(i, i + 2);
+				links.push({ source: a, target: b, color: '#00ff00' });
+			}
+			return links;
+		});
 
 		const inputs = (
 			await Promise.all(
@@ -99,7 +119,7 @@ export const load: PageLoad = async ({ fetch }) => {
 				return { source: withoutLastPart, target: x.id, color: '#ff0000' };
 			});
 
-		const l = composition.concat(links, receivers);
+		const l = composition.concat(links, receivers, processorsLinks);
 
 		return {
 			data: { nodes: n, links: l },
