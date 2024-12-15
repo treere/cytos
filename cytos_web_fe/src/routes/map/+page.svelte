@@ -11,11 +11,17 @@
 	const { data }: Props = $props();
 </script>
 
-<VisSingleContainer data={data.data}>
-	<VisGraph
-		nodeLabel={data.nodeLabel}
-		nodeFill={data.nodeFill}
-		linkStroke={data.linkStroke}
-		linkFlow={data.linkFlow}
-	/>
-</VisSingleContainer>
+{#await data.graph}
+	Loading
+{:then graph}
+	<VisSingleContainer data={graph}>
+		<VisGraph
+			nodeLabel={data.nodeLabel}
+			nodeFill={data.nodeFill}
+			linkStroke={data.linkStroke}
+			linkFlow={data.linkFlow}
+		/>
+	</VisSingleContainer>
+{:catch}
+	Error
+{/await}

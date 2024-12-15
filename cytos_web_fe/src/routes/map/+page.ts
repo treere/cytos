@@ -1,27 +1,28 @@
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ fetch }) => {
+	interface Link {
+		source: string;
+		target: string;
+		color: string;
+		active?: boolean;
+	}
+
+	enum NodeType {
+		Graph,
+		Node,
+		InputParam,
+		OutputParam
+	}
+
+	interface Node {
+		id: string;
+		color: string;
+		label: string;
+		type: NodeType;
+	}
+
 	const compose = async () => {
-		interface Link {
-			source: string;
-			target: string;
-			color: string;
-			active?: boolean;
-		}
-
-		enum NodeType {
-			Graph,
-			Node,
-			InputParam,
-			OutputParam
-		}
-
-		interface Node {
-			id: string;
-			color: string;
-			label: string;
-			type: NodeType;
-		}
 		const data = await fetch('/api/graphs');
 		const graphs: Node[] = (await data.json()).map((x: string) => ({
 			id: x,
@@ -143,16 +144,14 @@ export const load: PageLoad = async ({ fetch }) => {
 
 		const l = composition.concat(links, receivers, processorsLinks);
 
-		return {
-			data: { nodes: n, links: l },
-			linkStroke: (l: Link) => l.color,
-			nodeLabel: (n: Node) => n.label,
-			nodeFill: (n: Node) => n.color,
-			linkFlow: (l: Link) => l.active
-		};
+		return { nodes: n, links: l };
 	};
 
-	const res = await compose();
-
-	return res;
+	return {
+		graph: compose(),
+		linkStroke: (l: Link) => l.color,
+		nodeLabel: (n: Node) => n.label,
+		nodeFill: (n: Node) => n.color,
+		linkFlow: (l: Link) => l.active
+	};
 };
