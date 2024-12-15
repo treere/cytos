@@ -5,19 +5,29 @@ export const load: PageLoad = async ({ fetch }) => {
 		interface Link {
 			source: string;
 			target: string;
-			color?: string;
+			color: string;
+			active?: boolean;
+		}
+
+		enum NodeType {
+			Graph,
+			Node,
+			InputParam,
+			OutputParam
 		}
 
 		interface Node {
 			id: string;
 			color: string;
 			label: string;
+			type: NodeType;
 		}
 		const data = await fetch('/api/graphs');
 		const graphs: Node[] = (await data.json()).map((x: string) => ({
 			id: x,
 			color: '#ff0000',
-			label: x
+			label: x,
+			type: NodeType.Graph
 		}));
 
 		const receivers: Link[] = (
@@ -33,13 +43,18 @@ export const load: PageLoad = async ({ fetch }) => {
 			)
 		)
 			.flatMap((x) => x)
-			.map(([a, b]) => ({ source: a, target: b, color: '#0000ff' }));
+			.map(([a, b]) => ({ source: a, target: b, color: '#0000ff', active: true }));
 
 		const processorsData: Node[][] = await Promise.all(
 			graphs.map(async (graph) => {
 				const data = await fetch(`/api/graphs/${graph.id}/nodes`);
 				const json = (await data.json()) as string[];
-				return json.map((node) => ({ id: `${graph.id}/${node}`, color: '#00ff00', label: node }));
+				return json.map((node) => ({
+					id: `${graph.id}/${node}`,
+					color: '#00ff00',
+					label: node,
+					type: NodeType.Node
+				}));
 			})
 		);
 
@@ -50,12 +65,10 @@ export const load: PageLoad = async ({ fetch }) => {
 			if (group.length < 2) return [];
 			for (let i = 0; i < group.length - 1; i += 1) {
 				const [a, b] = group.slice(i, i + 2);
-				links.push({ source: a.id, target: b.id, color: '#00ffff' });
+				links.push({ source: a.id, target: b.id, color: '#00ffff', active: true });
 			}
 			return links;
 		});
-
-		console.info(processorsLinks);
 
 		const linkGroups: string[][] = (
 			await Promise.all(
@@ -74,12 +87,12 @@ export const load: PageLoad = async ({ fetch }) => {
 			const links: Link[] = [];
 			for (let i = 0; i < group.length - 1; i += 1) {
 				const [a, b] = group.slice(i, i + 2);
-				links.push({ source: a, target: b, color: '#00ff00' });
+				links.push({ source: a, target: b, color: '#00ff00', active: false });
 			}
 			return links;
 		});
 
-		const inputs = (
+		const inputs: Node[] = (
 			await Promise.all(
 				processors.map(async (n) => {
 					const [graph, node] = n.id.split('/');
@@ -88,13 +101,14 @@ export const load: PageLoad = async ({ fetch }) => {
 					return json.map((param) => ({
 						id: `${graph}/${node}/${param}`,
 						color: '#0000ff',
-						label: param
+						label: param,
+						type: NodeType.InputParam
 					}));
 				})
 			)
 		).flatMap((x) => x);
 
-		const outputs = (
+		const outputs: Node[] = (
 			await Promise.all(
 				processors.map(async (n) => {
 					const [graph, node] = n.id.split('/');
@@ -103,7 +117,8 @@ export const load: PageLoad = async ({ fetch }) => {
 					return json.map((param) => ({
 						id: `${graph}/${node}/${param}`,
 						color: '#0000ff',
-						label: param
+						label: param,
+						type: NodeType.OutputParam
 					}));
 				})
 			)
@@ -116,7 +131,14 @@ export const load: PageLoad = async ({ fetch }) => {
 			.map((x) => {
 				const lastIndex = x.id.lastIndexOf('/');
 				const withoutLastPart = lastIndex !== -1 ? x.id.substring(0, lastIndex) : x.id;
-				return { source: withoutLastPart, target: x.id, color: '#ff0000' };
+				const source = x.type == NodeType.OutputParam ? withoutLastPart : x.id;
+				const target = x.type == NodeType.OutputParam ? x.id : withoutLastPart;
+				return {
+					source,
+					target,
+					color: '#ff0000',
+					active: !(x.type in [NodeType.InputParam, NodeType.OutputParam])
+				};
 			});
 
 		const l = composition.concat(links, receivers, processorsLinks);
@@ -125,7 +147,8 @@ export const load: PageLoad = async ({ fetch }) => {
 			data: { nodes: n, links: l },
 			linkStroke: (l: Link) => l.color,
 			nodeLabel: (n: Node) => n.label,
-			nodeFill: (n: Node) => n.color
+			nodeFill: (n: Node) => n.color,
+			linkFlow: (l: Link) => l.active
 		};
 	};
 
