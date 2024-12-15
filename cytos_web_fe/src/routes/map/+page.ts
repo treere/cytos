@@ -1,4 +1,4 @@
-import type { GraphInputNode } from '@unovis/ts';
+import type { GraphInputLink, GraphInputNode } from '@unovis/ts';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ fetch }) => {
@@ -83,6 +83,7 @@ export const load: PageLoad = async ({ fetch }) => {
 
 		return {
 			data: { nodes: n, links: l },
+			linkStroke: (l: GraphInputLink) => '#ff0000',
 			nodeLabel: (n: GraphInputNode) => (n.id as string).split('/').at(-1),
 			nodeFill: (n: GraphInputNode) => {
 				switch ((n.id as string).split('/').length) {
