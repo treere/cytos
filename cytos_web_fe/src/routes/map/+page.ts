@@ -1,58 +1,65 @@
-import type { GraphInputLink, GraphInputNode } from '@unovis/ts';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ fetch }) => {
 	const compose = async () => {
-		const data = await fetch('/api/graphs');
-		const graphs: string[] = await data.json();
+		interface Link {
+			source: string;
+			target: string;
+			color?: string;
+		}
 
-		const receivers = (
+		interface Node {
+			id: string;
+		}
+		const data = await fetch('/api/graphs');
+		const graphs: Node[] = (await data.json()).map((x: string) => ({ id: x }));
+
+		const receivers: Link[] = (
 			await Promise.all(
 				graphs.map(async (graph) => {
-					const data = await fetch(`/api/graphs/${graph}/receivers`);
+					const data = await fetch(`/api/graphs/${graph.id}/receivers`);
 					const json: string[][][] = await data.json();
 
 					return json.map(([src, dst]) => {
-						return [src.join('/'), `${graph}/${dst.join('/')}`];
+						return [src.join('/'), `${graph.id}/${dst.join('/')}`];
 					});
 				})
 			)
 		)
 			.flatMap((x) => x)
-
-			.map(([a, b]) => ({ source: a, target: b }));
+			.map(([a, b]) => ({ source: a, target: b, color: '#0000ff' }));
 
 		const processors = (
 			await Promise.all(
 				graphs.map(async (graph) => {
-					const data = await fetch(`/api/graphs/${graph}/nodes`);
+					const data = await fetch(`/api/graphs/${graph.id}/nodes`);
 					const json = (await data.json()) as string[];
-					return json.map((node) => `${graph}/${node}`);
+					return json.map((node) => ({ id: `${graph.id}/${node}` }));
 				})
 			)
 		).flatMap((x) => x);
 
-		const links = (
+		const links: Link[] = (
 			await Promise.all(
 				graphs.map(async (graph) => {
-					const data = await fetch(`/api/graphs/${graph}/links`);
+					const data = await fetch(`/api/graphs/${graph.id}/links`);
 					const json: string[][][] = await data.json();
 
-					return json.map((x) => x.map((y) => `${graph}/${y.join('/')}`));
+					return json.map((x) => x.map((y) => `${graph.id}/${y.join('/')}`));
 				})
 			)
 		)
 			.flatMap((x) => x)
 			.filter((x) => x.length > 1)
-			.map(([a, b]) => ({ source: a, target: b }));
+			.map(([a, b]) => ({ source: a, target: b, color: '#00ff00' }));
 
 		const inputs = (
 			await Promise.all(
 				processors.map(async (n) => {
-					const [graph, node] = n.split('/');
+					const [graph, node] = n.id.split('/');
 					const data = await fetch(`/api/graphs/${graph}/nodes/${node}/inputs`);
 					const json = (await data.json()) as string[];
-					return json.map((param) => `${graph}/${node}/${param}`);
+					return json.map((param) => ({ id: `${graph}/${node}/${param}` }));
 				})
 			)
 		).flatMap((x) => x);
@@ -60,33 +67,32 @@ export const load: PageLoad = async ({ fetch }) => {
 		const outputs = (
 			await Promise.all(
 				processors.map(async (n) => {
-					const [graph, node] = n.split('/');
+					const [graph, node] = n.id.split('/');
 					const data = await fetch(`/api/graphs/${graph}/nodes/${node}/outputs`);
 					const json = (await data.json()) as string[];
-					return json.map((param) => `${graph}/${node}/${param}`);
+					return json.map((param) => ({ id: `${graph}/${node}/${param}` }));
 				})
 			)
 		).flatMap((x) => x);
 
-		const nodes = inputs.concat(outputs, processors, graphs);
+		const n = graphs.concat(graphs, inputs, outputs, processors);
 
-		const n = nodes.map((x) => ({ id: x }));
-
-		const l = nodes
-			.filter((x) => x.includes('/'))
+		const composition: Link[] = n
+			.filter((x) => x.id.includes('/'))
 			.map((x) => {
-				const lastIndex = x.lastIndexOf('/');
-				const withoutLastPart = lastIndex !== -1 ? x.substring(0, lastIndex) : x;
-				return { source: withoutLastPart, target: x };
-			})
-			.concat(links, receivers);
+				const lastIndex = x.id.lastIndexOf('/');
+				const withoutLastPart = lastIndex !== -1 ? x.id.substring(0, lastIndex) : x.id;
+				return { source: withoutLastPart, target: x.id, color: '#ff0000' };
+			});
+
+		const l = composition.concat(links, receivers);
 
 		return {
 			data: { nodes: n, links: l },
-			linkStroke: (l: GraphInputLink) => '#ff0000',
-			nodeLabel: (n: GraphInputNode) => (n.id as string).split('/').at(-1),
-			nodeFill: (n: GraphInputNode) => {
-				switch ((n.id as string).split('/').length) {
+			linkStroke: (l: Link) => l.color,
+			nodeLabel: (n: Node) => n.id.split('/').at(-1),
+			nodeFill: (n: Node) => {
+				switch (n.id.split('/').length) {
 					case 1:
 						return '#ff0000';
 					case 2:
