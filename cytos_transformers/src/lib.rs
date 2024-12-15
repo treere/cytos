@@ -3,6 +3,7 @@ extern crate cytos_derive;
 mod add_one;
 mod decoder;
 mod encoder;
+mod face_detection;
 mod imageops;
 mod incremental;
 mod mean;
@@ -38,5 +39,6 @@ pub extern "C" fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
         .add("Contrast", imageops::Contrast::default)
         .add("Filter3x3", imageops::Filter3x3::default)
         .add("Unsharpen", imageops::Unsharpen::default)
+        .add("FaceDetection", face_detection::FaceDetection::default)
         .add("Save", imageops::Unsharpen::default);
 }
