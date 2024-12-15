@@ -10,9 +10,15 @@ export const load: PageLoad = async ({ fetch }) => {
 
 		interface Node {
 			id: string;
+			color: string;
+			label: string;
 		}
 		const data = await fetch('/api/graphs');
-		const graphs: Node[] = (await data.json()).map((x: string) => ({ id: x }));
+		const graphs: Node[] = (await data.json()).map((x: string) => ({
+			id: x,
+			color: '#ff0000',
+			label: x
+		}));
 
 		const receivers: Link[] = (
 			await Promise.all(
@@ -34,7 +40,7 @@ export const load: PageLoad = async ({ fetch }) => {
 				graphs.map(async (graph) => {
 					const data = await fetch(`/api/graphs/${graph.id}/nodes`);
 					const json = (await data.json()) as string[];
-					return json.map((node) => ({ id: `${graph.id}/${node}` }));
+					return json.map((node) => ({ id: `${graph.id}/${node}`, color: '#00ff00', label: node }));
 				})
 			)
 		).flatMap((x) => x);
@@ -59,7 +65,11 @@ export const load: PageLoad = async ({ fetch }) => {
 					const [graph, node] = n.id.split('/');
 					const data = await fetch(`/api/graphs/${graph}/nodes/${node}/inputs`);
 					const json = (await data.json()) as string[];
-					return json.map((param) => ({ id: `${graph}/${node}/${param}` }));
+					return json.map((param) => ({
+						id: `${graph}/${node}/${param}`,
+						color: '#0000ff',
+						label: param
+					}));
 				})
 			)
 		).flatMap((x) => x);
@@ -70,7 +80,11 @@ export const load: PageLoad = async ({ fetch }) => {
 					const [graph, node] = n.id.split('/');
 					const data = await fetch(`/api/graphs/${graph}/nodes/${node}/outputs`);
 					const json = (await data.json()) as string[];
-					return json.map((param) => ({ id: `${graph}/${node}/${param}` }));
+					return json.map((param) => ({
+						id: `${graph}/${node}/${param}`,
+						color: '#0000ff',
+						label: param
+					}));
 				})
 			)
 		).flatMap((x) => x);
@@ -90,17 +104,8 @@ export const load: PageLoad = async ({ fetch }) => {
 		return {
 			data: { nodes: n, links: l },
 			linkStroke: (l: Link) => l.color,
-			nodeLabel: (n: Node) => n.id.split('/').at(-1),
-			nodeFill: (n: Node) => {
-				switch (n.id.split('/').length) {
-					case 1:
-						return '#ff0000';
-					case 2:
-						return '#00ff00';
-					case 3:
-						return '#0000ff';
-				}
-			}
+			nodeLabel: (n: Node) => n.label,
+			nodeFill: (n: Node) => n.color
 		};
 	};
 
