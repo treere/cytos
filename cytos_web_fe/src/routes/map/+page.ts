@@ -130,7 +130,7 @@ export const load: PageLoad = async ({ fetch }) => {
 			)
 		).flatMap((x) => x);
 
-		const n = graphs.concat(graphs, inputs, outputs, processors);
+		const n = graphs.concat(inputs, outputs, processors);
 
 		const composition: Link[] = n
 			.filter((x) => x.id.includes('/'))
