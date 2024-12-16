@@ -6,33 +6,37 @@
 
 	let content: Content | undefined = $state();
 
-	const load = () => {
-		if (content !== undefined && 'text' in content && content.text !== undefined) {
-			fetch(`/api/graphs/${data.graph}/nodes/${data.node}/params/${data.param}/load`, {
+	const modify = (endpoint: string) => {
+		if (content === undefined) {
+			console.log('Invalid content', content);
+			return;
+		}
+		if ('text' in content && content.text !== undefined) {
+			fetch(`/api/graphs/${data.graph}/nodes/${data.node}/params/${data.param}/${endpoint}`, {
 				method: 'POST',
 				body: content.text,
 				headers: {
 					'Content-Type': 'application/json'
 				}
 			});
-		} else {
-			console.log('Invalid content');
+			return;
 		}
+
+		if ('json' in content && content.json !== undefined && content.json !== null) {
+			fetch(`/api/graphs/${data.graph}/nodes/${data.node}/params/${data.param}/${endpoint}`, {
+				method: 'POST',
+				body: content.json.toString(),
+				headers: {
+					'Content-Type': 'application/json'
+				}
+			});
+			return;
+		}
+		console.log('Invalid content', content);
 	};
 
-	const assign = () => {
-		if (content !== undefined && 'text' in content && content.text !== undefined) {
-			fetch(`/api/graphs/${data.graph}/nodes/${data.node}/params/${data.param}/assign`, {
-				method: 'POST',
-				body: content.text,
-				headers: {
-					'Content-Type': 'application/json'
-				}
-			});
-		} else {
-			console.log('Invalid content');
-		}
-	};
+	const assign = () => modify('assign');
+	const load = () => modify('load');
 
 	const update = () => {
 		invalidate(`/api/graphs/${data.graph}/nodes/${data.node}/params/${data.param}/dump`);
