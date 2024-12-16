@@ -4,7 +4,7 @@
 
 	interface Props {
 		data: {
-			graph: { nodes: Node[]; links: Link[] };
+			graph: Promise<{ nodes: Node[]; links: Link[] }>;
 			nodeLabel: any;
 			nodeFill: any;
 			linkStroke: any;
