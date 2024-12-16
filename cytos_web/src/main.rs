@@ -11,11 +11,16 @@ use axum::{
 use cytos::repr::SystemRepr;
 use cytos::{loader::Registry, System};
 use serde_json::{json, Value};
+use tower_http::trace::TraceLayer;
 
 type WebSystem = Arc<System>;
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt()
+    .with_max_level(tracing::Level::DEBUG)
+        .init();
+    
     let matches = clap::Command::new("web")
         .about("start a cytos web")
         .version("0.0.1")
@@ -71,6 +76,7 @@ async fn main() {
             "/graphs/:graph_id/nodes/:node_id/params/:param_id/dump",
             get(node_param_dump),
         )
+        .layer(TraceLayer::new_for_http())
         .with_state(shared_state);
 
     // run our app with hyper, listening globally on port 3000
