@@ -1,12 +1,15 @@
 <script lang="ts">
 	import { VisSingleContainer, VisGraph } from '@unovis/svelte';
+	import type { Link, Node } from './+page';
 
 	interface Props {
-		data: any;
-		nodeLabel: any;
-		nodeFill: any;
-		linkStroke: any;
-		linkFlow: any;
+		data: {
+			graph: { nodes: Node[]; links: Link[] };
+			nodeLabel: any;
+			nodeFill: any;
+			linkStroke: any;
+			linkFlow: any;
+		};
 	}
 	const { data }: Props = $props();
 </script>
@@ -22,6 +25,13 @@
 			linkFlow={data.linkFlow}
 		/>
 	</VisSingleContainer>
+
+	<h1 class="text-2xl">Nodi</h1>
+	<ul class="list-inside list-disc">
+		{#each graph.nodes as node}
+			<li><a class="hover:underline" href={node.link} target="_blank"> {node.id}</a></li>
+		{/each}
+	</ul>
 {:catch}
 	Error
 {/await}

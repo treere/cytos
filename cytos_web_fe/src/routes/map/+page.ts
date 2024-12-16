@@ -1,34 +1,36 @@
 import type { PageLoad } from './$types';
 
+export interface Link {
+	source: string;
+	target: string;
+	color: string;
+	active?: boolean;
+}
+
+enum NodeType {
+	Graph,
+	Node,
+	InputParam,
+	OutputParam
+}
+
+export interface Node {
+	id: string;
+	color: string;
+	label: string;
+	type: NodeType;
+	link: string;
+}
+
 export const load: PageLoad = async ({ fetch }) => {
-	interface Link {
-		source: string;
-		target: string;
-		color: string;
-		active?: boolean;
-	}
-
-	enum NodeType {
-		Graph,
-		Node,
-		InputParam,
-		OutputParam
-	}
-
-	interface Node {
-		id: string;
-		color: string;
-		label: string;
-		type: NodeType;
-	}
-
-	const compose = async () => {
+	const create_graph = async () => {
 		const data = await fetch('/api/graphs');
 		const graphs: Node[] = (await data.json()).map((x: string) => ({
 			id: x,
 			color: '#ff0000',
 			label: x,
-			type: NodeType.Graph
+			type: NodeType.Graph,
+			link: `/graphs/${x}`
 		}));
 
 		const receivers: Link[] = (
@@ -54,7 +56,8 @@ export const load: PageLoad = async ({ fetch }) => {
 					id: `${graph.id}/${node}`,
 					color: '#00ff00',
 					label: node,
-					type: NodeType.Node
+					type: NodeType.Node,
+					link: `/graphs/${graph.id}/nodes/${node}`
 				}));
 			})
 		);
@@ -103,7 +106,8 @@ export const load: PageLoad = async ({ fetch }) => {
 						id: `${graph}/${node}/${param}`,
 						color: '#0000ff',
 						label: param,
-						type: NodeType.InputParam
+						type: NodeType.InputParam,
+						link: `/graphs/${graph}/nodes/${node}/params/${param}`
 					}));
 				})
 			)
@@ -119,7 +123,8 @@ export const load: PageLoad = async ({ fetch }) => {
 						id: `${graph}/${node}/${param}`,
 						color: '#0000ff',
 						label: param,
-						type: NodeType.OutputParam
+						type: NodeType.OutputParam,
+						link: `/graphs/${graph}/nodes/${node}/params/${param}`
 					}));
 				})
 			)
@@ -148,7 +153,7 @@ export const load: PageLoad = async ({ fetch }) => {
 	};
 
 	return {
-		graph: compose(),
+		graph: create_graph(),
 		linkStroke: (l: Link) => l.color,
 		nodeLabel: (n: Node) => n.label,
 		nodeFill: (n: Node) => n.color,
