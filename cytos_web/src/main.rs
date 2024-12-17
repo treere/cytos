@@ -18,9 +18,9 @@ type WebSystem = Arc<System>;
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
-    .with_max_level(tracing::Level::DEBUG)
+        .with_max_level(tracing::Level::DEBUG)
         .init();
-    
+
     let matches = clap::Command::new("web")
         .about("start a cytos web")
         .version("0.0.1")
@@ -64,6 +64,7 @@ async fn main() {
             "/graphs/:graph_id/nodes/:node_id/outputs",
             get(node_outputs),
         )
+        .route("/graphs/:graph_id/nodes/link", post(node_link))
         .route(
             "/graphs/:graph_id/nodes/:node_id/params/:param_id/load",
             post(node_param_load),
@@ -156,6 +157,23 @@ async fn node_outputs(
         .unwrap()
         .list_outputs(node_id.into())
         .unwrap();
+    Json(json!(result))
+}
+
+async fn node_link(
+    Path(graph_id): Path<String>,
+    State(system): State<WebSystem>,
+    Json(((src_node, src_param), (dst_node, dst_param))): Json<((String,String),(String,String))>,
+) -> Json<Value> {
+    let result = system
+        .graph(graph_id.into())
+        .unwrap()
+        .add_link(
+            (src_node.into(), src_param.into()),
+            (dst_node.into(), dst_param.into()),
+        )
+        .unwrap();
+
     Json(json!(result))
 }
 async fn node_param_dump(
