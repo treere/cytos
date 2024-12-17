@@ -131,6 +131,7 @@ export const load: PageLoad = async ({ fetch }) => {
 		).flatMap((x) => x);
 
 		const n = graphs.concat(inputs, outputs, processors);
+		n.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
 		const composition: Link[] = n
 			.filter((x) => x.id.includes('/'))

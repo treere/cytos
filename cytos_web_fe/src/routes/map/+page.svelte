@@ -12,6 +12,10 @@
 		};
 	}
 	const { data }: Props = $props();
+
+	const typeToColor = (x: Node['type']) => {
+		return x == 'Graph' ? 'text-red-500' : x == 'Node' ? 'text-green-500' : 'text-blue-500';
+	};
 </script>
 
 {#await data.graph}
@@ -23,7 +27,8 @@
 
 			{#each graph.nodes as node}
 				<div class="text-nowrap">
-					{node.type}: <a class="hover:underline" href={node.link} target="_blank"> {node.id} </a>
+					<span class={typeToColor(node.type)}>{node.type}</span>:
+					<a class="hover:underline" href={node.link} target="_blank"> {node.id} </a>
 				</div>
 			{/each}
 		</div>
