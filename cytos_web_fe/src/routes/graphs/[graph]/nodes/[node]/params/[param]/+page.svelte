@@ -25,7 +25,7 @@
 		if ('json' in content && content.json !== undefined && content.json !== null) {
 			fetch(`/api/graphs/${data.graph}/nodes/${data.node}/params/${data.param}/${endpoint}`, {
 				method: 'POST',
-				body: content.json.toString(),
+				body: JSON.stringify(content.json),
 				headers: {
 					'Content-Type': 'application/json'
 				}
