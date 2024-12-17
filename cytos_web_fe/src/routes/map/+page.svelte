@@ -17,21 +17,26 @@
 {#await data.graph}
 	Loading
 {:then graph}
-	<VisSingleContainer data={graph}>
-		<VisGraph
-			nodeLabel={data.nodeLabel}
-			nodeFill={data.nodeFill}
-			linkStroke={data.linkStroke}
-			linkFlow={data.linkFlow}
-		/>
-	</VisSingleContainer>
+	<div class="flex">
+		<div>
+			<h1 class="text-2xl">Nodi</h1>
 
-	<h1 class="text-2xl">Nodi</h1>
-	<ul class="list-inside list-disc">
-		{#each graph.nodes as node}
-			<li>{node.type}: <a class="hover:underline" href={node.link} target="_blank"> {node.id} </a></li>
-		{/each}
-	</ul>
+			{#each graph.nodes as node}
+				<div class="text-nowrap">
+					{node.type}: <a class="hover:underline" href={node.link} target="_blank"> {node.id} </a>
+				</div>
+			{/each}
+		</div>
+
+		<VisSingleContainer data={graph}>
+			<VisGraph
+				nodeLabel={data.nodeLabel}
+				nodeFill={data.nodeFill}
+				linkStroke={data.linkStroke}
+				linkFlow={data.linkFlow}
+			/>
+		</VisSingleContainer>
+	</div>
 {:catch}
 	Error
 {/await}

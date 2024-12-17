@@ -8,10 +8,10 @@ export interface Link {
 }
 
 enum NodeType {
-	Graph = "Graph",
-	Node = "Node",
-	InputParam = "Input",
-	OutputParam = "Output"
+	Graph = 'Graph',
+	Node = 'Node',
+	InputParam = 'Input',
+	OutputParam = 'Output'
 }
 
 export interface Node {
