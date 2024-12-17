@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { VisSingleContainer, VisGraph } from '@unovis/svelte';
 	import type { Link, Node } from './+page';
-	import { invalidateAll } from '$app/navigation';
+	import { linkNodes } from '$lib/api';
 
 	interface Props {
 		data: {
@@ -20,29 +20,6 @@
 
 	let source = $state('');
 	let target = $state('');
-	const link = async () => {
-		const s = source.split('/').filter((x) => x);
-		const t = target.split('/').filter((x) => x);
-		console.info('>', s, t);
-		if (s.length != 3 || t.length != 3) return;
-		console.info('here');
-		const [s_g, s_n, s_p] = s;
-		const [t_g, t_n, t_p] = t;
-
-		if (s_g != t_g) return;
-		await fetch(`/api/graphs/${s_g}/nodes/link`, {
-			method: 'POST',
-			body: JSON.stringify([
-				[s_n, s_p],
-				[t_n, t_p]
-			]),
-			headers: {
-				'Content-Type': 'application/json'
-			}
-		});
-
-		invalidateAll();
-	};
 </script>
 
 {#await data.graph}
@@ -74,7 +51,7 @@
 		<input type="text" placeholder="source" bind:value={source} />
 		<input type="text" placeholder="target" bind:value={target} />
 		<button
-			onclick={link}
+			onclick={() => linkNodes(source, target)}
 			type="submit"
 			class="mr-2 rounded-lg bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
 			>Link</button

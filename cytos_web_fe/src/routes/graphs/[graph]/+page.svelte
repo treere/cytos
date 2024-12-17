@@ -1,15 +1,7 @@
 <script lang="ts">
-	let { data } = $props();
-	import { invalidateAll } from '$app/navigation';
+	import { graphStart, graphStop } from '$lib/api.js';
 
-	async function handleStart(graph: string) {
-		await fetch(`/api/graphs/${graph}/start`, { method: 'POST' });
-		invalidateAll();
-	}
-	async function handleStop(graph: string) {
-		await fetch(`/api/graphs/${graph}/stop`, { method: 'POST' });
-		invalidateAll();
-	}
+	let { data } = $props();
 </script>
 
 <h1 class="mb-4 text-3xl">
@@ -27,13 +19,13 @@
 		<h3 class="mb-4 text-xl font-bold">{status}</h3>
 		<div class="mt-2">
 			<button
-				onclick={() => handleStart(data.graph)}
+				onclick={() => graphStart(data.graph)}
 				class="mr-2 rounded-lg bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
 			>
 				Start
 			</button>
 			<button
-				onclick={() => handleStop(data.graph)}
+				onclick={() => graphStop(data.graph)}
 				class="rounded-lg bg-red-500 px-4 py-2 font-bold text-white hover:bg-red-600"
 			>
 				Stop
