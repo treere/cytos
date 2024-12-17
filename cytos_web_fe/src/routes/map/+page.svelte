@@ -29,7 +29,7 @@
 	<h1 class="text-2xl">Nodi</h1>
 	<ul class="list-inside list-disc">
 		{#each graph.nodes as node}
-			<li><a class="hover:underline" href={node.link} target="_blank"> {node.id}</a></li>
+			<li>{node.type}: <a class="hover:underline" href={node.link} target="_blank"> {node.id} </a></li>
 		{/each}
 	</ul>
 {:catch}
