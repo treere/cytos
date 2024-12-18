@@ -1,26 +1,28 @@
 import { invalidate, invalidateAll } from '$app/navigation';
 
-export const linkNodes = async (source: string, target: string) => {
-	const s = source.split('/').filter((x) => x);
-	const t = target.split('/').filter((x) => x);
-	console.info('>', s, t);
-	if (s.length != 3 || t.length != 3) return;
-	console.info('here');
-	const [s_g, s_n, s_p] = s;
-	const [t_g, t_n, t_p] = t;
+const decodePath = (path: string) => {
+	const p = path.split('/').filter((x) => x);
+	if (p.length != 3) throw new Error('invalid path');
+	return { graph: p[0], node: p[1], prop: p[2] };
+};
 
-	if (s_g != t_g) return;
-	await fetch(`/api/graphs/${s_g}/nodes/link`, {
+export const linkNodes = async (source: string, target: string) => {
+	const s = decodePath(source);
+	const t = decodePath(target);
+
+	if (s.graph != t.graph) throw new Error('conflicting graphs');
+
+	await fetch(`/api/graphs/${s.graph}/nodes/link`, {
 		method: 'POST',
 		body: JSON.stringify([
-			[s_n, s_p],
-			[t_n, t_p]
+			[s.node, s.prop],
+			[t.node, t.prop]
 		]),
 		headers: {
 			'Content-Type': 'application/json'
 		}
 	});
-	invalidateAll();
+	invalidate(`/api/graphs/${s.graph}/links`);
 };
 
 export const graphStart = async (graph: string) => {
