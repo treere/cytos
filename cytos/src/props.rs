@@ -121,6 +121,12 @@ create_ownable_clone_container_doubled!(std::collections::BTreeMap<K,V>);
 /// Generic Property as owned
 pub struct GenericOwnedProp(Box<dyn Any + Send + Sync + 'static>);
 
+impl std::fmt::Debug for GenericOwnedProp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f     , "GenericOwnedProp")
+    }
+}
+
 /// Internal prop structure
 #[derive(Default)]
 pub struct Prop<T>(Rc<UnsafeCell<T>>);

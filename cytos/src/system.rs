@@ -658,6 +658,7 @@ impl GraphView<'_> {
     }
 }
 
+#[derive(Debug)]
 enum StateCommand {
     /// Kill the runner
     Kill,
@@ -669,6 +670,7 @@ enum StateCommand {
     Status,
 }
 
+#[derive(Debug)]
 enum NodeCommand {
     /// List the nodes of the graph inside the runner
     ListNodes,
@@ -680,6 +682,7 @@ enum NodeCommand {
     RemoveNode(NodeId),
 }
 
+#[derive(Debug)]
 enum ParamCommand {
     /// Multi dump command
     Dump(Vec<(NodeId, ParamId)>),
@@ -693,6 +696,7 @@ enum ParamCommand {
     OwnedAssign(Vec<(NodeId, ParamId, GenericOwnedProp)>),
 }
 
+#[derive(Debug)]
 enum StructureCommand {
     /// List links
     ListLinks,
@@ -712,6 +716,7 @@ enum StructureCommand {
     RemoveReceiver((ExternalDestination, Destination)),
 }
 
+#[derive(Debug)]
 /// Commands that a runner can send
 enum Command {
     /// State command
