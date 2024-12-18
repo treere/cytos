@@ -1,8 +1,12 @@
+use std::error::Error;
 use std::io::Read;
 
 use std::{fs::File, sync::Arc};
 
 use axum::extract::{Path, State};
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
+use axum::routing::delete;
 use axum::Json;
 use axum::{
     routing::{get, post},
@@ -58,7 +62,11 @@ async fn main() {
         .route("/graphs/:graph_id/nodes", get(node_list))
         .route("/graphs/:graph_id/links", get(link_list))
         .route("/graphs/:graph_id/senders", get(senders_list))
+        .route("/graphs/:graph_id/senders", post(senders_create))
+        .route("/graphs/:graph_id/senders", delete(senders_delete))
         .route("/graphs/:graph_id/receivers", get(receivers_list))
+        .route("/graphs/:graph_id/receivers", post(receivers_create))
+        .route("/graphs/:graph_id/receivers", delete(receivers_delete))
         .route("/graphs/:graph_id/nodes/:node_id/inputs", get(node_inputs))
         .route(
             "/graphs/:graph_id/nodes/:node_id/outputs",
@@ -88,6 +96,20 @@ async fn main() {
 async fn root() -> &'static str {
     "Hello World!"
 }
+
+struct WebError(String);
+
+impl From<Box<dyn Error>> for WebError {
+    fn from(value: Box<dyn Error>) -> Self {
+        Self(value.to_string())
+    }
+}
+
+impl IntoResponse for WebError {
+    fn into_response(self) -> axum::response::Response {
+        (StatusCode::INTERNAL_SERVER_ERROR, self.0).into_response()
+    }
+}
 async fn graphs_list(State(system): State<WebSystem>) -> Json<Value> {
     let graphs: Vec<_> = system.graphs().cloned().collect();
     Json(json!(graphs))
@@ -95,120 +117,157 @@ async fn graphs_list(State(system): State<WebSystem>) -> Json<Value> {
 async fn graph_status(
     Path(graph_id): Path<String>,
     State(system): State<WebSystem>,
-) -> Json<Value> {
-    let result = system.graph(graph_id.into()).unwrap().status().unwrap();
-    Json(json!(result))
+) -> Result<Json<Value>, WebError> {
+    let result = system.graph(graph_id.into())?.status()?;
+    Ok(Json(json!(result)))
 }
-async fn graph_start(Path(graph_id): Path<String>, State(system): State<WebSystem>) -> Json<Value> {
-    let result = system.graph(graph_id.into()).unwrap().start().unwrap();
-    Json(json!(result))
+async fn graph_start(
+    Path(graph_id): Path<String>,
+    State(system): State<WebSystem>,
+) -> Result<Json<Value>, WebError> {
+    let result = system.graph(graph_id.into())?.start()?;
+    Ok(Json(json!(result)))
 }
-async fn graph_stop(Path(graph_id): Path<String>, State(system): State<WebSystem>) -> Json<Value> {
-    let result = system.graph(graph_id.into()).unwrap().stop().unwrap();
-    Json(json!(result))
+async fn graph_stop(
+    Path(graph_id): Path<String>,
+    State(system): State<WebSystem>,
+) -> Result<Json<Value>, WebError> {
+    let result = system.graph(graph_id.into())?.stop()?;
+    Ok(Json(json!(result)))
 }
-async fn node_list(Path(graph_id): Path<String>, State(system): State<WebSystem>) -> Json<Value> {
-    let result = system.graph(graph_id.into()).unwrap().list_nodes().unwrap();
-    Json(json!(result))
+async fn node_list(
+    Path(graph_id): Path<String>,
+    State(system): State<WebSystem>,
+) -> Result<Json<Value>, WebError> {
+    let result = system.graph(graph_id.into())?.list_nodes()?;
+    Ok(Json(json!(result)))
 }
-async fn link_list(Path(graph_id): Path<String>, State(system): State<WebSystem>) -> Json<Value> {
-    let result = system.graph(graph_id.into()).unwrap().list_links().unwrap();
-    Json(json!(result))
+async fn link_list(
+    Path(graph_id): Path<String>,
+    State(system): State<WebSystem>,
+) -> Result<Json<Value>, WebError> {
+    let result = system.graph(graph_id.into())?.list_links()?;
+    Ok(Json(json!(result)))
 }
 async fn senders_list(
     Path(graph_id): Path<String>,
     State(system): State<WebSystem>,
-) -> Json<Value> {
-    let result = system
-        .graph(graph_id.into())
-        .unwrap()
-        .list_senders()
-        .unwrap();
-    Json(json!(result))
+) -> Result<Json<Value>, WebError> {
+    let result = system.graph(graph_id.into())?.list_senders()?;
+    Ok(Json(json!(result)))
+}
+async fn senders_create(
+    Path(graph_id): Path<String>,
+    State(system): State<WebSystem>,
+    Json((src, dst)): Json<((String, String), (String, String, String))>,
+) -> Result<Json<Value>, WebError> {
+    let result = system.graph(graph_id.into())?.add_sender(
+        (src.0.into(), src.1.into()),
+        (dst.0.into(), dst.1.into(), dst.2.into()),
+    )?;
+    Ok(Json(json!(result)))
+}
+async fn senders_delete(
+    Path(graph_id): Path<String>,
+    State(system): State<WebSystem>,
+    Json((src, dst)): Json<((String, String), (String, String, String))>,
+) -> Result<Json<Value>, WebError> {
+    let result = system.graph(graph_id.into())?.remove_sender(
+        (src.0.into(), src.1.into()),
+        (dst.0.into(), dst.1.into(), dst.2.into()),
+    )?;
+    Ok(Json(json!(result)))
 }
 async fn receivers_list(
     Path(graph_id): Path<String>,
     State(system): State<WebSystem>,
-) -> Json<Value> {
-    let result = system
-        .graph(graph_id.into())
-        .unwrap()
-        .list_receivers()
-        .unwrap();
-    Json(json!(result))
+) -> Result<Json<Value>, WebError> {
+    let result = system.graph(graph_id.into())?.list_receivers()?;
+    Ok(Json(json!(result)))
+}
+async fn receivers_create(
+    Path(graph_id): Path<String>,
+    State(system): State<WebSystem>,
+    Json((src, dst)): Json<((String, String, String), (String, String))>,
+) -> Result<Json<Value>, WebError> {
+    let result = system.graph(graph_id.into())?.add_receiver(
+        (src.0.into(), src.1.into(), src.2.into()),
+        (dst.0.into(), dst.1.into()),
+    )?;
+    Ok(Json(json!(result)))
+}
+async fn receivers_delete(
+    Path(graph_id): Path<String>,
+    State(system): State<WebSystem>,
+    Json((src, dst)): Json<((String, String, String), (String, String))>,
+) -> Result<Json<Value>, WebError> {
+    let result = system.graph(graph_id.into())?.remove_receiver(
+        (src.0.into(), src.1.into(), src.2.into()),
+        (dst.0.into(), dst.1.into()),
+    )?;
+    Ok(Json(json!(result)))
 }
 async fn node_inputs(
     Path((graph_id, node_id)): Path<(String, String)>,
     State(system): State<WebSystem>,
-) -> Json<Value> {
-    let result = system
-        .graph(graph_id.into())
-        .unwrap()
-        .list_inputs(node_id.into())
-        .unwrap();
-    Json(json!(result))
+) -> Result<Json<Value>, WebError> {
+    let result = system.graph(graph_id.into())?.list_inputs(node_id.into())?;
+    Ok(Json(json!(result)))
 }
 async fn node_outputs(
     Path((graph_id, node_id)): Path<(String, String)>,
     State(system): State<WebSystem>,
-) -> Json<Value> {
+) -> Result<Json<Value>, WebError> {
     let result = system
-        .graph(graph_id.into())
-        .unwrap()
-        .list_outputs(node_id.into())
-        .unwrap();
-    Json(json!(result))
+        .graph(graph_id.into())?
+        .list_outputs(node_id.into())?;
+    Ok(Json(json!(result)))
 }
 
 async fn node_link(
     Path(graph_id): Path<String>,
     State(system): State<WebSystem>,
-    Json(((src_node, src_param), (dst_node, dst_param))): Json<((String,String),(String,String))>,
-) -> Json<Value> {
-    let result = system
-        .graph(graph_id.into())
-        .unwrap()
-        .add_link(
-            (src_node.into(), src_param.into()),
-            (dst_node.into(), dst_param.into()),
-        )
-        .unwrap();
+    Json(((src_node, src_param), (dst_node, dst_param))): Json<(
+        (String, String),
+        (String, String),
+    )>,
+) -> Result<Json<Value>, WebError> {
+    let result = system.graph(graph_id.into())?.add_link(
+        (src_node.into(), src_param.into()),
+        (dst_node.into(), dst_param.into()),
+    )?;
 
-    Json(json!(result))
+    Ok(Json(json!(result)))
 }
 async fn node_param_dump(
     Path((graph_id, node_id, param_id)): Path<(String, String, String)>,
     State(system): State<WebSystem>,
-) -> Json<Value> {
+) -> Result<Json<Value>, WebError> {
     let result = system
-        .graph(graph_id.into())
-        .unwrap()
-        .dump(vec![(node_id.into(), param_id.into())])
-        .unwrap();
-    Json(json!(result))
+        .graph(graph_id.into())?
+        .dump(vec![(node_id.into(), param_id.into())])?;
+    Ok(Json(json!(result)))
 }
 async fn node_param_load(
     Path((graph_id, node_id, param_id)): Path<(String, String, String)>,
     State(system): State<WebSystem>,
     Json(value): Json<cytos::Value>,
-) -> Json<Value> {
-    let result = system
-        .graph(graph_id.into())
-        .unwrap()
-        .load(vec![(node_id.into(), param_id.into(), value)])
-        .unwrap();
-    Json(json!(result))
+) -> Result<Json<Value>, WebError> {
+    let result =
+        system
+            .graph(graph_id.into())?
+            .load(vec![(node_id.into(), param_id.into(), value)])?;
+    Ok(Json(json!(result)))
 }
 
 async fn node_param_assign(
     Path((graph_id, node_id, param_id)): Path<(String, String, String)>,
     State(system): State<WebSystem>,
     Json(value): Json<cytos::Value>,
-) -> Json<Value> {
-    let result = system
-        .graph(graph_id.into())
-        .unwrap()
-        .assign(vec![(node_id.into(), param_id.into(), value)])
-        .unwrap();
-    Json(json!(result))
+) -> Result<Json<Value>, WebError> {
+    let result =
+        system
+            .graph(graph_id.into())?
+            .assign(vec![(node_id.into(), param_id.into(), value)])?;
+    Ok(Json(json!(result)))
 }

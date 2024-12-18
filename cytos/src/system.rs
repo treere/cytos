@@ -610,7 +610,6 @@ impl GraphView<'_> {
             self.senders.clone(),
         ))))
     }
-
     pub fn add_sender(
         &self,
         src: (NodeId, ParamId),
@@ -637,7 +636,6 @@ impl GraphView<'_> {
             StructureCommand::ListReceiver(self.senders.clone()),
         )))
     }
-
     pub fn add_receiver(
         &self,
         src: (GraphId, NodeId, ParamId),
