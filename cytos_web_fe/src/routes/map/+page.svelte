@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { VisSingleContainer, VisGraph } from '@unovis/svelte';
 	import type { Link, Node } from './+page';
-	import { linkNodes } from '$lib/api';
+	import { createReceiver, createSender, deleteReceiver, deleteSender, linkNodes } from '$lib/api';
 
 	interface Props {
 		data: {
@@ -50,12 +50,33 @@
 	<form>
 		<input type="text" placeholder="source" bind:value={source} />
 		<input type="text" placeholder="target" bind:value={target} />
-		<button
-			onclick={() => linkNodes(source, target)}
-			type="submit"
-			class="mr-2 rounded-lg bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
-			>Link</button
-		>
+		<div class="mt-5">
+			<button
+				onclick={() => linkNodes(source, target)}
+				class="mr-2 rounded-lg bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
+				>Link</button
+			>
+			<button
+				onclick={() => createReceiver(source, target)}
+				class="mr-2 rounded-lg bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
+				>Create receiver</button
+			>
+			<button
+				onclick={() => deleteReceiver(source, target)}
+				class="mr-2 rounded-lg bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
+				>Delete receiver</button
+			>
+			<button
+				onclick={() => createSender(source, target)}
+				class="mr-2 rounded-lg bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
+				>Create sender</button
+			>
+			<button
+				onclick={() => deleteSender(source, target)}
+				class="mr-2 rounded-lg bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
+				>Delete sender</button
+			>
+		</div>
 	</form>
 {:catch}
 	Error

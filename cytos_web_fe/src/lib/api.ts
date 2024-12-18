@@ -10,7 +10,7 @@ export const linkNodes = async (source: string, target: string) => {
 	const s = decodePath(source);
 	const t = decodePath(target);
 
-	if (s.graph != t.graph) throw new Error('conflicting graphs');
+	if (s.graph !== t.graph) throw new Error('conflicting graphs');
 
 	await fetch(`/api/graphs/${s.graph}/nodes/link`, {
 		method: 'POST',
@@ -33,4 +33,76 @@ export const graphStart = async (graph: string) => {
 export const graphStop = async (graph: string) => {
 	await fetch(`/api/graphs/${graph}/stop`, { method: 'POST' });
 	invalidate(`/api/graphs/${graph}`);
+};
+
+export const createReceiver = async (source: string, target: string) => {
+	const s = decodePath(source);
+	const t = decodePath(target);
+
+	if (s.graph === t.graph) throw new Error('conflicting graphs');
+
+	await fetch(`/api/graphs/${t.graph}/receivers`, {
+		method: 'POST',
+		body: JSON.stringify([
+			[s.graph, s.node, s.prop],
+			[t.node, t.prop]
+		]),
+		headers: {
+			'Content-Type': 'application/json'
+		}
+	});
+	invalidate(`/api/graphs/${t.graph}/receivers`);
+};
+export const deleteReceiver = async (source: string, target: string) => {
+	const s = decodePath(source);
+	const t = decodePath(target);
+
+	if (s.graph === t.graph) throw new Error('conflicting graphs');
+
+	await fetch(`/api/graphs/${t.graph}/receivers`, {
+		method: 'DELETE',
+		body: JSON.stringify([
+			[s.graph, s.node, s.prop],
+			[t.node, t.prop]
+		]),
+		headers: {
+			'Content-Type': 'application/json'
+		}
+	});
+	invalidate(`/api/graphs/${t.graph}/receivers`);
+};
+
+export const createSender = async (source: string, target: string) => {
+	const s = decodePath(source);
+	const t = decodePath(target);
+
+	if (s.graph === t.graph) throw new Error('conflicting graphs');
+	await fetch(`/api/graphs/${s.graph}/senders`, {
+		method: 'POST',
+		body: JSON.stringify([
+			[s.node, s.prop],
+			[t.graph, t.node, t.prop]
+		]),
+		headers: {
+			'Content-Type': 'application/json'
+		}
+	});
+	invalidate(`/api/graphs/${s.graph}/senders`);
+};
+export const deleteSender = async (source: string, target: string) => {
+	const s = decodePath(source);
+	const t = decodePath(target);
+	if (s.graph === t.graph) throw new Error('conflicting graphs');
+
+	await fetch(`/api/graphs/${s.graph}/senders`, {
+		method: 'DELETE',
+		body: JSON.stringify([
+			[s.node, s.prop],
+			[t.graph, t.node, t.prop]
+		]),
+		headers: {
+			'Content-Type': 'application/json'
+		}
+	});
+	invalidate(`/api/graphs/${s.graph}/senders`);
 };
