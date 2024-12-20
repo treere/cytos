@@ -123,7 +123,7 @@ pub struct GenericOwnedProp(Box<dyn Any + Send + Sync + 'static>);
 
 impl std::fmt::Debug for GenericOwnedProp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f     , "GenericOwnedProp")
+        write!(f, "GenericOwnedProp")
     }
 }
 

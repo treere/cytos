@@ -570,6 +570,8 @@ fn receiver_remove_command(status: Rc<Mutex<Status>>) -> Command<'static> {
 }
 
 fn main() -> Result<(), &'static str> {
+    env_logger::init();
+
     let matches = clap::Command::new("rep")
         .about("start a cytos repl")
         .version("0.0.1")

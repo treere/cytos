@@ -7,6 +7,7 @@ use crossbeam::channel::unbounded;
 use crossbeam::channel::Receiver;
 use crossbeam::channel::Sender;
 use indexmap::IndexMap;
+use log::trace;
 
 use serde::Serialize;
 
@@ -211,8 +212,10 @@ impl Worker {
     }
     /// Run the internal runner
     fn run(mut self) {
+        trace!("graph loaded");
         'main: loop {
             while let Ok((command, message)) = self.receiver.recv() {
+                trace!("received command {:?}", command);
                 match command {
                     Command::State(StateCommand::Kill) => break 'main,
                     Command::State(StateCommand::Start) => break,
@@ -231,12 +234,15 @@ impl Worker {
             }
 
             self.graph.initialize().expect("cannot initialize");
+            trace!("graph starting");
+
             'outer: loop {
                 self.request_values().expect("cannot request");
 
                 if let Ok(cause) = self.graph.step() {
                     self.send_values().expect("cannot send");
                     while let Ok((command, message)) = self.receiver.try_recv() {
+                        trace!("received command {:?}", command);
                         match command {
                             Command::State(StateCommand::Kill) => break 'main,
                             Command::State(StateCommand::Stop) => break 'outer,
@@ -260,6 +266,7 @@ impl Worker {
                     break 'outer;
                 }
             }
+            trace!("graph stopping");
             self.graph.terminate().expect("cannot terminate");
         }
     }
@@ -492,6 +499,7 @@ impl Worker {
 
     fn request_values(&mut self) -> Result<()> {
         if !self.requests.is_empty() {
+            trace!("requesting values start");
             let (message, receiver) = Response::new();
             for ((sender, nodes), internals) in &self.requests {
                 let response: Vec<_> = match sender.send((
@@ -512,12 +520,14 @@ impl Worker {
                         .and_then(|n| n.assign_owned(*param_id, response))?;
                 }
             }
+            trace!("requesting values end");
         }
         Ok(())
     }
 
     fn send_values(&mut self) -> Result<()> {
         if !self.sends.is_empty() {
+            trace!("sending values start");
             let (message, _receiver) = Response::new();
 
             for ((sender, external_nodes), internal_props) in &self.sends {
@@ -536,6 +546,7 @@ impl Worker {
                     message.clone(),
                 ))?;
             }
+            trace!("sending values end");
         }
         Ok(())
     }

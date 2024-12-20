@@ -7,6 +7,7 @@ use crate::{
 use super::{node::Node, NodeId, ParamId, Result};
 
 use indexmap::IndexMap;
+use log::trace;
 
 /// Result of a step
 #[derive(Debug)]
@@ -62,14 +63,18 @@ pub fn trace_node_step(_node_id: u64, node: &mut Node) -> Result<()> {
 impl Graph {
     /// Initialize the nodes
     pub fn initialize(&mut self) -> Result<()> {
+        trace!("start initialize");
         for node in self.nodes.values_mut() {
             node.initialize()?;
         }
+
+        trace!("end initialize");
         Ok(())
     }
 
     /// Compute one step of processing
     pub fn step(&mut self) -> Result<StepResult> {
+        trace!("start step");
         for (node_id, node) in self.nodes.iter_mut() {
             match trace_node_step(node_id.0, node) {
                 Ok(_) => continue,
@@ -80,15 +85,18 @@ impl Graph {
                 },
             }
         }
-
+        trace!("end step");
         Ok(StepResult::Done)
     }
 
     /// Terminate the nodes
     pub fn terminate(&mut self) -> Result<()> {
+        trace!("start terminate");
         for node in self.nodes.values_mut() {
             node.terminate()?;
         }
+
+        trace!("end terminate");
         Ok(())
     }
 
