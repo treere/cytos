@@ -22,7 +22,7 @@ type WebSystem = Arc<System>;
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::TRACE)
+        .with_max_level(tracing::Level::DEBUG)
         .init();
 
     let matches = clap::Command::new("web")
