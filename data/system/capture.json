@@ -16,6 +16,13 @@
           "on_error": "Skip"
         },
         {
+          "name": "FaceDetector",
+          "type": "FaceDetection",
+          "props": {
+            "model": "./data/system/face.bin"
+          }
+        },
+        {
           "name": "MEAN",
           "type": "ImageMean"
         },
@@ -33,6 +40,16 @@
           "dst": [
             "MEAN",
             "input"
+          ]
+        },
+                {
+          "src": [
+            "DECODER",
+            "decoded"
+          ],
+          "dst": [
+            "FaceDetector",
+            "image"
           ]
         },
         {

@@ -30,6 +30,9 @@ pub struct FaceDetection {
     #[input]
     image: Prop<Image>,
 
+    #[input]
+    model: Prop<String>,
+
     #[output]
     facesinfo: Prop<Vec<Rectangle>>,
 
@@ -61,7 +64,7 @@ impl Stepper for FaceDetection {
     }
 
     fn initialize(&mut self) -> cytos::Result<()> {
-        let detector = rustface::create_detector("/path/to/model")
+        let detector = rustface::create_detector(&*self.model)
             .map(|mut detector| {
                 detector.set_min_face_size(20);
                 detector.set_score_thresh(2.0);

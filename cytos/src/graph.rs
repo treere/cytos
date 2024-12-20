@@ -156,18 +156,22 @@ impl Graph {
     }
 
     pub fn get_node(&self, node_id: NodeId) -> Result<&Node> {
-        self.nodes.get(&node_id).ok_or("missing node".into())
+        self.nodes
+            .get(&node_id)
+            .ok_or_else(|| format!("missing node {:?}", node_id).into())
     }
 
     pub fn get_node_mut(&mut self, node_id: NodeId) -> Result<&mut Node> {
-        self.nodes.get_mut(&node_id).ok_or("missing node".into())
+        self.nodes
+            .get_mut(&node_id)
+            .ok_or_else(|| format!("missing node {:?}", node_id).into())
     }
 
     pub fn remove(&mut self, node_id: NodeId) -> Result<()> {
         self.nodes
             .shift_remove(&node_id)
             .and(Some(()))
-            .ok_or("missing_node".into())
+            .ok_or_else(|| format!("missing node {:?}", node_id).into())
     }
 }
 
