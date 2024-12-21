@@ -48,6 +48,21 @@ export const load: PageLoad = async ({ fetch }) => {
 			.flatMap((x) => x)
 			.map(([a, b]) => ({ source: a, target: b, color: '#0000ff', active: true }));
 
+		const senders: Link[] = (
+			await Promise.all(
+				graphs.map(async (graph) => {
+					const data = await fetch(`/api/graphs/${graph.id}/senders`);
+					const json: string[][][] = await data.json();
+
+					return json.map(([src, dst]) => {
+						return [src.join('/'), `${graph.id}/${dst.join('/')}`];
+					});
+				})
+			)
+		)
+			.flatMap((x) => x)
+			.map(([a, b]) => ({ source: b, target: a, color: '#ff00ff', active: true }));
+
 		const processorsData: Node[][] = await Promise.all(
 			graphs.map(async (graph) => {
 				const data = await fetch(`/api/graphs/${graph.id}/nodes`);
@@ -148,7 +163,7 @@ export const load: PageLoad = async ({ fetch }) => {
 				};
 			});
 
-		const l = composition.concat(links, receivers, processorsLinks);
+		const l = composition.concat(links, receivers, senders, processorsLinks);
 
 		return { nodes: n, links: l };
 	};

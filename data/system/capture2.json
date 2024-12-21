@@ -1,0 +1,91 @@
+{
+  "graphs": {
+    "capture": {
+      "nodes": [
+        {
+          "name": "SOURCE",
+          "type": "Rscam"
+        }
+      ]
+    },
+    "process": {
+      "nodes": [
+        {
+          "name": "DECODER",
+          "type": "ImageDecoder",
+          "on_error": "Skip"
+        },
+        {
+          "name": "FaceDetector",
+          "type": "FaceDetection",
+          "props": {
+            "model": "./data/system/face.bin"
+          }
+        },
+        {
+          "name": "MEAN",
+          "type": "ImageMean"
+        }
+      ],
+      "links": [
+        {
+          "src": [
+            "DECODER",
+            "decoded"
+          ],
+          "dst": [
+            "MEAN",
+            "input"
+          ]
+        },
+        {
+          "src": [
+            "DECODER",
+            "decoded"
+          ],
+          "dst": [
+            "FaceDetector",
+            "image"
+          ]
+        }
+      ]
+    },
+    "print": {
+      "nodes": [
+        {
+          "name": "PrintF64",
+          "type": "PrintF64"
+        }
+      ],
+      "links": []
+    }
+  },
+  "requests": [
+    {
+      "src": [
+        "capture",
+        "SOURCE",
+        "frame"
+      ],
+      "dst": [
+        "process",
+        "DECODER",
+        "frame"
+      ]
+    }
+  ],
+  "sends": [
+    {
+      "src": [
+        "process",
+        "MEAN",
+        "output"
+      ],
+      "dst": [
+        "print",
+        "printf64",
+        "input"
+      ]
+    }
+  ]
+}
