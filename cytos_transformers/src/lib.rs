@@ -8,6 +8,7 @@ mod imageops;
 mod incremental;
 mod mean;
 mod print;
+mod sleep;
 mod source;
 mod timer;
 mod types;
@@ -40,5 +41,6 @@ pub extern "C" fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
         .add("Filter3x3", imageops::Filter3x3::default)
         .add("Unsharpen", imageops::Unsharpen::default)
         .add("FaceDetection", face_detection::FaceDetection::default)
+        .add("Sleep", sleep::Sleep::default)
         .add("Save", imageops::Unsharpen::default);
 }

@@ -55,6 +55,13 @@
         {
           "name": "PrintF64",
           "type": "PrintF64"
+        },
+        {
+          "name": "sleep",
+          "type": "Sleep",
+          "props": {
+            "millis": 1000
+          }
         }
       ],
       "links": []
@@ -83,7 +90,7 @@
       ],
       "dst": [
         "print",
-        "printf64",
+        "PrintF64p",
         "input"
       ]
     }

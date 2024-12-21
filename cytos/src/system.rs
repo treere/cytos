@@ -51,7 +51,7 @@ fn create_sends(
     sends[..]
         .chunk_by(|a, b| a.dst.0 == b.dst.0)
         .map(|requests| {
-            let g = requests[0].dst.0;
+            let destination_graph = requests[0].dst.0;
             let (sources, destinations) = requests
                 .iter()
                 .map(|request| {
@@ -63,12 +63,12 @@ fn create_sends(
                 .unzip();
 
             senders
-                .get(&g)
+                .get(&destination_graph)
                 .cloned()
                 .map(|sender| ((sender, destinations), sources))
         })
         .collect::<Option<Vec<_>>>()
-        .ok_or("missin sender".into())
+        .ok_or("missing sender".into())
 }
 
 fn create_requests(
@@ -774,7 +774,7 @@ impl Response {
             .map(Internal::Value)
             .map_err(|r| r.to_string());
 
-        self.sender.send(resp).expect("cannot send");
+        let _ = self.sender.send(resp);
     }
 
     fn send_prop(self, resp: Result<Vec<GenericOwnedProp>>) {
