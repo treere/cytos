@@ -153,10 +153,12 @@ async fn receivers_list(
     let result = system.graph(graph_id.into())?.list_receivers()?;
     Ok(Json(json!(result)))
 }
+
+type ReceiverJson = Json<((String, String, String), (String, String))>;
 async fn receivers_create(
     Path(graph_id): Path<String>,
     State(system): State<WebSystem>,
-    Json((src, dst)): Json<((String, String, String), (String, String))>,
+    Json((src, dst)): ReceiverJson,
 ) -> Result<Json<Value>, WebError> {
     let result = system.graph(graph_id.into())?.add_receiver(
         (src.0.into(), src.1.into(), src.2.into()),
@@ -167,7 +169,7 @@ async fn receivers_create(
 async fn receivers_delete(
     Path(graph_id): Path<String>,
     State(system): State<WebSystem>,
-    Json((src, dst)): Json<((String, String, String), (String, String))>,
+    Json((src, dst)): ReceiverJson,
 ) -> Result<Json<Value>, WebError> {
     let result = system.graph(graph_id.into())?.remove_receiver(
         (src.0.into(), src.1.into(), src.2.into()),

@@ -45,9 +45,9 @@ impl Stepper for FaceDetection {
             let width = self.image.image.width();
             let height = self.image.image.height();
             let bytes = &*self.image.image;
-            let mut image = ImageData::new(bytes, width, height);
+            let image = ImageData::new(bytes, width, height);
             *self.facesinfo = detector
-                .detect(&mut image)
+                .detect(& image)
                 .into_iter()
                 .map(|info| Rectangle {
                     x: info.bbox().x(),
@@ -64,7 +64,7 @@ impl Stepper for FaceDetection {
     }
 
     fn initialize(&mut self) -> cytos::Result<()> {
-        let detector = rustface::create_detector(&*self.model)
+        let detector = rustface::create_detector(&self.model)
             .map(|mut detector| {
                 detector.set_min_face_size(20);
                 detector.set_score_thresh(2.0);
