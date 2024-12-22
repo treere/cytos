@@ -82,10 +82,6 @@ pub struct SystemRepr {
     #[serde(default)]
     /// Request between graphs
     pub requests: Vec<SystemLink>,
-
-    #[serde(default)]
-    /// Send between graphs
-    pub sends: Vec<SystemLink>,
 }
 
 impl SystemRepr {

@@ -61,9 +61,6 @@ async fn main() {
         .route("/graphs/:graph_id/stop", post(graph_stop))
         .route("/graphs/:graph_id/nodes", get(node_list))
         .route("/graphs/:graph_id/links", get(link_list))
-        .route("/graphs/:graph_id/senders", get(senders_list))
-        .route("/graphs/:graph_id/senders", post(senders_create))
-        .route("/graphs/:graph_id/senders", delete(senders_delete))
         .route("/graphs/:graph_id/receivers", get(receivers_list))
         .route("/graphs/:graph_id/receivers", post(receivers_create))
         .route("/graphs/:graph_id/receivers", delete(receivers_delete))
@@ -147,35 +144,6 @@ async fn link_list(
     State(system): State<WebSystem>,
 ) -> Result<Json<Value>, WebError> {
     let result = system.graph(graph_id.into())?.list_links()?;
-    Ok(Json(json!(result)))
-}
-async fn senders_list(
-    Path(graph_id): Path<String>,
-    State(system): State<WebSystem>,
-) -> Result<Json<Value>, WebError> {
-    let result = system.graph(graph_id.into())?.list_senders()?;
-    Ok(Json(json!(result)))
-}
-async fn senders_create(
-    Path(graph_id): Path<String>,
-    State(system): State<WebSystem>,
-    Json((src, dst)): Json<((String, String), (String, String, String))>,
-) -> Result<Json<Value>, WebError> {
-    let result = system.graph(graph_id.into())?.add_sender(
-        (src.0.into(), src.1.into()),
-        (dst.0.into(), dst.1.into(), dst.2.into()),
-    )?;
-    Ok(Json(json!(result)))
-}
-async fn senders_delete(
-    Path(graph_id): Path<String>,
-    State(system): State<WebSystem>,
-    Json((src, dst)): Json<((String, String), (String, String, String))>,
-) -> Result<Json<Value>, WebError> {
-    let result = system.graph(graph_id.into())?.remove_sender(
-        (src.0.into(), src.1.into()),
-        (dst.0.into(), dst.1.into(), dst.2.into()),
-    )?;
     Ok(Json(json!(result)))
 }
 async fn receivers_list(

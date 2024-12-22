@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { VisSingleContainer, VisGraph } from '@unovis/svelte';
 	import type { Link, Node } from './+page';
-	import { createReceiver, createSender, deleteReceiver, deleteSender, linkNodes } from '$lib/api';
+	import { createReceiver, deleteReceiver, linkNodes } from '$lib/api';
 
 	interface Props {
 		data: {
@@ -65,16 +65,6 @@
 				onclick={() => deleteReceiver(source, target)}
 				class="mr-2 rounded-lg bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
 				>Delete receiver</button
-			>
-			<button
-				onclick={() => createSender(source, target)}
-				class="mr-2 rounded-lg bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
-				>Create sender</button
-			>
-			<button
-				onclick={() => deleteSender(source, target)}
-				class="mr-2 rounded-lg bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
-				>Delete sender</button
 			>
 		</div>
 	</form>

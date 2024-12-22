@@ -30,45 +30,14 @@ fn create_runner(
     senders: IndexMap<GraphId, Sender<InternalCommand>>,
     registry: Registry,
     requests: Vec<&SystemLink>,
-    sends: Vec<&SystemLink>,
 ) -> Result<impl FnOnce()> {
     let requests = create_requests(&senders, requests)?;
-    let sends = create_sends(&senders, sends)?;
 
     Ok(move || {
         let graph = repr.into_graph(&registry).expect("Cannot build graph");
 
-        Worker::new(graph, receiver, requests, sends).run();
+        Worker::new(graph, receiver, requests).run();
     })
-}
-
-fn create_sends(
-    senders: &IndexMap<GraphId, Sender<InternalCommand>>,
-    mut sends: Vec<&SystemLink>,
-) -> Result<LinksToExternal> {
-    sends.sort_by_key(|x| x.dst.0);
-
-    sends[..]
-        .chunk_by(|a, b| a.dst.0 == b.dst.0)
-        .map(|requests| {
-            let destination_graph = requests[0].dst.0;
-            let (sources, destinations) = requests
-                .iter()
-                .map(|request| {
-                    (
-                        (request.src.1, request.src.2),
-                        (request.dst.1, request.dst.2),
-                    )
-                })
-                .unzip();
-
-            senders
-                .get(&destination_graph)
-                .cloned()
-                .map(|sender| ((sender, destinations), sources))
-        })
-        .collect::<Option<Vec<_>>>()
-        .ok_or("missing sender".into())
 }
 
 fn create_requests(
@@ -118,23 +87,16 @@ impl SystemRepr {
             .into_iter()
             .map(|(id, (repr, receiver))| {
                 let requests = self.requests.iter().filter(|l| l.dst.0 == id).collect();
-                let sends = self.sends.iter().filter(|l| l.src.0 == id).collect();
 
-                create_runner(
-                    repr,
-                    receiver,
-                    senders.clone(),
-                    registry.clone(),
-                    requests,
-                    sends,
+                create_runner(repr, receiver, senders.clone(), registry.clone(), requests).and_then(
+                    |thread| -> Result<(GraphId, JoinHandle<()>)> {
+                        Builder::new()
+                            .name(id.to_string())
+                            .spawn(thread)
+                            .map(|thread| (id, thread))
+                            .map_err(|x| x.into())
+                    },
                 )
-                .and_then(|thread| -> Result<(GraphId, JoinHandle<()>)> {
-                    Builder::new()
-                        .name(id.to_string())
-                        .spawn(thread)
-                        .map(|thread| (id, thread))
-                        .map_err(|x| x.into())
-                })
             })
             .collect::<Result<IndexMap<_, _>>>()?;
 
@@ -189,24 +151,17 @@ struct Worker {
     receiver: Receiver<InternalCommand>,
     /// Requests between graphs
     requests: LinksToExternal,
-    /// Sends between graphs
-    sends: LinksToExternal,
     /// Queue
     queue: Vec<(ParamCommand, Response)>,
 }
 
 impl Worker {
-    fn new(
-        graph: Graph,
-        receiver: Receiver<InternalCommand>,
-        requests: LinksToExternal,
-        sends: LinksToExternal,
-    ) -> Self {
+    fn new(graph: Graph, receiver: Receiver<InternalCommand>, requests: LinksToExternal) -> Self {
         Worker {
             graph,
             receiver,
             requests,
-            sends,
+
             queue: Vec::default(),
         }
     }
@@ -240,7 +195,6 @@ impl Worker {
                 self.request_values().expect("cannot request");
 
                 if let Ok(cause) = self.graph.step() {
-                    self.send_values().expect("cannot send");
                     while let Ok((command, message)) = self.receiver.try_recv() {
                         trace!("received command {:?}", command);
                         match command {
@@ -344,57 +298,6 @@ impl Worker {
 
                 message.send_value(Ok(()))
             }
-            StructureCommand::ListSender(senders) => {
-                let senders: Vec<_> = self
-                    .sends
-                    .iter()
-                    .flat_map(|((s, v1), v2)| {
-                        let g = senders
-                            .iter()
-                            .find(|(_, s2)| s.same_channel(s2))
-                            .map(|(g, _)| *g)
-                            .unwrap();
-
-                        v1.iter()
-                            .zip(v2.iter())
-                            .map(|((n, p), (n2, p2))| ((g, *n, *p), (*n2, *p2)))
-                            .collect::<Vec<_>>()
-                    })
-                    .collect();
-                message.send_value(Ok(senders))
-            }
-            StructureCommand::AddSender(((external_sender, external_destination), destination)) => {
-                if let Some(((_, external), internal)) = self
-                    .sends
-                    .iter_mut()
-                    .find(|((sender, _), _)| external_sender.same_channel(sender))
-                {
-                    external.push(external_destination);
-                    internal.push(destination)
-                } else {
-                    self.sends.push((
-                        (external_sender, vec![external_destination]),
-                        vec![destination],
-                    ));
-                }
-                message.send_value(Ok(()))
-            }
-            StructureCommand::RemoveSender((
-                (external_sender, external_destination),
-                destination,
-            )) => {
-                if let Some(((_, external), internal)) = self
-                    .sends
-                    .iter_mut()
-                    .find(|((sender, _), _)| external_sender.same_channel(sender))
-                {
-                    external.retain(|n| *n != external_destination);
-                    internal.retain(|n| *n != destination);
-                }
-
-                self.sends.retain(|(_, internal)| !internal.is_empty());
-                message.send_value(Ok(()))
-            }
             StructureCommand::ListReceiver(senders) => {
                 let senders: Vec<_> = self
                     .requests
@@ -482,17 +385,6 @@ impl Worker {
                     .collect();
                 message.send_value(p)
             }
-            ParamCommand::OwnedAssign(vec) => {
-                let p: Result<Vec<_>> = vec
-                    .into_iter()
-                    .map(|(n, p, v)| {
-                        self.graph
-                            .get_node_mut(n)
-                            .and_then(|n| n.assign_owned(p, v))
-                    })
-                    .collect();
-                message.send_value(p)
-            }
             _ => unreachable!(),
         }
     }
@@ -521,32 +413,6 @@ impl Worker {
                 }
             }
             trace!("requesting values end");
-        }
-        Ok(())
-    }
-
-    fn send_values(&mut self) -> Result<()> {
-        if !self.sends.is_empty() {
-            trace!("sending values start");
-            let (message, _receiver) = Response::new();
-
-            for ((sender, external_nodes), internal_props) in &self.sends {
-                let loads = internal_props
-                    .iter()
-                    .map(|(node_id, param_id)| {
-                        self.graph
-                            .get_node(*node_id)
-                            .and_then(|n| n.dump_owned(*param_id))
-                    })
-                    .zip(external_nodes)
-                    .map(|(v, (n, p))| v.map(|val| (*n, *p, val)))
-                    .collect::<Result<Vec<_>>>()?;
-                sender.send((
-                    Command::Param(ParamCommand::OwnedAssign(loads)),
-                    message.clone(),
-                ))?;
-            }
-            trace!("sending values end");
         }
         Ok(())
     }
@@ -616,32 +482,6 @@ impl GraphView<'_> {
             src, dst,
         )))))
     }
-    pub fn list_senders(&self) -> Result<Value> {
-        self.command(Command::Structure(Box::new(StructureCommand::ListSender(
-            self.senders.clone(),
-        ))))
-    }
-    pub fn add_sender(
-        &self,
-        src: (NodeId, ParamId),
-        dst: (GraphId, NodeId, ParamId),
-    ) -> Result<Value> {
-        let sender = self.senders.get(&dst.0).ok_or("not found")?;
-        self.command(Command::Structure(Box::new(StructureCommand::AddSender((
-            (sender.clone(), (dst.1, dst.2)),
-            src,
-        )))))
-    }
-    pub fn remove_sender(
-        &self,
-        src: (NodeId, ParamId),
-        dst: (GraphId, NodeId, ParamId),
-    ) -> Result<Value> {
-        let sender = self.senders.get(&dst.0).ok_or("not found")?;
-        self.command(Command::Structure(Box::new(
-            StructureCommand::RemoveSender(((sender.clone(), (dst.1, dst.2)), src)),
-        )))
-    }
     pub fn list_receivers(&self) -> Result<Value> {
         self.command(Command::Structure(Box::new(
             StructureCommand::ListReceiver(self.senders.clone()),
@@ -703,8 +543,6 @@ enum ParamCommand {
     Load(Vec<(NodeId, ParamId, Value)>),
     /// Multi owned dump command
     OwnedDump(Vec<(NodeId, ParamId)>),
-    /// Multi assign owned command
-    OwnedAssign(Vec<(NodeId, ParamId, GenericOwnedProp)>),
 }
 
 #[derive(Debug)]
@@ -713,12 +551,6 @@ enum StructureCommand {
     ListLinks,
     /// Link nodes
     AddLink(((NodeId, ParamId), (NodeId, ParamId))),
-    /// List senders
-    ListSender(IndexMap<GraphId, Sender<(Command, Response)>>),
-    /// Add sender
-    AddSender((ExternalDestination, Destination)),
-    /// Remove sender
-    RemoveSender((ExternalDestination, Destination)),
     /// List receivers
     ListReceiver(IndexMap<GraphId, Sender<(Command, Response)>>),
     /// Add a request
