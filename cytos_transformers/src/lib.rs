@@ -1,5 +1,6 @@
 extern crate cytos_derive;
 
+mod classifier;
 mod add_one;
 mod decoder;
 mod encoder;
@@ -12,8 +13,10 @@ mod sleep;
 mod source;
 mod timer;
 mod types;
+mod web_sender;
 
 use add_one::AddValue;
+use classifier::BinaryClassifier;
 use cytos::loader::DynamicLoadingRegistryWrapper;
 use decoder::ImageDecoder;
 use incremental::IncrementalGenerator;
@@ -26,6 +29,7 @@ use timer::Timer;
 pub extern "C" fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
     registry
         .add("IncrementalGenerator", IncrementalGenerator::default)
+        .add("BinaryClassifier", BinaryClassifier::default)
         .add("AddValue", AddValue::default)
         .add("Rscam", Rscam::default)
         .add("ImageDecoder", ImageDecoder::default)
@@ -42,5 +46,6 @@ pub extern "C" fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
         .add("Unsharpen", imageops::Unsharpen::default)
         .add("FaceDetection", face_detection::FaceDetection::default)
         .add("Sleep", sleep::Sleep::default)
-        .add("Save", imageops::Unsharpen::default);
+        .add("Save", imageops::Unsharpen::default)
+        .add("WebSenderU64", web_sender::WebSender::<u64>::default);
 }
