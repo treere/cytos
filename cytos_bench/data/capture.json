@@ -2,7 +2,7 @@
   "nodes": [
     {
       "name": "SOURCE",
-      "type": "Rscam"
+      "type": "RscamSource"
     },
     {
       "name": "DECODER",

@@ -15,29 +15,25 @@ mod timer;
 mod types;
 mod web_sender;
 
-use add_one::AddValue;
-use classifier::BinaryClassifier;
 use cytos::loader::DynamicLoadingRegistryWrapper;
-use decoder::ImageDecoder;
-use incremental::IncrementalGenerator;
-use mean::Mean;
-use print::Print;
-use timer::Timer;
 
 #[no_mangle]
 pub extern "C" fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
     registry
-        .add("IncrementalGenerator", IncrementalGenerator::default)
-        .add("BinaryClassifier", BinaryClassifier::default)
-        .add("AddValue", AddValue::default)
-        .add("Rscam", source::Rscam::default)
+        .add(
+            "IncrementalGenerator",
+            incremental::IncrementalGenerator::default,
+        )
+        .add("BinaryClassifier", classifier::BinaryClassifier::default)
+        .add("AddValue", add_one::AddValue::default)
+        .add("RscamSource", source::Rscam::default)
         .add("FileSource", source::File::default)
-        .add("ImageDecoder", ImageDecoder::default)
-        .add("ImageMean", Mean::default)
-        .add("PrintU64", Print::<u64>::default)
-        .add("PrintF64", Print::<f64>::default)
-        .add("PrintString", Print::<String>::default)
-        .add("Timer", Timer::default)
+        .add("ImageDecoder", decoder::ImageDecoder::default)
+        .add("ImageMean", mean::Mean::default)
+        .add("PrintU64", print::Print::<u64>::default)
+        .add("PrintF64", print::Print::<f64>::default)
+        .add("PrintString", print::Print::<String>::default)
+        .add("Timer", timer::Timer::default)
         .add("Blur", imageops::Blur::default)
         .add("FastBlur", imageops::FastBlur::default)
         .add("Brighten", imageops::Brighten::default)
