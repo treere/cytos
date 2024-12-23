@@ -7,7 +7,7 @@ use crate::{
 use super::{node::Node, NodeId, ParamId, Result};
 
 use indexmap::IndexMap;
-use log::trace;
+use tracing::trace;
 
 /// Result of a step
 #[derive(Debug)]

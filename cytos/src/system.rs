@@ -7,7 +7,7 @@ use crossbeam::channel::unbounded;
 use crossbeam::channel::Receiver;
 use crossbeam::channel::Sender;
 use indexmap::IndexMap;
-use log::trace;
+use tracing::trace;
 
 use serde::Serialize;
 
