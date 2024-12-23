@@ -1,7 +1,7 @@
 extern crate cytos_derive;
 
-mod classifier;
 mod add_one;
+mod classifier;
 mod decoder;
 mod encoder;
 mod face_detection;
@@ -22,7 +22,6 @@ use decoder::ImageDecoder;
 use incremental::IncrementalGenerator;
 use mean::Mean;
 use print::Print;
-use source::Rscam;
 use timer::Timer;
 
 #[no_mangle]
@@ -31,7 +30,8 @@ pub extern "C" fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
         .add("IncrementalGenerator", IncrementalGenerator::default)
         .add("BinaryClassifier", BinaryClassifier::default)
         .add("AddValue", AddValue::default)
-        .add("Rscam", Rscam::default)
+        .add("Rscam", source::Rscam::default)
+        .add("FileSource", source::File::default)
         .add("ImageDecoder", ImageDecoder::default)
         .add("ImageMean", Mean::default)
         .add("PrintU64", Print::<u64>::default)

@@ -47,7 +47,7 @@ impl Stepper for FaceDetection {
             let bytes = &*self.image.image;
             let image = ImageData::new(bytes, width, height);
             *self.facesinfo = detector
-                .detect(& image)
+                .detect(&image)
                 .into_iter()
                 .map(|info| Rectangle {
                     x: info.bbox().x(),

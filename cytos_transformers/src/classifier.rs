@@ -9,7 +9,7 @@ pub struct BinaryClassifier {
     image: Prop<Image>,
 
     #[output]
-    prediction: Prop<f32>
+    prediction: Prop<f32>,
 }
 
 impl Stepper for BinaryClassifier {

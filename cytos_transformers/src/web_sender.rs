@@ -15,9 +15,14 @@ where
     input: Prop<T>,
 }
 
-impl<T: Ownable + Display + Default + DeserializeOwned + Serialize + 'static> Stepper for WebSender<T> {
+impl<T: Ownable + Display + Default + DeserializeOwned + Serialize + 'static> Stepper
+    for WebSender<T>
+{
     fn step(&mut self) -> Result<()> {
-        reqwest::blocking::Client::new().post(&*self.url).json(&*self.input).send()?;
+        reqwest::blocking::Client::new()
+            .post(&*self.url)
+            .json(&*self.input)
+            .send()?;
         Ok(())
     }
 }

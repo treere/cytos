@@ -90,6 +90,14 @@ impl From<rscam::Frame> for Frame {
     }
 }
 
+impl From<Vec<u8>> for Frame {
+    fn from(value: Vec<u8>) -> Self {
+        Self {
+            frame: FrameKind::Raw(value),
+        }
+    }
+}
+
 impl Ownable for Frame {
     type Value = Vec<u8>;
 

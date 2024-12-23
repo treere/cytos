@@ -1,8 +1,39 @@
+use std::io::Read;
+
 use cytos::{Prop, Result, Stepper};
 use cytos_derive::CytosNode;
 use rscam::Camera;
 
 use crate::types::Frame;
+
+#[derive(CytosNode, Default)]
+pub struct File {
+    #[input]
+    filename: Prop<String>,
+
+    #[output]
+    frame: Prop<Frame>,
+}
+
+impl Stepper for File {
+    fn step(&mut self) -> Result<()> {
+        Ok(())
+    }
+
+    fn initialize(&mut self) -> Result<()> {
+        let mut f = std::fs::File::open(&*self.filename)?;
+        let mut v = Vec::new();
+
+        f.read_exact(&mut v)?;
+        *self.frame = v.into();
+        Ok(())
+    }
+
+    fn terminate(&mut self) -> Result<()> {
+        *self.frame = Frame::default();
+        Ok(())
+    }
+}
 
 #[derive(CytosNode)]
 pub struct Rscam {
