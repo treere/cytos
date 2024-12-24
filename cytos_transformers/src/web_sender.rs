@@ -23,6 +23,7 @@ impl<T: Ownable + Display + Default + DeserializeOwned + Serialize + 'static> St
             .post(&*self.url)
             .json(&*self.input)
             .send()?;
+
         Ok(())
     }
 }

@@ -1,0 +1,82 @@
+{
+  "graphs": {
+    "capture": {
+      "nodes": [
+        {
+          "name": "SOURCE",
+          "type": "RscamSource"
+        }
+      ]
+    },
+    "process": {
+      "nodes": [
+        {
+          "name": "DECODER",
+          "type": "ImageDecoder",
+          "on_error": "Skip"
+        },
+        {
+          "name": "MEAN",
+          "type": "ImageMean"
+        }
+      ],
+      "links": [
+        {
+          "src": [
+            "DECODER",
+            "decoded"
+          ],
+          "dst": [
+            "MEAN",
+            "input"
+          ]
+        }
+      ]
+    },
+    "web": {
+      "nodes": [
+        {
+          "name": "WebSenderF64",
+          "type": "WebSenderF64",
+          "props": {
+            "url": "http://localhost:5173/node"
+          },
+          "on_error": "Continue"
+        },
+        {
+          "name": "sleep",
+          "type": "Sleep",
+          "props": {
+            "millis": 5000
+          }
+        }
+      ]
+    }
+  },
+  "requests": [
+    {
+      "src": [
+        "capture",
+        "SOURCE",
+        "frame"
+      ],
+      "dst": [
+        "process",
+        "DECODER",
+        "frame"
+      ]
+    },
+    {
+      "src": [
+        "process",
+        "MEAN",
+        "output"
+      ],
+      "dst": [
+        "web",
+        "WebSenderF64",
+        "input"
+      ]
+    }
+  ]
+}

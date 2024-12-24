@@ -43,5 +43,6 @@ pub extern "C" fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
         .add("FaceDetection", face_detection::FaceDetection::default)
         .add("Sleep", sleep::Sleep::default)
         .add("Save", imageops::Unsharpen::default)
-        .add("WebSenderU64", web_sender::WebSender::<u64>::default);
+        .add("WebSenderU64", web_sender::WebSender::<u64>::default)
+        .add("WebSenderF64", web_sender::WebSender::<f64>::default);
 }
