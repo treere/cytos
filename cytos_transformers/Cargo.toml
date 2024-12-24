@@ -14,4 +14,3 @@ rscam = "0.5.5"
 serde = { version = "1.0", features = ["derive"] }
 rustface = "0.1.7"
 reqwest = { version = "0.12.9", features = ["blocking","json"] }
-ort = "=2.0.0-rc.9"

@@ -1,7 +1,6 @@
 extern crate cytos_derive;
 
 mod add_one;
-mod classifier;
 mod decoder;
 mod encoder;
 mod face_detection;
@@ -24,7 +23,6 @@ pub extern "C" fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
             "IncrementalGenerator",
             incremental::IncrementalGenerator::default,
         )
-        .add("BinaryClassifier", classifier::BinaryClassifier::default)
         .add("AddValue", add_one::AddValue::default)
         .add("RscamSource", source::Rscam::default)
         .add("FileSource", source::File::default)
