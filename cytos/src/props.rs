@@ -16,6 +16,18 @@ pub trait Ownable {
     fn from_owned(v: &Self::Value) -> Self;
 }
 
+impl<T: Ownable> Ownable for Option<T> {
+    type Value = Option<T::Value>;
+
+    fn to_ownable(&self) -> Self::Value {
+        self.as_ref().map(Ownable::to_ownable)
+    }
+
+    fn from_owned(v: &Self::Value) -> Self {
+        v.as_ref().map(Ownable::from_owned)
+    }
+}
+
 macro_rules! create_ownable_copy {
     ($ty:ty) => {
         impl Ownable for $ty {

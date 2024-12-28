@@ -39,7 +39,8 @@
           "name": "WebSenderF64",
           "type": "WebSenderF64",
           "props": {
-            "url": "http://localhost:5173/node"
+            "url": "http://localhost:5173/node",
+            "header": ["x-cytos-id", "123123"]
           },
           "on_error": "Continue"
         },

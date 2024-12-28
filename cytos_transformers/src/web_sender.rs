@@ -12,6 +12,9 @@ where
     url: Prop<String>,
 
     #[input]
+    header: Prop<Option<(String, String)>>,
+
+    #[input]
     input: Prop<T>,
 }
 
@@ -19,10 +22,15 @@ impl<T: Ownable + Display + Default + DeserializeOwned + Serialize + 'static> St
     for WebSender<T>
 {
     fn step(&mut self) -> Result<()> {
-        reqwest::blocking::Client::new()
-            .post(&*self.url)
-            .json(&*self.input)
-            .send()?;
+        let post = reqwest::blocking::Client::new().post(&*self.url);
+
+        let post = if let Some((k, v)) = &*self.header {
+            post.header(k, v)
+        } else {
+            post
+        };
+
+        post.json(&*self.input).send()?;
 
         Ok(())
     }
