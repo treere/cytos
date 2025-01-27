@@ -2,7 +2,6 @@ use cytos::{loader::DynamicLoadingRegistryWrapper, props::Ownable, Prop, Result,
 use cytos_derive::CytosNode;
 use serde::{Deserialize, Serialize};
 
-
 use crate::types::Frame;
 
 #[derive(Serialize, Deserialize)]
@@ -72,9 +71,6 @@ impl Stepper for ImageDecoder {
     }
 }
 
-
-
-
 #[derive(CytosNode, Default)]
 struct ImageSave {
     #[input]
@@ -94,10 +90,8 @@ impl Stepper for ImageSave {
     }
 }
 
-
 pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
-    registry.add("ImageDecoder", ImageDecoder::default)
+    registry
+        .add("ImageDecoder", ImageDecoder::default)
         .add("ImageSave", ImageSave::default);
 }
-
-

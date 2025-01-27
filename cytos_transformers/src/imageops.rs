@@ -100,6 +100,63 @@ impl Stepper for Mean {
     }
 }
 
+#[derive(CytosNode, Default)]
+struct Resize {
+    #[input]
+    input: Prop<Image>,
+
+    #[input]
+    width: Prop<u32>,
+
+    #[input]
+    height: Prop<u32>,
+
+    #[output]
+    output: Prop<Image>,
+}
+
+impl Stepper for Resize {
+    fn step(&mut self) -> Result<()> {
+        *self.output = Image {
+            image: image::imageops::resize(
+                &self.input.image,
+                *self.width,
+                *self.height,
+                image::imageops::FilterType::Gaussian,
+            ),
+        };
+        Ok(())
+    }
+}
+
+#[derive(CytosNode, Default)]
+struct Crop {
+    #[input]
+    input: Prop<Image>,
+
+    #[input]
+    rect: Prop<Vec<u32>>,
+
+    #[output]
+    output: Prop<Image>,
+}
+
+impl Stepper for Crop {
+    fn step(&mut self) -> Result<()> {
+        *self.output = Image {
+            image: image::imageops::crop(
+                &mut self.input.image,
+                self.rect[0],
+                self.rect[1],
+                self.rect[2],
+                self.rect[3],
+            )
+            .to_image(),
+        };
+        Ok(())
+    }
+}
+
 pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
     registry
         .add("Blur", Blur::default)
@@ -108,5 +165,7 @@ pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
         .add("Contrast", Contrast::default)
         .add("Filter3x3", Filter3x3::default)
         .add("Unsharpen", Unsharpen::default)
-        .add("Mean", Mean::default);
+        .add("Resize", Resize::default)
+        .add("Mean", Mean::default)
+        .add("Crop", Crop::default);
 }
