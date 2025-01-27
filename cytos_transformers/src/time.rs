@@ -1,10 +1,12 @@
-use std::time::{Duration, Instant};
-
+use cytos::loader::DynamicLoadingRegistryWrapper;
 use cytos::{Prop, Stepper};
 use cytos_derive::CytosNode;
 
+use std::time::{Duration, Instant};
+use std::{thread, time};
+
 #[derive(CytosNode)]
-pub struct Timer {
+struct Timer {
     #[output]
     output: Prop<Duration>,
 
@@ -34,4 +36,25 @@ impl Stepper for Timer {
 
         Ok(())
     }
+}
+
+#[derive(CytosNode, Default)]
+struct Sleep {
+    #[input]
+    millis: Prop<u64>,
+}
+
+impl Stepper for Sleep {
+    fn step(&mut self) -> cytos::Result<()> {
+        let ten_millis = time::Duration::from_millis(*self.millis);
+        thread::sleep(ten_millis);
+
+        Ok(())
+    }
+}
+
+pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
+    registry
+        .add("Sleep", Sleep::default)
+        .add("Timer", Timer::default);
 }

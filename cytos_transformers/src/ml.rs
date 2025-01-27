@@ -1,12 +1,12 @@
-use cytos::{props::Ownable, Prop, Stepper};
+use cytos::{loader::DynamicLoadingRegistryWrapper, props::Ownable, Prop, Stepper};
 use cytos_derive::CytosNode;
 use rustface::{Detector, ImageData};
 use serde::{Deserialize, Serialize};
 
-use crate::decoder::Image;
+use crate::imageio::Image;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Rectangle {
+struct Rectangle {
     x: i32,
     y: i32,
     width: u32,
@@ -26,7 +26,7 @@ impl Ownable for Rectangle {
 }
 
 #[derive(CytosNode, Default)]
-pub struct FaceDetection {
+struct FaceDetection {
     #[input]
     image: Prop<Image>,
 
@@ -78,4 +78,8 @@ impl Stepper for FaceDetection {
 
         Ok(())
     }
+}
+
+pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
+    registry.add("FaceDetection", FaceDetection::default);
 }

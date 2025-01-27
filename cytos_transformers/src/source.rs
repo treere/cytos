@@ -1,13 +1,13 @@
 use std::io::Read;
 
-use cytos::{Prop, Result, Stepper};
+use cytos::{loader::DynamicLoadingRegistryWrapper, Prop, Result, Stepper};
 use cytos_derive::CytosNode;
 use rscam::Camera;
 
 use crate::types::Frame;
 
 #[derive(CytosNode, Default)]
-pub struct File {
+struct File {
     #[input]
     filename: Prop<String>,
 
@@ -36,7 +36,7 @@ impl Stepper for File {
 }
 
 #[derive(CytosNode)]
-pub struct Rscam {
+struct Rscam {
     #[input]
     filename: Prop<String>,
     #[input]
@@ -99,4 +99,10 @@ impl Stepper for Rscam {
         drop(camera);
         Ok(())
     }
+}
+
+pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
+    registry
+        .add("RscamSource", Rscam::default)
+        .add("FileSource", File::default);
 }

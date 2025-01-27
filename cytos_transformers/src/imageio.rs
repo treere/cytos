@@ -1,6 +1,7 @@
-use cytos::{props::Ownable, Prop, Result, Stepper};
+use cytos::{loader::DynamicLoadingRegistryWrapper, props::Ownable, Prop, Result, Stepper};
 use cytos_derive::CytosNode;
 use serde::{Deserialize, Serialize};
+
 
 use crate::types::Frame;
 
@@ -50,7 +51,7 @@ impl Ownable for Image {
 }
 
 #[derive(CytosNode, Default)]
-pub struct ImageDecoder {
+struct ImageDecoder {
     #[input]
     frame: Prop<Frame>,
 
@@ -70,3 +71,33 @@ impl Stepper for ImageDecoder {
         }
     }
 }
+
+
+
+
+#[derive(CytosNode, Default)]
+struct ImageSave {
+    #[input]
+    input: Prop<Image>,
+
+    #[input]
+    filename: Prop<String>,
+}
+
+impl Stepper for ImageSave {
+    fn step(&mut self) -> Result<()> {
+        self.input
+            .image
+            .save(&*self.filename)
+            .map_err(|x| x.to_string())?;
+        Ok(())
+    }
+}
+
+
+pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
+    registry.add("ImageDecoder", ImageDecoder::default)
+        .add("ImageSave", ImageSave::default);
+}
+
+

@@ -1,11 +1,11 @@
-use crate::decoder::Image;
-use cytos::{Prop, Result, Stepper};
+use crate::imageio::Image;
+use cytos::{loader::DynamicLoadingRegistryWrapper, Prop, Result, Stepper};
 use cytos_derive::CytosNode;
 
 macro_rules! define_function {
     ($struct_name:ident, $image_ops_func:path, $param_type:ty) => {
         #[derive(CytosNode, Default)]
-        pub struct $struct_name {
+        struct $struct_name {
             #[input]
             input: Prop<Image>,
             #[input]
@@ -28,7 +28,7 @@ macro_rules! define_function {
 
     ($struct_name:ident, $image_ops_func:path, $param1_type:ty, $param2_type:ty) => {
         #[derive(CytosNode, Default)]
-        pub struct $struct_name {
+        struct $struct_name {
             #[input]
             input: Prop<Image>,
             #[input]
@@ -59,7 +59,7 @@ define_function!(Contrast, image::imageops::contrast, f32);
 define_function!(Unsharpen, image::imageops::unsharpen, f32, i32);
 
 #[derive(CytosNode, Default)]
-pub struct Filter3x3 {
+struct Filter3x3 {
     #[input]
     input: Prop<Image>,
     #[input]
@@ -76,4 +76,37 @@ impl Stepper for Filter3x3 {
 
         Ok(())
     }
+}
+
+#[derive(CytosNode, Default)]
+struct Mean {
+    #[input]
+    input: Prop<Image>,
+
+    #[output]
+    output: Prop<f64>,
+}
+
+impl Stepper for Mean {
+    fn step(&mut self) -> Result<()> {
+        let sum = self
+            .input
+            .image
+            .pixels()
+            .fold(0u64, |a, b| u64::from(b[0]) + a) as f64;
+
+        *self.output = sum / f64::from(self.input.image.width() * self.input.image.height());
+        Ok(())
+    }
+}
+
+pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
+    registry
+        .add("Blur", Blur::default)
+        .add("FastBlur", FastBlur::default)
+        .add("Brighten", Brighten::default)
+        .add("Contrast", Contrast::default)
+        .add("Filter3x3", Filter3x3::default)
+        .add("Unsharpen", Unsharpen::default)
+        .add("Mean", Mean::default);
 }

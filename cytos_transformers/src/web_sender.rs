@@ -1,10 +1,10 @@
-use cytos::{props::Ownable, Prop, Result, Stepper};
+use cytos::{loader::DynamicLoadingRegistryWrapper, props::Ownable, Prop, Result, Stepper};
 use cytos_derive::CytosNode;
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Display;
 
 #[derive(CytosNode, Default)]
-pub struct WebSender<T>
+struct WebSender<T>
 where
     T: Ownable + Display + Default + DeserializeOwned + Serialize + 'static,
 {
@@ -34,4 +34,10 @@ impl<T: Ownable + Display + Default + DeserializeOwned + Serialize + 'static> St
 
         Ok(())
     }
+}
+
+pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
+    registry
+        .add("WebSenderU64", WebSender::<u64>::default)
+        .add("WebSenderF64", WebSender::<f64>::default);
 }
