@@ -92,6 +92,7 @@ macro_rules! create_ownable_clone_container_doubled {
     };
 }
 
+create_ownable_copy!(bool);
 create_ownable_copy!(u8);
 create_ownable_copy!(u16);
 create_ownable_copy!(u32);
