@@ -1,7 +1,9 @@
-use cytos::{loader::DynamicLoadingRegistryWrapper, props::Ownable, Prop, Stepper};
+pub use cytos::{loader::DynamicLoadingRegistryWrapper, props::Ownable, Prop, Stepper};
 use cytos_derive::CytosNode;
 use rustface::{Detector, ImageData};
 use serde::{Deserialize, Serialize};
+
+pub mod yolov8;
 
 use crate::imageio::Image;
 
@@ -82,4 +84,5 @@ impl Stepper for FaceDetection {
 
 pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
     registry.add("FaceDetection", FaceDetection::default);
+    registry.add("YoloV8", yolov8::YoloV8::default);
 }
