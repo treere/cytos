@@ -166,6 +166,6 @@ pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
         .add("Filter3x3", Filter3x3::default)
         .add("Unsharpen", Unsharpen::default)
         .add("Resize", Resize::default)
-        .add("Mean", Mean::default)
+        .add("ImageMean", Mean::default)
         .add("Crop", Crop::default);
 }
