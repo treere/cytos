@@ -1,5 +1,6 @@
 extern crate cytos_derive;
 
+mod cmp;
 mod imageio;
 mod imageops;
 mod logic;
@@ -19,6 +20,7 @@ pub extern "C" fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
     imageio::load_registry(registry);
     imageops::load_registry(registry);
     logic::load_registry(registry);
+    cmp::load_registry(registry);
     ml::load_registry(registry);
     print::load_registry(registry);
     signal::load_registry(registry);
