@@ -3,19 +3,19 @@
 	let { value }: { value: Record<string, unknown> } = $props();
 
 	let selectedFormat = $state('jpeg');
-	let formats = ['jpeg', 'raw grey'];
+	let formats = ['jpeg', 'png', 'raw grey'];
 
 	let name = $state('');
 	let width = $state('width');
 	let height = $state('height');
 
-	let renderImage = () => {
+	let renderFormatImage = (format) => {
 		const binString = Array.from(value[name] as number[], (byte: number) =>
 			String.fromCodePoint(byte)
 		).join('');
 		const b64encoded = btoa(binString);
 		const img = document.createElement('img');
-		img.src = 'data:image/jpg;base64,' + b64encoded;
+		img.src = `data:image/${format};base64,` + b64encoded;
 		img.style.width = '800px';
 
 		setChild('image', img);
@@ -41,8 +41,17 @@
 
 	let render = () => {
 		try {
-			if (selectedFormat === 'jpeg') renderImage();
-			else renderGreyArray();
+			switch (selectedFormat) {
+				case 'jpeg':
+					renderFormatImage('jpeg');
+					break;
+				case 'png':
+					renderFormatImage('png');
+					break;
+				case 'raw grey':
+					renderGreyArray();
+					break;
+			}
 		} catch {
 			alert('Error rendering');
 		}
@@ -61,7 +70,7 @@
 	>
 </div>
 <div class="my-3">
-	{#if selectedFormat === 'jpeg'}
+	{#if selectedFormat !== 'raw grey'}
 		<label for="data">Data:</label>
 		<input type="text" bind:value={name} id="data" />
 	{:else}

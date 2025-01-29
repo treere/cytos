@@ -1,4 +1,4 @@
-import { invalidate, invalidateAll } from '$app/navigation';
+import { invalidate } from '$app/navigation';
 
 const decodePath = (path: string) => {
 	const p = path.split('/').filter((x) => x);
