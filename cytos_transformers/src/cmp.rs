@@ -132,10 +132,10 @@ where
 macro_rules! load_reg {
     ($id: ident, $ty: ty) => {
         $id.add(stringify!(Eq$ty), Eq::<$ty>::default)
-        .add(stringify!(Lt$ty), Lt::<$ty>::default)
-        .add(stringify!(Lte$ty), Lte::<$ty>::default)
-        .add(stringify!(Gt$ty), Gt::<$ty>::default)
-        .add(stringify!(Gte$ty), Gte::<$ty>::default);
+            .add(stringify!(Lt$ty), Lt::<$ty>::default)
+            .add(stringify!(Lte$ty), Lte::<$ty>::default)
+            .add(stringify!(Gt$ty), Gt::<$ty>::default)
+            .add(stringify!(Gte$ty), Gte::<$ty>::default);
     };
 }
 

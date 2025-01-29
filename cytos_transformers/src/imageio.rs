@@ -1,20 +1,20 @@
+use std::io::Cursor;
+
 use cytos::{loader::DynamicLoadingRegistryWrapper, props::Ownable, Prop, Result, Stepper};
 use cytos_derive::CytosNode;
+use image::ImageFormat;
 use serde::{Deserialize, Serialize};
 
 use crate::types::Frame;
 
 #[derive(Serialize, Deserialize)]
 pub struct SerdeImage {
-    width: u32,
-    height: u32,
-    data: Vec<u8>,
+    buffer: Vec<u8>,
 }
 
 impl TryFrom<SerdeImage> for Image {
     fn try_from(value: SerdeImage) -> std::result::Result<Self, Self::Error> {
-        let image = image::GrayImage::from_vec(value.width, value.height, value.data)
-            .ok_or("cannot convert")?;
+        let image = image::load_from_memory(&value.buffer).map_err(|_| "cannot load")?;
         Ok(Image { image })
     }
 
@@ -23,18 +23,19 @@ impl TryFrom<SerdeImage> for Image {
 
 impl From<Image> for SerdeImage {
     fn from(value: Image) -> Self {
-        SerdeImage {
-            width: value.image.width(),
-            height: value.image.height(),
-            data: value.image.into_vec(),
-        }
+        let mut buffer = Vec::new();
+        value
+            .image
+            .write_to(&mut Cursor::new(&mut buffer), ImageFormat::Png)
+            .unwrap();
+        SerdeImage { buffer }
     }
 }
 
 #[derive(Default, Clone, Serialize, Deserialize)]
 #[serde(try_from = "SerdeImage", into = "SerdeImage")]
 pub struct Image {
-    pub image: image::GrayImage,
+    pub image: image::DynamicImage,
 }
 
 impl Ownable for Image {
@@ -61,9 +62,7 @@ struct ImageDecoder {
 impl Stepper for ImageDecoder {
     fn step(&mut self) -> Result<()> {
         if let Ok(image) = image::load_from_memory(self.frame.as_u8()) {
-            *self.decoded = Image {
-                image: image.to_luma8(),
-            };
+            *self.decoded = Image { image };
             Ok(())
         } else {
             Err("cannot decode image".into())

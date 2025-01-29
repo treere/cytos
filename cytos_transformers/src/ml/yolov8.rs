@@ -1,6 +1,6 @@
 use cytos::{Prop, Stepper};
 use cytos_derive::CytosNode;
-use image::{imageops::FilterType, DynamicImage, GenericImageView};
+use image::{imageops::FilterType, GenericImageView};
 use ndarray::{s, Array, Axis};
 use ort::{
     inputs,
@@ -56,7 +56,7 @@ pub struct YoloV8 {
 impl Stepper for YoloV8 {
     fn step(&mut self) -> cytos::Result<()> {
         let model = self.model.as_ref().unwrap();
-        let original_img: DynamicImage = self.input.image.clone().into();
+        let original_img = &self.input.image;
         let img_width = original_img.width();
         let img_height = original_img.height();
         let img = original_img.resize_exact(640, 640, FilterType::CatmullRom);

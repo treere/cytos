@@ -46,7 +46,7 @@ impl Stepper for FaceDetection {
         if let Some(detector) = &mut self.detector {
             let width = self.image.image.width();
             let height = self.image.image.height();
-            let bytes = &*self.image.image;
+            let bytes = &*self.image.image.to_luma8();
             let image = ImageData::new(bytes, width, height);
             *self.facesinfo = detector
                 .detect(&image)

@@ -1,6 +1,7 @@
 use crate::imageio::Image;
 use cytos::{loader::DynamicLoadingRegistryWrapper, Prop, Result, Stepper};
 use cytos_derive::CytosNode;
+use image::DynamicImage;
 
 macro_rules! define_function {
     ($struct_name:ident, $image_ops_func:path, $param_type:ty) => {
@@ -52,11 +53,10 @@ macro_rules! define_function {
     };
 }
 
-define_function!(Blur, image::imageops::blur, f32);
-define_function!(FastBlur, image::imageops::fast_blur, f32);
-define_function!(Brighten, image::imageops::brighten, i32);
-define_function!(Contrast, image::imageops::contrast, f32);
-define_function!(Unsharpen, image::imageops::unsharpen, f32, i32);
+define_function!(Blur, DynamicImage::blur, f32);
+define_function!(FastBlur, DynamicImage::fast_blur, f32);
+define_function!(Brighten, DynamicImage::brighten, i32);
+define_function!(Unsharpen, DynamicImage::unsharpen, f32, i32);
 
 #[derive(CytosNode, Default)]
 struct Filter3x3 {
@@ -71,7 +71,7 @@ struct Filter3x3 {
 impl Stepper for Filter3x3 {
     fn step(&mut self) -> Result<()> {
         *self.output = Image {
-            image: image::imageops::filter3x3(&self.input.image, &self.kernel),
+            image: self.input.image.filter3x3(&self.kernel),
         };
 
         Ok(())
@@ -92,6 +92,7 @@ impl Stepper for Mean {
         let sum = self
             .input
             .image
+            .to_luma8()
             .pixels()
             .fold(0u64, |a, b| u64::from(b[0]) + a) as f64;
 
@@ -118,8 +119,7 @@ struct Resize {
 impl Stepper for Resize {
     fn step(&mut self) -> Result<()> {
         *self.output = Image {
-            image: image::imageops::resize(
-                &self.input.image,
+            image: self.input.image.resize(
                 *self.width,
                 *self.height,
                 image::imageops::FilterType::Gaussian,
@@ -144,14 +144,10 @@ struct Crop {
 impl Stepper for Crop {
     fn step(&mut self) -> Result<()> {
         *self.output = Image {
-            image: image::imageops::crop(
-                &mut self.input.image,
-                self.rect[0],
-                self.rect[1],
-                self.rect[2],
-                self.rect[3],
-            )
-            .to_image(),
+            image: self
+                .input
+                .image
+                .crop(self.rect[0], self.rect[1], self.rect[2], self.rect[3]),
         };
         Ok(())
     }
@@ -162,7 +158,6 @@ pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
         .add("Blur", Blur::default)
         .add("FastBlur", FastBlur::default)
         .add("Brighten", Brighten::default)
-        .add("Contrast", Contrast::default)
         .add("Filter3x3", Filter3x3::default)
         .add("Unsharpen", Unsharpen::default)
         .add("Resize", Resize::default)

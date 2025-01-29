@@ -1,0 +1,43 @@
+{
+  "graphs": {
+    "capture": {
+      "nodes": [
+        {
+          "name": "SOURCE",
+          "type": "RscamSource"
+        },
+        {
+          "name": "DECODER",
+          "type": "ImageDecoder",
+          "on_error": "Skip"
+        },
+        {
+          "name": "YoloV8",
+          "type": "YoloV8"
+        }
+      ],
+      "links": [
+        {
+          "src": [
+            "SOURCE",
+            "frame"
+          ],
+          "dst": [
+            "DECODER",
+            "frame"
+          ]
+        },
+        {
+          "src": [
+            "DECODER",
+            "decoded"
+          ],
+          "dst": [
+            "YoloV8",
+            "input"
+          ]
+        }
+      ]
+    }
+  }
+}
