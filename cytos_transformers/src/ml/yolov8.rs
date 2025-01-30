@@ -1,7 +1,7 @@
-use cytos::{props::Ownable, Prop, Stepper};
+use cytos::{Prop, Stepper};
 use cytos_derive::CytosNode;
 use image::{imageops::FilterType, GenericImageView};
-use ndarray::{s, Array, ArrayBase, Axis, Dim, OwnedRepr};
+use ndarray::{s, Array, Axis};
 use ort::{
     inputs,
     session::{Session, SessionOutputs},
@@ -9,6 +9,8 @@ use ort::{
 use serde::{Deserialize, Serialize};
 
 use crate::imageio::Image;
+
+use super::Buffer;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 struct BoundingBox {
@@ -42,11 +44,8 @@ const YOLOV8_CLASS_LABELS: [&str; 80] = [
 	"book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"
 ];
 
-#[derive(Default, Clone, Serialize, Deserialize)]
-struct Buffer(ArrayBase<OwnedRepr<f32>, Dim<[usize; 4]>>);
-
 #[derive(CytosNode, Default)]
-pub struct YoloV8 {
+pub struct YoloV8Runner {
     #[input]
     input: Prop<Image>,
 
@@ -62,19 +61,7 @@ pub struct YoloV8 {
     model: Option<Session>,
 }
 
-impl Ownable for Buffer {
-    type Value = Buffer;
-
-    fn to_ownable(&self) -> Self::Value {
-        self.clone()
-    }
-
-    fn from_owned(v: &Self::Value) -> Self {
-        v.clone()
-    }
-}
-
-impl Stepper for YoloV8 {
+impl Stepper for YoloV8Runner {
     fn step(&mut self) -> cytos::Result<()> {
         let model = self.model.as_ref().unwrap();
         let original_img = &self.input.image;
