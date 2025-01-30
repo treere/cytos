@@ -63,7 +63,7 @@ pub struct YoloV8 {
 }
 
 impl Ownable for Buffer {
-    type Value=Buffer;
+    type Value = Buffer;
 
     fn to_ownable(&self) -> Self::Value {
         self.clone()
@@ -80,7 +80,9 @@ impl Stepper for YoloV8 {
         let original_img = &self.input.image;
         let img_width = original_img.width();
         let img_height = original_img.height();
-        *self.resized = Image { image: original_img.resize_exact(640, 640, FilterType::CatmullRom)};
+        *self.resized = Image {
+            image: original_img.resize_exact(640, 640, FilterType::CatmullRom),
+        };
         let mut input = Array::zeros((1, 3, 640, 640));
         for pixel in self.resized.image.pixels() {
             let x = pixel.0 as _;
@@ -92,6 +94,7 @@ impl Stepper for YoloV8 {
         }
 
         let outputs: SessionOutputs = model.run(inputs!["images" => input.view()]?)?;
+        *self.buffer = Buffer(input);
         let output = outputs["output0"]
             .try_extract_tensor::<f32>()?
             .t()
