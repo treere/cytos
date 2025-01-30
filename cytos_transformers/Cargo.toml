@@ -15,4 +15,4 @@ serde = { version = "1.0", features = ["derive"] }
 rustface = "0.1.7"
 reqwest = { version = "0.12.9", features = ["blocking","json"] }
 ort = {version = "=2.0.0-rc.9", features = ["fetch-models" ]}
-ndarray = "0.16.1"
+ndarray = {version = "0.16.1", features = ["serde"]}

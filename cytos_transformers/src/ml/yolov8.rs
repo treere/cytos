@@ -1,7 +1,7 @@
-use cytos::{Prop, Stepper};
+use cytos::{props::Ownable, Prop, Stepper};
 use cytos_derive::CytosNode;
 use image::{imageops::FilterType, GenericImageView};
-use ndarray::{s, Array, Axis};
+use ndarray::{s, Array, ArrayBase, Axis, Dim, OwnedRepr};
 use ort::{
     inputs,
     session::{Session, SessionOutputs},
@@ -42,15 +42,36 @@ const YOLOV8_CLASS_LABELS: [&str; 80] = [
 	"book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"
 ];
 
+#[derive(Default, Clone, Serialize, Deserialize)]
+struct Buffer(ArrayBase<OwnedRepr<f32>, Dim<[usize; 4]>>);
+
 #[derive(CytosNode, Default)]
 pub struct YoloV8 {
     #[input]
     input: Prop<Image>,
 
     #[output]
+    resized: Prop<Image>,
+
+    #[output]
+    buffer: Prop<Buffer>,
+
+    #[output]
     results: Prop<Vec<(BoundingBox, &'static str, f32)>>,
 
     model: Option<Session>,
+}
+
+impl Ownable for Buffer {
+    type Value=Buffer;
+
+    fn to_ownable(&self) -> Self::Value {
+        self.clone()
+    }
+
+    fn from_owned(v: &Self::Value) -> Self {
+        v.clone()
+    }
 }
 
 impl Stepper for YoloV8 {
@@ -59,9 +80,9 @@ impl Stepper for YoloV8 {
         let original_img = &self.input.image;
         let img_width = original_img.width();
         let img_height = original_img.height();
-        let img = original_img.resize_exact(640, 640, FilterType::CatmullRom);
+        *self.resized = Image { image: original_img.resize_exact(640, 640, FilterType::CatmullRom)};
         let mut input = Array::zeros((1, 3, 640, 640));
-        for pixel in img.pixels() {
+        for pixel in self.resized.image.pixels() {
             let x = pixel.0 as _;
             let y = pixel.1 as _;
             let [r, g, b, _] = pixel.2 .0;
