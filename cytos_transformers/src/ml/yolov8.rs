@@ -136,7 +136,6 @@ impl Stepper for YoloV8 {
     }
 
     fn initialize(&mut self) -> cytos::Result<()> {
-        ort::init().commit()?;
         self.model = Some(Session::builder()?.commit_from_url(YOLOV8M_URL)?);
 
         Ok(())
