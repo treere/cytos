@@ -1,7 +1,8 @@
 use crate::imageio::Image;
-use cytos::{loader::DynamicLoadingRegistryWrapper, Prop, Result, Stepper};
+use cytos::{loader::DynamicLoadingRegistryWrapper, props::Ownable, Prop, Result, Stepper};
 use cytos_derive::CytosNode;
 use image::DynamicImage;
+use serde::{Deserialize, Serialize};
 
 macro_rules! define_function {
     ($struct_name:ident, $image_ops_func:path, $param_type:ty) => {
@@ -112,6 +113,9 @@ struct Resize {
     #[input]
     height: Prop<u32>,
 
+    #[input]
+    filter: Prop<FilterTypeDef>,
+
     #[output]
     output: Prop<Image>,
 }
@@ -119,11 +123,88 @@ struct Resize {
 impl Stepper for Resize {
     fn step(&mut self) -> Result<()> {
         *self.output = Image {
-            image: self.input.image.resize(
-                *self.width,
-                *self.height,
-                image::imageops::FilterType::Gaussian,
-            ),
+            image: self
+                .input
+                .image
+                .resize(*self.width, *self.height, (*self.filter).into()),
+        };
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Hash, Serialize, Deserialize)]
+enum FilterTypeDef {
+    /// Nearest Neighbor
+    Nearest,
+
+    /// Linear Filter
+    Triangle,
+
+    /// Cubic Filter
+    CatmullRom,
+
+    /// Gaussian Filter
+    Gaussian,
+
+    /// Lanczos with window 3
+    Lanczos3,
+}
+
+impl Default for FilterTypeDef {
+    fn default() -> Self {
+        Self::Nearest
+    }
+}
+
+impl Ownable for FilterTypeDef {
+    type Value = FilterTypeDef;
+
+    fn to_ownable(&self) -> Self::Value {
+        *self
+    }
+
+    fn from_owned(v: &Self::Value) -> Self {
+        *v
+    }
+}
+
+impl From<FilterTypeDef> for image::imageops::FilterType {
+    fn from(value: FilterTypeDef) -> Self {
+        match value {
+            FilterTypeDef::Nearest => image::imageops::FilterType::Nearest,
+            FilterTypeDef::Triangle => image::imageops::FilterType::Triangle,
+            FilterTypeDef::CatmullRom => image::imageops::FilterType::CatmullRom,
+            FilterTypeDef::Gaussian => image::imageops::FilterType::Gaussian,
+            FilterTypeDef::Lanczos3 => image::imageops::FilterType::Lanczos3,
+        }
+    }
+}
+
+#[derive(CytosNode, Default)]
+struct ResizeExact {
+    #[input]
+    input: Prop<Image>,
+
+    #[input]
+    width: Prop<u32>,
+
+    #[input]
+    height: Prop<u32>,
+
+    #[input]
+    filter: Prop<FilterTypeDef>,
+
+    #[output]
+    output: Prop<Image>,
+}
+
+impl Stepper for ResizeExact {
+    fn step(&mut self) -> Result<()> {
+        *self.output = Image {
+            image: self
+                .input
+                .image
+                .resize_exact(*self.width, *self.height, (*self.filter).into()),
         };
         Ok(())
     }
@@ -161,6 +242,7 @@ pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
         .add("Filter3x3", Filter3x3::default)
         .add("Unsharpen", Unsharpen::default)
         .add("Resize", Resize::default)
+        .add("ResizeExact", ResizeExact::default)
         .add("ImageMean", Mean::default)
         .add("Crop", Crop::default);
 }
