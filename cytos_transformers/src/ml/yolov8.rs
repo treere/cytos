@@ -1,4 +1,4 @@
-use cytos::{Prop, Stepper};
+use cytos::{loader::DynamicLoadingRegistryWrapper, Prop, Stepper};
 use cytos_derive::CytosNode;
 use image::{imageops::FilterType, GenericImageView};
 use ndarray::{s, Array, Axis};
@@ -45,7 +45,7 @@ const YOLOV8_CLASS_LABELS: [&str; 80] = [
 ];
 
 #[derive(CytosNode, Default)]
-pub struct YoloV8 {
+struct YoloV8 {
     #[input]
     input: Prop<Image>,
 
@@ -145,4 +145,123 @@ impl Stepper for YoloV8 {
         self.model = None;
         Ok(())
     }
+}
+
+#[derive(CytosNode, Default)]
+struct YoloV8Runner {
+    #[input]
+    input: Prop<Buffer>,
+
+    #[output]
+    output: Prop<Vec<Vec<f32>>>,
+
+    model: Option<Session>,
+}
+
+impl Stepper for YoloV8Runner {
+    fn step(&mut self) -> cytos::Result<()> {
+        let model = self.model.as_ref().unwrap();
+        let input = &(*self.input).0;
+
+        let outputs: SessionOutputs = model.run(inputs!["images" => input.view()]?)?;
+
+        let output = outputs["output0"]
+            .try_extract_tensor::<f32>()?
+            .t()
+            .into_owned();
+
+        let output = output.slice(s![.., .., 0]);
+        *self.output = output
+            .axis_iter(Axis(0))
+            .map(|row| row.iter().copied().collect::<Vec<_>>())
+            .collect::<Vec<_>>();
+
+        Ok(())
+    }
+
+    fn initialize(&mut self) -> cytos::Result<()> {
+        self.model = Some(Session::builder()?.commit_from_url(YOLOV8M_URL)?);
+
+        Ok(())
+    }
+
+    fn terminate(&mut self) -> cytos::Result<()> {
+        self.model = None;
+        Ok(())
+    }
+}
+
+#[derive(CytosNode, Default)]
+struct YoloV8Decoder {
+    #[input]
+    original: Prop<Image>,
+
+    #[input]
+    detections: Prop<Vec<Vec<f32>>>,
+
+    #[input]
+    threshold: Prop<f32>,
+
+    #[output]
+    results: Prop<Vec<(BoundingBox, &'static str, f32)>>,
+}
+
+impl Stepper for YoloV8Decoder {
+    fn step(&mut self) -> cytos::Result<()> {
+        let original_img = &self.original.image;
+        let img_width = original_img.width();
+        let img_height = original_img.height();
+
+        let mut boxes = Vec::new();
+
+        for row in (*self.detections).iter() {
+            let (class_id, prob) = row
+                .iter()
+                // skip bounding box coordinates
+                .skip(4)
+                .enumerate()
+                .map(|(index, value)| (index, *value))
+                .reduce(|accum, row| if row.1 > accum.1 { row } else { accum })
+                .unwrap();
+            if prob < *self.threshold {
+                continue;
+            }
+            let label = YOLOV8_CLASS_LABELS[class_id];
+            let xc = row[0] / 640. * (img_width as f32);
+            let yc = row[1] / 640. * (img_height as f32);
+            let w = row[2] / 640. * (img_width as f32);
+            let h = row[3] / 640. * (img_height as f32);
+            boxes.push((
+                BoundingBox {
+                    x1: xc - w / 2.,
+                    y1: yc - h / 2.,
+                    x2: xc + w / 2.,
+                    y2: yc + h / 2.,
+                },
+                label,
+                prob,
+            ));
+        }
+
+        boxes.sort_by(|box1, box2| box2.2.total_cmp(&box1.2));
+        self.results.clear();
+
+        while !boxes.is_empty() {
+            self.results.push(boxes[0]);
+            boxes = boxes
+                .iter()
+                .filter(|box1| {
+                    intersection(&boxes[0].0, &box1.0) / union(&boxes[0].0, &box1.0) < 0.7
+                })
+                .copied()
+                .collect();
+        }
+        Ok(())
+    }
+}
+
+pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
+    registry.add("Yolo", YoloV8::default);
+    registry.add("YoloV8Runner", YoloV8Runner::default);
+    registry.add("YoloV8Decoder", YoloV8Decoder::default);
 }

@@ -128,7 +128,7 @@ impl Stepper for Image2Buffer {
 }
 
 pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
+    yolov8::load_registry(registry);
     registry.add("FaceDetection", FaceDetection::default);
-    registry.add("YoloV8", yolov8::YoloV8::default);
     registry.add("Image2Buffer", Image2Buffer::default);
 }
