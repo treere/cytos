@@ -45,7 +45,7 @@ const YOLOV8_CLASS_LABELS: [&str; 80] = [
 ];
 
 #[derive(CytosNode, Default)]
-pub struct YoloV8Runner {
+pub struct YoloV8 {
     #[input]
     input: Prop<Image>,
 
@@ -61,7 +61,7 @@ pub struct YoloV8Runner {
     model: Option<Session>,
 }
 
-impl Stepper for YoloV8Runner {
+impl Stepper for YoloV8 {
     fn step(&mut self) -> cytos::Result<()> {
         let model = self.model.as_ref().unwrap();
         let original_img = &self.input.image;
