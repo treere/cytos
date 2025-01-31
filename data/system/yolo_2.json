@@ -1,0 +1,102 @@
+{
+  "graphs": {
+    "capture": {
+      "nodes": [
+        {
+          "name": "SOURCE",
+          "type": "RscamSource"
+        },
+        {
+          "name": "DECODER",
+          "type": "ImageDecoder",
+          "on_error": "Skip"
+        },
+        {
+          "name": "ResizeExact",
+          "type": "ResizeExact",
+          "props": {
+            "width": 640,
+            "height": 640
+          }
+        },
+        {
+          "name": "Image2Buffer",
+          "type": "Image2Buffer"
+        },
+        {
+          "name": "YoloV8Runner",
+          "type": "YoloV8Runner"
+        },
+        {
+          "name": "YoloV8Dec",
+          "type": "YoloV8Decoder",
+          "props": {
+            "threshold": 0.6
+          }
+        }
+      ],
+      "links": [
+        {
+          "src": [
+            "SOURCE",
+            "frame"
+          ],
+          "dst": [
+            "DECODER",
+            "frame"
+          ]
+        },
+        {
+          "src": [
+            "DECODER",
+            "decoded"
+          ],
+          "dst": [
+            "ResizeExact",
+            "input"
+          ]
+        },
+        {
+          "src": [
+            "ResizeExact",
+            "output"
+          ],
+          "dst": [
+            "Image2Buffer",
+            "input"
+          ]
+        },
+        {
+          "src": [
+            "Image2Buffer",
+            "output"
+          ],
+          "dst": [
+            "YoloV8Runner",
+            "input"
+          ]
+        },
+        {
+          "src": [
+            "YoloV8Runner",
+            "output"
+          ],
+          "dst": [
+            "YoloV8Dec",
+            "detections"
+          ]
+        },
+        {
+          "src": [
+            "DECODER",
+            "decoded"
+          ],
+          "dst": [
+            "YoloV8Dec",
+            "original"
+          ]
+        }
+      ]
+    }
+  }
+}
