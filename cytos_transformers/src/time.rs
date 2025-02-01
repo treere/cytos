@@ -10,6 +10,9 @@ struct Timer {
     #[output]
     output: Prop<Duration>,
 
+    #[input]
+    every: Prop<u64>,
+
     timer: Instant,
     count: u64,
 }
@@ -20,6 +23,7 @@ impl Default for Timer {
             output: Prop::new(Duration::ZERO),
             timer: Instant::now(),
             count: 0,
+            every: Prop::new(30),
         }
     }
 }
@@ -30,7 +34,7 @@ impl Stepper for Timer {
             *self.output = self.timer.elapsed();
 
             self.timer = Instant::now();
-            self.count = 1000;
+            self.count = *self.every;
         }
         self.count -= 1;
 
