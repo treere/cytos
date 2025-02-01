@@ -32,7 +32,7 @@ fn union(box1: &BoundingBox, box2: &BoundingBox) -> f32 {
 }
 
 #[rustfmt::skip]
-const YOLOV8_CLASS_LABELS: [&str; 80] = [
+const YOLO_CLASS_LABELS: [&str; 80] = [
     "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
 	"fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow", "elephant",
 	"bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard",
@@ -44,7 +44,7 @@ const YOLOV8_CLASS_LABELS: [&str; 80] = [
 ];
 
 #[derive(CytosNode, Default)]
-struct YoloV8 {
+struct Yolo {
     #[input]
     input: Prop<Image>,
 
@@ -60,7 +60,7 @@ struct YoloV8 {
     model: Option<Session>,
 }
 
-impl Stepper for YoloV8 {
+impl Stepper for Yolo {
     fn step(&mut self) -> cytos::Result<()> {
         let model = self.model.as_ref().unwrap();
         let original_img = &self.input.image;
@@ -101,7 +101,7 @@ impl Stepper for YoloV8 {
             if prob < 0.5 {
                 continue;
             }
-            let label = YOLOV8_CLASS_LABELS[class_id];
+            let label = YOLO_CLASS_LABELS[class_id];
             let xc = row[0] / 640. * (img_width as f32);
             let yc = row[1] / 640. * (img_height as f32);
             let w = row[2] / 640. * (img_width as f32);
@@ -147,7 +147,7 @@ impl Stepper for YoloV8 {
 }
 
 #[derive(CytosNode, Default)]
-struct YoloV8Runner {
+struct YoloRunner {
     #[input]
     input: Prop<Buffer>,
 
@@ -157,7 +157,7 @@ struct YoloV8Runner {
     model: Option<Session>,
 }
 
-impl Stepper for YoloV8Runner {
+impl Stepper for YoloRunner {
     fn step(&mut self) -> cytos::Result<()> {
         let model = self.model.as_ref().unwrap();
         let input = &(*self.input).0;
@@ -191,7 +191,7 @@ impl Stepper for YoloV8Runner {
 }
 
 #[derive(CytosNode, Default)]
-struct YoloV8Decoder {
+struct YoloDecoder {
     #[input]
     original: Prop<Image>,
 
@@ -205,7 +205,7 @@ struct YoloV8Decoder {
     results: Prop<Vec<(BoundingBox, &'static str, f32)>>,
 }
 
-impl Stepper for YoloV8Decoder {
+impl Stepper for YoloDecoder {
     fn step(&mut self) -> cytos::Result<()> {
         let original_img = &self.original.image;
         let img_width = original_img.width();
@@ -225,7 +225,7 @@ impl Stepper for YoloV8Decoder {
             if prob < *self.threshold {
                 continue;
             }
-            let label = YOLOV8_CLASS_LABELS[class_id];
+            let label = YOLO_CLASS_LABELS[class_id];
             let xc = row[0] / 640. * (img_width as f32);
             let yc = row[1] / 640. * (img_height as f32);
             let w = row[2] / 640. * (img_width as f32);
@@ -260,7 +260,7 @@ impl Stepper for YoloV8Decoder {
 }
 
 pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
-    registry.add("YoloV8", YoloV8::default);
-    registry.add("YoloV8Runner", YoloV8Runner::default);
-    registry.add("YoloV8Decoder", YoloV8Decoder::default);
+    registry.add("Yolo", Yolo::default);
+    registry.add("YoloRunner", YoloRunner::default);
+    registry.add("YoloDecoder", YoloDecoder::default);
 }

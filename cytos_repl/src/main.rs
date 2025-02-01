@@ -500,7 +500,7 @@ fn receiver_remove_command(status: Rc<Mutex<Status>>) -> Command<'static> {
 
 fn main() -> Result<(), &'static str> {
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
+        .with_max_level(tracing::Level::ERROR)
         .init();
 
     let matches = clap::Command::new("rep")

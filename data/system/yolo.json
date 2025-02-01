@@ -12,8 +12,8 @@
           "on_error": "Skip"
         },
         {
-          "name": "YoloV8",
-          "type": "YoloV8"
+          "name": "Yolo",
+          "type": "Yolo"
         }
       ],
       "links": [
@@ -33,7 +33,7 @@
             "decoded"
           ],
           "dst": [
-            "YoloV8",
+            "Yolo",
             "input"
           ]
         }

@@ -4,7 +4,7 @@ use image::GenericImageView;
 use rustface::{Detector, ImageData};
 use serde::{Deserialize, Serialize};
 
-pub mod yolov8;
+pub mod yolo;
 
 use crate::imageio::Image;
 
@@ -128,7 +128,7 @@ impl Stepper for Image2Buffer {
 }
 
 pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
-    yolov8::load_registry(registry);
+    yolo::load_registry(registry);
     registry.add("FaceDetection", FaceDetection::default);
     registry.add("Image2Buffer", Image2Buffer::default);
 }
