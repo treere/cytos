@@ -10,6 +10,9 @@ struct Timer {
     #[output]
     output: Prop<Duration>,
 
+    #[output]
+    fps: Prop<f64>,
+
     #[input]
     every: Prop<u64>,
 
@@ -22,6 +25,7 @@ impl Default for Timer {
         Self {
             output: Prop::new(Duration::ZERO),
             timer: Instant::now(),
+            fps: Prop::default(),
             count: 0,
             every: Prop::new(30),
         }
@@ -32,6 +36,8 @@ impl Stepper for Timer {
     fn step(&mut self) -> cytos::Result<()> {
         if self.count == 0 {
             *self.output = self.timer.elapsed();
+
+            *self.fps = (*self.every as f64) / (*self.output).as_secs_f64();
 
             self.timer = Instant::now();
             self.count = *self.every;
