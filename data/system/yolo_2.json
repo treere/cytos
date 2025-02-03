@@ -33,6 +33,10 @@
           "props": {
             "threshold": 0.6
           }
+        },
+        {
+          "name": "Timer",
+          "type": "Timer"
         }
       ],
       "links": [

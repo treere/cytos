@@ -14,6 +14,10 @@
         {
           "name": "Yolo",
           "type": "Yolo"
+        },
+        {
+          "name": "Timer",
+          "type": "Timer"
         }
       ],
       "links": [
