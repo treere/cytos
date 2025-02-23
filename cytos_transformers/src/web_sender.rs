@@ -39,5 +39,17 @@ impl<T: Ownable + Display + Default + DeserializeOwned + Serialize + 'static> St
 pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
     registry
         .add("WebSenderU64", WebSender::<u64>::default)
-        .add("WebSenderF64", WebSender::<f64>::default);
+        .add("WebSenderF64", WebSender::<f64>::default)
+        .add("WebSenderString", WebSender::<String>::default)
+        .add("WebSenderI8", WebSender::<i8>::default)
+        .add("WebSenderI16", WebSender::<i16>::default)
+        .add("WebSenderI32", WebSender::<i32>::default)
+        .add("WebSenderI64", WebSender::<i64>::default)
+        .add("WebSenderU8", WebSender::<u8>::default)
+        .add("WebSenderU16", WebSender::<u16>::default)
+        .add("WebSenderU32", WebSender::<u32>::default)
+        .add("WebSenderUSize", WebSender::<usize>::default)
+        .add("WebSenderF32", WebSender::<f32>::default)
+        .add("WebSenderBool", WebSender::<bool>::default)
+        .add("WebSenderChar", WebSender::<char>::default);
 }

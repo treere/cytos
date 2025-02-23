@@ -105,6 +105,7 @@ create_ownable_copy!(i64);
 create_ownable_copy!(isize);
 create_ownable_copy!(f32);
 create_ownable_copy!(f64);
+create_ownable_copy!(char);
 create_ownable_copy!(std::time::Duration);
 
 create_ownable_clone!(String);

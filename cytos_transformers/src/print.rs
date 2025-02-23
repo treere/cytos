@@ -26,5 +26,16 @@ pub extern "C" fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
     registry
         .add("PrintU64", Print::<u64>::default)
         .add("PrintF64", Print::<f64>::default)
-        .add("PrintString", Print::<String>::default);
+        .add("PrintString", Print::<String>::default)
+        .add("PrintI8", Print::<i8>::default)
+        .add("PrintI16", Print::<i16>::default)
+        .add("PrintI32", Print::<i32>::default)
+        .add("PrintI64", Print::<i64>::default)
+        .add("PrintU8", Print::<u8>::default)
+        .add("PrintU16", Print::<u16>::default)
+        .add("PrintU32", Print::<u32>::default)
+        .add("PrintUSize", Print::<usize>::default)
+        .add("PrintF32", Print::<f32>::default)
+        .add("PrintBool", Print::<bool>::default)
+        .add("PrintChar", Print::<char>::default);
 }
