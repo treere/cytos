@@ -12,16 +12,16 @@ impl serde::Serialize for FrameKind {
         S: serde::Serializer,
     {
         match self {
-            FrameKind::Rscam(frame) => {
+            Self::Rscam(frame) => {
                 let mut s = serializer.serialize_seq(Some(frame.len()))?;
                 for i in frame.iter() {
                     s.serialize_element(i)?;
                 }
                 s.end()
             }
-            FrameKind::Raw(vec) => {
+            Self::Raw(vec) => {
                 let mut s = serializer.serialize_seq(Some(vec.len()))?;
-                for i in vec.iter() {
+                for i in vec {
                     s.serialize_element(i)?;
                 }
                 s.end()
@@ -103,7 +103,7 @@ impl Ownable for Frame {
 
     fn to_ownable(&self) -> Self::Value {
         match &self.frame {
-            FrameKind::Rscam(frame) => frame.iter().cloned().collect(),
+            FrameKind::Rscam(frame) => frame.iter().copied().collect(),
             FrameKind::Raw(vec) => vec.clone(),
         }
     }

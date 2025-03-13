@@ -184,13 +184,14 @@ impl<T: Ownable> Prop<T> {
     }
 
     pub fn assign_owned_generic(&mut self, val: GenericOwnedProp) -> Result<()> {
-        if let Ok(v) = val.0.downcast::<T::Value>() {
-            *std::ops::DerefMut::deref_mut(self) = Ownable::from_owned(&*v);
+        val.0.downcast::<T::Value>().map_or_else(
+            |_| Err("invalid type".into()),
+            |v| {
+                *std::ops::DerefMut::deref_mut(self) = Ownable::from_owned(&*v);
 
-            Ok(())
-        } else {
-            Err("invalid type".into())
-        }
+                Ok(())
+            },
+        )
     }
 }
 
@@ -237,7 +238,7 @@ pub struct GenericProp(Rc<dyn Any>);
 
 impl GenericProp {
     /// Verify if two generic props are the same
-    pub fn is_same(&self, other: &GenericProp) -> bool {
+    pub fn is_same(&self, other: &Self) -> bool {
         Rc::ptr_eq(&self.0, &other.0)
     }
 }

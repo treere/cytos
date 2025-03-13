@@ -12,9 +12,7 @@ struct FactoryContainer(Arc<dyn Fn() -> Box<dyn Transformer> + Send + Sync>);
 
 impl FactoryContainer {
     /// Create a FactoryContaier from a generic factory
-    fn new<K: Transformer + 'static>(
-        factory: impl (Fn() -> K) + 'static + Send + Sync,
-    ) -> FactoryContainer {
+    fn new<K: Transformer + 'static>(factory: impl (Fn() -> K) + 'static + Send + Sync) -> Self {
         Self(Arc::new(move || Box::new(factory())))
     }
 
@@ -92,8 +90,7 @@ impl Registry {
             .ok_or_else(|| format!("cannot find \"{name}\""))?;
 
         match factory {
-            FactoryType::Plain(factory) => Ok(factory.get()),
-            FactoryType::Dynamic((factory, _)) => Ok(factory.get()),
+            FactoryType::Plain(factory) | FactoryType::Dynamic((factory, _)) => Ok(factory.get()),
         }
     }
 

@@ -27,7 +27,7 @@ fn intersection(box1: &BoundingBox, box2: &BoundingBox) -> f32 {
 }
 
 fn union(box1: &BoundingBox, box2: &BoundingBox) -> f32 {
-    ((box1.x2 - box1.x1) * (box1.y2 - box1.y1)) + ((box2.x2 - box2.x1) * (box2.y2 - box2.y1))
+    (box1.x2 - box1.x1).mul_add(box1.y2 - box1.y1, (box2.x2 - box2.x1) * (box2.y2 - box2.y1))
         - intersection(box1, box2)
 }
 
@@ -74,9 +74,9 @@ impl Stepper for Yolo {
             let x = pixel.0 as _;
             let y = pixel.1 as _;
             let [r, g, b, _] = pixel.2 .0;
-            input[[0, 0, y, x]] = (r as f32) / 255.;
-            input[[0, 1, y, x]] = (g as f32) / 255.;
-            input[[0, 2, y, x]] = (b as f32) / 255.;
+            input[[0, 0, y, x]] = f32::from(r) / 255.;
+            input[[0, 1, y, x]] = f32::from(g) / 255.;
+            input[[0, 2, y, x]] = f32::from(b) / 255.;
         }
 
         let outputs: SessionOutputs = model.run(inputs!["images" => input.view()]?)?;
@@ -213,7 +213,7 @@ impl Stepper for YoloDecoder {
 
         let mut boxes = Vec::new();
 
-        for row in (*self.detections).iter() {
+        for row in &(*self.detections) {
             let (class_id, prob) = row
                 .iter()
                 // skip bounding box coordinates

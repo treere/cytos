@@ -324,7 +324,7 @@ fn ident_to_lit(ident: &'_ Option<Ident>) -> proc_macro2::TokenStream {
     let lit = format!(
         "{}u64",
         u64::from_str_radix(&lit, 36)
-            .unwrap_or_else(|_| panic!("cannot parse field '{}' as base 36 number", lit))
+            .unwrap_or_else(|_| panic!("cannot parse field '{lit}' as base 36 number"))
     );
     let l = LitInt::new(&lit, Span::call_site());
     quote! {

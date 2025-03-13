@@ -15,7 +15,7 @@ struct AddValue {
 
 impl Default for AddValue {
     fn default() -> Self {
-        AddValue {
+        Self {
             input: Prop::default(),
             increment: Prop::new(1),
             output: Prop::default(),

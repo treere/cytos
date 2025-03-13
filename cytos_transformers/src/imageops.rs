@@ -157,7 +157,7 @@ impl Default for FilterTypeDef {
 }
 
 impl Ownable for FilterTypeDef {
-    type Value = FilterTypeDef;
+    type Value = Self;
 
     fn to_ownable(&self) -> Self::Value {
         *self
@@ -171,11 +171,11 @@ impl Ownable for FilterTypeDef {
 impl From<FilterTypeDef> for image::imageops::FilterType {
     fn from(value: FilterTypeDef) -> Self {
         match value {
-            FilterTypeDef::Nearest => image::imageops::FilterType::Nearest,
-            FilterTypeDef::Triangle => image::imageops::FilterType::Triangle,
-            FilterTypeDef::CatmullRom => image::imageops::FilterType::CatmullRom,
-            FilterTypeDef::Gaussian => image::imageops::FilterType::Gaussian,
-            FilterTypeDef::Lanczos3 => image::imageops::FilterType::Lanczos3,
+            FilterTypeDef::Nearest => Self::Nearest,
+            FilterTypeDef::Triangle => Self::Triangle,
+            FilterTypeDef::CatmullRom => Self::CatmullRom,
+            FilterTypeDef::Gaussian => Self::Gaussian,
+            FilterTypeDef::Lanczos3 => Self::Lanczos3,
         }
     }
 }

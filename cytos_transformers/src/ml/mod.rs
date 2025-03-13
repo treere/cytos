@@ -17,7 +17,7 @@ struct Rectangle {
 }
 
 impl Ownable for Rectangle {
-    type Value = Rectangle;
+    type Value = Self;
 
     fn to_ownable(&self) -> Self::Value {
         self.clone()
@@ -87,7 +87,7 @@ impl Stepper for FaceDetection {
 pub struct Buffer(pub ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<[usize; 4]>>);
 
 impl Ownable for Buffer {
-    type Value = Buffer;
+    type Value = Self;
 
     fn to_ownable(&self) -> Self::Value {
         self.clone()
@@ -118,9 +118,9 @@ impl Stepper for Image2Buffer {
             let x = pixel.0 as _;
             let y = pixel.1 as _;
             let [r, g, b, _] = pixel.2 .0;
-            buffer[[0, 0, y, x]] = (r as f32) / 255.;
-            buffer[[0, 1, y, x]] = (g as f32) / 255.;
-            buffer[[0, 2, y, x]] = (b as f32) / 255.;
+            buffer[[0, 0, y, x]] = f32::from(r) / 255.;
+            buffer[[0, 1, y, x]] = f32::from(g) / 255.;
+            buffer[[0, 2, y, x]] = f32::from(b) / 255.;
         }
         *self.output = Buffer(buffer);
         Ok(())

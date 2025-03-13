@@ -24,7 +24,7 @@ impl Stepper for File {
         let mut f = std::fs::File::open(&*self.filename)?;
         let mut v = Vec::new();
 
-        f.read_exact(&mut v)?;
+        f.read_to_end(&mut v)?;
         *self.frame = v.into();
         Ok(())
     }
@@ -77,7 +77,7 @@ impl Stepper for Rscam {
 
     fn initialize(&mut self) -> Result<()> {
         let mut camera =
-            rscam::new(&self.filename).map_err(|x| format!("cannot open camera: {}", x))?;
+            rscam::new(&self.filename).map_err(|x| format!("cannot open camera: {x}"))?;
 
         camera
             .start(&rscam::Config {
@@ -87,7 +87,7 @@ impl Stepper for Rscam {
                 nbuffers: 4,
                 ..Default::default()
             })
-            .map_err(|x| format!("cannot start camera: {}", x))?;
+            .map_err(|x| format!("cannot start camera: {x}"))?;
 
         self.camera = Some(camera);
         Ok(())

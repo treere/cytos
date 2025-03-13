@@ -15,7 +15,7 @@ struct And {
 
 impl Stepper for And {
     fn step(&mut self) -> cytos::Result<()> {
-        *self.output = *self.op1 & *self.op2;
+        *self.output = *self.op1 && *self.op2;
         Ok(())
     }
 }
@@ -34,7 +34,7 @@ struct Or {
 
 impl Stepper for Or {
     fn step(&mut self) -> cytos::Result<()> {
-        *self.output = *self.op1 | *self.op2;
+        *self.output = *self.op1 || *self.op2;
         Ok(())
     }
 }

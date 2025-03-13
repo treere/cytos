@@ -2,6 +2,8 @@ use super::{Result, Transformer};
 use crate::{loader::Registry, repr::NodeRepr};
 
 /// Node
+///
+/// A node is only a pointer to a transformer
 pub type Node = Box<dyn Transformer>;
 
 impl NodeRepr {

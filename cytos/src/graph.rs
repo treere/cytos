@@ -45,12 +45,16 @@ impl GraphRepr {
 }
 
 /// Graph.
+///
+/// A graph is a list of nodes. They are processed in the list sequence.
+/// For each node there can be a behaviour that tells what to do in case of an exception
 #[derive(Default)]
 pub struct Graph {
-    /// Processors
+    /// Nodes
     nodes: IndexMap<NodeId, Node>,
 
     /// OnErrors
+    /// Defines the error handling strategy for each node in case of failure during `step()`.
     on_errors: IndexMap<NodeId, OnError>,
 }
 
@@ -75,12 +79,12 @@ impl Graph {
     /// Compute one step of processing
     pub fn step(&mut self) -> Result<StepResult> {
         trace!("start step");
-        for (node_id, node) in self.nodes.iter_mut() {
+        for (node_id, node) in &mut self.nodes {
             match trace_node_step(node_id.0, node) {
-                Ok(_) => continue,
+                Ok(()) => (),
                 Err(x) => match self.on_errors.get(node_id).unwrap_or(&OnError::Fail) {
                     OnError::Skip => return Ok(StepResult::Skip),
-                    OnError::Continue => continue,
+                    OnError::Continue => (),
                     OnError::Fail => return Err(x),
                 },
             }
@@ -122,9 +126,9 @@ impl Graph {
                         .iter_mut()
                         .find(|(key_prop, _)| key_prop.is_same(&prop))
                     {
-                        arr.push(vals)
+                        arr.push(vals);
                     } else {
-                        links.push((prop, vec![vals]))
+                        links.push((prop, vec![vals]));
                     }
                     links
                 },
@@ -158,20 +162,20 @@ impl Graph {
     pub fn get_node(&self, node_id: NodeId) -> Result<&Node> {
         self.nodes
             .get(&node_id)
-            .ok_or_else(|| format!("missing node {:?}", node_id).into())
+            .ok_or_else(|| format!("missing node {node_id:?}").into())
     }
 
     pub fn get_node_mut(&mut self, node_id: NodeId) -> Result<&mut Node> {
         self.nodes
             .get_mut(&node_id)
-            .ok_or_else(|| format!("missing node {:?}", node_id).into())
+            .ok_or_else(|| format!("missing node {node_id:?}").into())
     }
 
     pub fn remove(&mut self, node_id: NodeId) -> Result<()> {
         self.nodes
             .shift_remove(&node_id)
             .and(Some(()))
-            .ok_or_else(|| format!("missing node {:?}", node_id).into())
+            .ok_or_else(|| format!("missing node {node_id:?}").into())
     }
 }
 

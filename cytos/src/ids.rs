@@ -62,7 +62,7 @@ pub fn id_number_to_string(x: u64) -> Result<String> {
 }
 
 pub fn id_string_to_number(value: &str) -> Result<u64> {
-    u64::from_str_radix(value, 36).map_err(|x| x.into())
+    u64::from_str_radix(value, 36).map_err(std::convert::Into::into)
 }
 
 /// Format an u64 using a given radix

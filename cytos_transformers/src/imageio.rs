@@ -15,7 +15,7 @@ pub struct SerdeImage {
 impl TryFrom<SerdeImage> for Image {
     fn try_from(value: SerdeImage) -> std::result::Result<Self, Self::Error> {
         let image = image::load_from_memory(&value.buffer).map_err(|_| "cannot load")?;
-        Ok(Image { image })
+        Ok(Self { image })
     }
 
     type Error = &'static str;
@@ -27,8 +27,8 @@ impl From<Image> for SerdeImage {
         value
             .image
             .write_to(&mut Cursor::new(&mut buffer), ImageFormat::Png)
-            .unwrap();
-        SerdeImage { buffer }
+            .expect("cannot convert image to serde image");
+        Self { buffer }
     }
 }
 
@@ -39,7 +39,7 @@ pub struct Image {
 }
 
 impl Ownable for Image {
-    type Value = Image;
+    type Value = Self;
 
     fn to_ownable(&self) -> Self::Value {
         self.clone()
