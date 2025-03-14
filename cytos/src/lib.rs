@@ -7,6 +7,7 @@
 #![deny(clippy::pedantic)]
 #![allow(clippy::must_use_candidate)]
 
+mod decorator;
 pub mod graph;
 mod ids;
 pub mod loader;
