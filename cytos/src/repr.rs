@@ -70,7 +70,7 @@ impl Default for OnError {
     }
 }
 
-/// SystemRepr
+/// `SystemRepr`
 ///
 /// Deserializable System Representation
 #[derive(Deserialize, Debug)]
@@ -85,13 +85,17 @@ pub struct SystemRepr {
 }
 
 impl SystemRepr {
-    /// Create a SystemRepr loading a file
-    pub fn from_json(file: &str) -> Result<Self, serde_json::Error> {
-        serde_json::from_str(file)
+    /// Create a `SystemRepr` loading a file
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if `data` is not a valid `SystemRepr`
+    pub fn from_json(data: &str) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(data)
     }
 }
 
-/// SystemLink between params of different graphs
+/// `SystemLink` between params of different graphs
 #[derive(Deserialize, Debug, Clone)]
 pub struct SystemLink {
     /// Source node

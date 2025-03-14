@@ -108,12 +108,13 @@ struct Image2Buffer {
 }
 
 impl Stepper for Image2Buffer {
+    #[allow(clippy::many_single_char_names)]
     fn step(&mut self) -> cytos::Result<()> {
         let input = &self.input.image;
-        let w = input.width();
-        let h = input.height();
+        let width = input.width();
+        let height = input.height();
 
-        let mut buffer = ndarray::Array::zeros((1, 3, w as usize, h as usize));
+        let mut buffer = ndarray::Array::zeros((1, 3, width as usize, height as usize));
         for pixel in input.pixels() {
             let x = pixel.0 as _;
             let y = pixel.1 as _;

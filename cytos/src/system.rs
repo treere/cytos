@@ -71,6 +71,10 @@ fn create_requests(
 
 impl SystemRepr {
     /// Convert a system representation into a System
+    ///
+    /// # Errors
+    ///
+    /// Will return `Errors` when cannot create a runner
     pub fn to_system(self, registry: &Registry) -> Result<System> {
         // From the map of id, reprs create a map of ip, repr and receiver
         // and a map of id, sender.
@@ -119,7 +123,13 @@ impl System {
         self.runners.keys()
     }
 
+    /// Return a specific graph view
+    ///
+    /// # Errors
+    ///
+    /// Will return an error if there is not `graph` in the `system`
     pub fn graph(&self, graph: GraphId) -> Result<GraphView<'_>> {
+        let _sender = self.senders.get(&graph).ok_or("not found")?;
         Ok(GraphView {
             senders: &self.senders,
             graph,
@@ -448,53 +458,127 @@ impl GraphView<'_> {
             Internal::Prop(_generic_owned_prop) => Err("cannot return owned".into()),
         })
     }
+
+    /// Kill a sender
+    ///
+    /// # Errors
+    /// If the receiver cannot proress the request
     pub fn kill(&self) -> Result<Value> {
         self.command(Command::State(StateCommand::Kill))
     }
+
+    /// Start a sender
+    ///
+    /// # Errors
+    /// If the receiver cannot proress the request
     pub fn start(&self) -> Result<Value> {
         self.command(Command::State(StateCommand::Start))
     }
+
+    /// Stop a sender
+    ///
+    /// # Errors
+    /// If the receiver cannot proress the request
     pub fn stop(&self) -> Result<Value> {
         self.command(Command::State(StateCommand::Stop))
     }
+
+    /// Get the status of a sender
+    ///
+    /// # Errors
+    /// If the receiver cannot proress the request
     pub fn status(&self) -> Result<Value> {
         self.command(Command::State(StateCommand::Status))
     }
+
+    /// List the nodes of a sender
+    ///
+    /// # Errors
+    /// If the receiver cannot proress the request
     pub fn list_nodes(&self) -> Result<Value> {
         self.command(Command::Node(NodeCommand::ListNodes))
     }
+
+    /// List the inputs of a node
+    ///
+    /// # Errors
+    /// If the receiver cannot proress the request
     pub fn list_inputs(&self, node_id: NodeId) -> Result<Value> {
         self.command(Command::Node(NodeCommand::ListInputs(node_id)))
     }
+
+    /// List the outputs of a node
+    ///
+    /// # Errors
+    /// If the receiver cannot proress the request
     pub fn list_outputs(&self, node_id: NodeId) -> Result<Value> {
         self.command(Command::Node(NodeCommand::ListOutputs(node_id)))
     }
+
+    /// Remove a node
+    ///
+    /// # Errors
+    /// If the receiver cannot proress the request
     pub fn remove_node(&self, node_id: NodeId) -> Result<Value> {
         self.command(Command::Node(NodeCommand::RemoveNode(node_id)))
     }
+
+    /// Dump a node param
+    ///
+    /// # Errors
+    /// If the receiver cannot proress the request
     pub fn dump(&self, data: Vec<(NodeId, ParamId)>) -> Result<Value> {
         self.command(Command::Param(ParamCommand::Dump(data)))
     }
+
+    /// Assign a node param
+    ///
+    /// # Errors
+    /// If the receiver cannot proress the request
     pub fn assign(&self, data: Vec<(NodeId, ParamId, Value)>) -> Result<Value> {
         self.command(Command::Param(ParamCommand::Assign(data)))
     }
+
+    /// Load a value into a node
+    ///
+    /// # Errors
+    /// If the receiver cannot proress the request
     pub fn load(&self, data: Vec<(NodeId, ParamId, Value)>) -> Result<Value> {
         self.command(Command::Param(ParamCommand::Load(data)))
     }
+
+    /// List the links
+    ///
+    /// # Errors
+    /// If the receiver cannot proress the request
     pub fn list_links(&self) -> Result<Value> {
         self.command(Command::Structure(Box::new(StructureCommand::ListLinks)))
     }
 
+    /// Add a link
+    ///
+    /// # Errors
+    /// If the receiver cannot proress the request
     pub fn add_link(&self, src: (NodeId, ParamId), dst: (NodeId, ParamId)) -> Result<Value> {
         self.command(Command::Structure(Box::new(StructureCommand::AddLink((
             src, dst,
         )))))
     }
+
+    /// List receivers in the graph
+    ///
+    /// # Errors
+    /// If the receiver cannot proress the request
     pub fn list_receivers(&self) -> Result<Value> {
         self.command(Command::Structure(Box::new(
             StructureCommand::ListReceiver(self.senders.clone()),
         )))
     }
+
+    /// Add a receiver
+    ///
+    /// # Errors
+    /// If the receiver cannot proress the request
     pub fn add_receiver(
         &self,
         src: (GraphId, NodeId, ParamId),
@@ -505,6 +589,11 @@ impl GraphView<'_> {
             ((sender.clone(), (src.1, src.2)), dst),
         ))))
     }
+
+    /// Remove a receiver
+    ///
+    /// # Errors
+    /// If the receiver cannot proress the request
     pub fn remove_receiver(
         &self,
         src: (GraphId, NodeId, ParamId),

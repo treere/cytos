@@ -57,15 +57,29 @@ macro_rules! create_ids {
     };
 }
 
+/// Convert a number into a base 36 representation string
+///
+/// # Errors
+///
+/// Will return `Err`  if the `x` cannot be converted
 pub fn id_number_to_string(x: u64) -> Result<String> {
     format_radix(x, 36)
 }
 
+/// Convert a base 36 string into a u64
+///
+/// # Errors
+///
+/// Will return `Err` if the string cannot be converted to an `u64`
 pub fn id_string_to_number(value: &str) -> Result<u64> {
     u64::from_str_radix(value, 36).map_err(std::convert::Into::into)
 }
 
 /// Format an u64 using a given radix
+///
+/// # Errors
+///
+/// Will return `Err` if the `x` cannot be converted to a `string` in base `radix`
 fn format_radix(mut x: u64, radix: u32) -> Result<String> {
     let mut result = vec![];
     let r = u64::from(radix);

@@ -61,6 +61,7 @@ struct Yolo {
 }
 
 impl Stepper for Yolo {
+    #[allow(clippy::many_single_char_names)]
     fn step(&mut self) -> cytos::Result<()> {
         let model = self.model.as_ref().unwrap();
         let original_img = &self.input.image;

@@ -5,12 +5,7 @@
 #![deny(clippy::correctness)]
 #![deny(clippy::nursery)]
 #![deny(clippy::pedantic)]
-#![allow(clippy::missing_errors_doc)]
-#![allow(clippy::doc_markdown)]
-#![allow(clippy::no_mangle_with_rust_abi)]
-#![allow(clippy::missing_panics_doc)]
 #![allow(clippy::must_use_candidate)]
-#![allow(clippy::many_single_char_names)]
 #![allow(clippy::cast_precision_loss)]
 
 extern crate cytos_derive;

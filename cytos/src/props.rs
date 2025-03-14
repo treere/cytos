@@ -154,6 +154,10 @@ impl<T: 'static> Prop<T> {
     }
 
     /// Link that prop to another prop
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if the type is invalid
     pub fn link_value(&mut self, val: GenericProp) -> Result<()> {
         if let Ok(v) = val.0.downcast::<UnsafeCell<T>>() {
             self.0 = v;
@@ -174,6 +178,11 @@ impl<T: Ownable> Prop<T> {
         GenericOwnedProp(Box::new(self.to_ownable()))
     }
 
+    /// Load a `GenericOwnedProp` into `self`
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if the type is invalid
     pub fn load_owned_generic(&mut self, val: GenericOwnedProp) -> Result<()> {
         if let Ok(v) = val.0.downcast::<T::Value>() {
             self.0 = Rc::new(UnsafeCell::new(Ownable::from_owned(&*v)));
@@ -183,6 +192,11 @@ impl<T: Ownable> Prop<T> {
         }
     }
 
+    /// Assign a `GenericOwnedProp` into `self`
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if cannot load self into a `Value`
     pub fn assign_owned_generic(&mut self, val: GenericOwnedProp) -> Result<()> {
         val.0.downcast::<T::Value>().map_or_else(
             |_| Err("invalid type".into()),
@@ -211,6 +225,10 @@ impl<T> std::ops::DerefMut for Prop<T> {
 
 impl<T: 'static + DeserializeOwned> Prop<T> {
     /// Load a value into a prop
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if cannot dump the `val`
     pub fn load(&mut self, val: Value) -> Result<()> {
         let value = val.dump()?;
         self.0 = Rc::new(UnsafeCell::new(value));
@@ -218,6 +236,10 @@ impl<T: 'static + DeserializeOwned> Prop<T> {
     }
 
     /// Assign a value into a prop
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if cannot dump the `val`
     pub fn assign(&mut self, val: Value) -> Result<()> {
         let value = val.dump::<T>()?;
         *std::ops::DerefMut::deref_mut(self) = value;
@@ -228,6 +250,10 @@ impl<T: 'static + DeserializeOwned> Prop<T> {
 
 impl<T: 'static + Serialize> Prop<T> {
     /// Dump the value of a prop
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if cannot load self into a `Value`
     pub fn dump(&self) -> Result<Value> {
         Value::load(&**self)
     }

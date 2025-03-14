@@ -11,7 +11,7 @@ use std::{collections::HashMap, sync::Arc};
 struct FactoryContainer(Arc<dyn Fn() -> Box<dyn Transformer> + Send + Sync>);
 
 impl FactoryContainer {
-    /// Create a FactoryContaier from a generic factory
+    /// Create a `FactoryContaier` from a generic factory
     fn new<K: Transformer + 'static>(factory: impl (Fn() -> K) + 'static + Send + Sync) -> Self {
         Self(Arc::new(move || Box::new(factory())))
     }
@@ -83,6 +83,10 @@ impl Registry {
     }
 
     /// Returns a factory by name
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if the factory is missing
     pub fn load(&self, name: &str) -> Result<Box<dyn Transformer>> {
         let factory = self
             .factories
@@ -100,6 +104,10 @@ impl Registry {
     }
 
     /// Dynamically load a library
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if the library cannot be loaded
     pub fn load_library(&mut self, file: &str) -> Result<()> {
         let lib = unsafe { Library::new(file) }.or(Err("cannot load library"))?;
         let lib = Arc::new(lib);

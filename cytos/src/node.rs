@@ -8,6 +8,10 @@ pub type Node = Box<dyn Transformer>;
 
 impl NodeRepr {
     /// Convert a [`NodeRepr`] into a [`Node`] loading factories from a [`Registry`]
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if the value cannot be loaded
     pub fn into_node(self, loader: &Registry) -> Result<Node> {
         let mut transformer = loader.load(self.typ.as_str())?;
 

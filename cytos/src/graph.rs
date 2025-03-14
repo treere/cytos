@@ -20,11 +20,19 @@ pub enum StepResult {
 
 impl GraphRepr {
     /// Load a graph from a file
-    pub fn from_json(file: &str) -> Result<Self> {
-        serde_json::from_str(file).map_err(Into::into)
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if `data` is not a valid json
+    pub fn from_json(data: &str) -> Result<Self> {
+        serde_json::from_str(data).map_err(Into::into)
     }
 
     /// Convert a [`GraphRepr`] into a [`Graph`]
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if cannot load one of the nodes
     pub fn into_graph(self, loader: &Registry) -> Result<Graph> {
         let mut nodes = IndexMap::default();
         let mut on_errors = IndexMap::default();
@@ -53,19 +61,27 @@ pub struct Graph {
     /// Nodes
     nodes: IndexMap<NodeId, Node>,
 
-    /// OnErrors
     /// Defines the error handling strategy for each node in case of failure during `step()`.
     on_errors: IndexMap<NodeId, OnError>,
 }
 
+/// A frapper arount node step to make it observable
+///
+/// # Errors
+///
+/// Will return `Err` if the `node` step returns `Err`
 #[no_mangle]
 #[inline(never)]
-pub fn trace_node_step(_node_id: u64, node: &mut Node) -> Result<()> {
+pub extern "Rust" fn trace_node_step(_node_id: u64, node: &mut Node) -> Result<()> {
     node.step()
 }
 
 impl Graph {
     /// Initialize the nodes
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if the `node` initialize returns `Err`
     pub fn initialize(&mut self) -> Result<()> {
         trace!("start initialize");
         for node in self.nodes.values_mut() {
@@ -77,6 +93,10 @@ impl Graph {
     }
 
     /// Compute one step of processing
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if one of the node returns an `Err` and it cannot be handled.
     pub fn step(&mut self) -> Result<StepResult> {
         trace!("start step");
         for (node_id, node) in &mut self.nodes {
@@ -94,6 +114,10 @@ impl Graph {
     }
 
     /// Terminate the nodes
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if one `node` terminate returns `Err`
     pub fn terminate(&mut self) -> Result<()> {
         trace!("start terminate");
         for node in self.nodes.values_mut() {
@@ -104,6 +128,10 @@ impl Graph {
         Ok(())
     }
 
+    /// Collect the links between nodes
+    ///
+    /// # Panics
+    /// Cannot take a node
     pub fn collect_links(&self) -> Vec<Vec<(NodeId, ParamId)>> {
         self.nodes
             .iter()
@@ -144,6 +172,10 @@ impl Graph {
     }
 
     /// Connects a output data to an input one.
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if a node is missing or if the linking process fails
     pub fn link(
         &mut self,
         (src_node_id, src_param_id): (NodeId, ParamId),
@@ -159,18 +191,33 @@ impl Graph {
         Ok(())
     }
 
+    /// Get a node
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if a node is missing
     pub fn get_node(&self, node_id: NodeId) -> Result<&Node> {
         self.nodes
             .get(&node_id)
             .ok_or_else(|| format!("missing node {node_id:?}").into())
     }
 
+    /// Get a node as mutable
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if a node is missing
     pub fn get_node_mut(&mut self, node_id: NodeId) -> Result<&mut Node> {
         self.nodes
             .get_mut(&node_id)
             .ok_or_else(|| format!("missing node {node_id:?}").into())
     }
 
+    /// Remove a node
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if a node is missing
     pub fn remove(&mut self, node_id: NodeId) -> Result<()> {
         self.nodes
             .shift_remove(&node_id)
