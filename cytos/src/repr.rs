@@ -15,6 +15,18 @@ pub struct NodeRepr {
     pub props: HashMap<ParamId, Value>,
 }
 
+/// Decorator deserializable rapresentation
+#[derive(Deserialize, Debug)]
+pub struct DecoratorRepr {
+    /// Type of the node
+    #[serde(rename = "type")]
+    pub typ: String,
+
+    /// Properties
+    #[serde(default)]
+    pub props: HashMap<ParamId, Value>,
+}
+
 /// Graph representatio to be loaded
 #[derive(Deserialize, Debug)]
 pub struct GraphRepr {
@@ -49,6 +61,9 @@ pub struct InternalNodeRepr {
     /// On error expect behaviour
     #[serde(default)]
     pub on_error: OnError,
+
+    #[serde(default)]
+    pub decorators: Vec<DecoratorRepr>,
 }
 
 /// Graph behaviour on node failure

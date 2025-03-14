@@ -38,7 +38,10 @@ impl GraphRepr {
         let mut on_errors = IndexMap::default();
 
         for node_repr in self.nodes {
-            let node = node_repr.node.into_node(loader)?;
+            let mut node = node_repr.node.into_node(loader)?;
+            for dec in node_repr.decorators {
+                node = dec.into_node(node)?;
+            }
             nodes.insert(node_repr.name, node);
             on_errors.insert(node_repr.name, node_repr.on_error);
         }

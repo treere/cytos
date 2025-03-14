@@ -1,4 +1,27 @@
-use crate::{node::Node, Prop, Stepper, Transformer};
+use crate::{node::Node, repr::DecoratorRepr, Prop, Result, Stepper, Transformer};
+
+impl DecoratorRepr {
+    /// Convert a [`NodeRepr`] into a [`Node`] loading factories from a [`Registry`]
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if the value cannot be loaded
+    pub fn into_node(self, node: Node) -> Result<Node> {
+        if self.typ == "skip" {
+            let mut decorator = Box::new(SkipDecorator {
+                skip: Prop::default(),
+                node,
+            });
+            for (prop, value) in self.props {
+                decorator.load(prop, value)?;
+            }
+
+            Ok(decorator)
+        } else {
+            Err("only skip supported".into())
+        }
+    }
+}
 
 struct SkipDecorator {
     skip: Prop<bool>,
