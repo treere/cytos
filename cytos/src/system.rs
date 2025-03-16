@@ -2,10 +2,6 @@
 //!
 //! A system is a set of graph linked together
 
-use crossbeam::channel::bounded;
-use crossbeam::channel::unbounded;
-use crossbeam::channel::Receiver;
-use crossbeam::channel::Sender;
 use indexmap::IndexMap;
 use tracing::trace;
 
@@ -19,6 +15,7 @@ use crate::repr::SystemRepr;
 use super::graph::Graph;
 use super::graph::StepResult;
 
+use super::queue::{bounded, unbounded, Receiver, Sender};
 use super::GenericOwnedProp;
 use super::{GraphId, NodeId, ParamId, Result, Value};
 
