@@ -1,5 +1,5 @@
 //! Properties
-use serde::{Serialize, de::DeserializeOwned};
+use serde::{de::DeserializeOwned, Serialize};
 use std::{any::Any, cell::UnsafeCell, rc::Rc};
 
 use super::{Result, Value};
