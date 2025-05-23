@@ -1,9 +1,9 @@
 use anyhow::anyhow;
-use easy_repl::{command, Command, CommandStatus, Repl};
+use easy_repl::{Command, CommandStatus, Repl, command};
 
 use cytos::loader::Registry;
 use cytos::repr::SystemRepr;
-use cytos::{id_number_to_string, id_string_to_number, NodeId, ParamId, System, Value};
+use cytos::{NodeId, ParamId, System, Value, id_number_to_string, id_string_to_number};
 
 use std::collections::HashSet;
 
@@ -272,7 +272,7 @@ fn link_list(status: Rc<Mutex<Status>>, graph_id: String) -> Result<CommandStatu
     let status = status.lock().or(Err(anyhow!("cannot lock")))?;
     let l = status.system.graph(graph_id.into()).unwrap().list_links();
 
-    println!("{:?}", l);
+    println!("{l:?}");
 
     Ok(CommandStatus::Done)
 }
@@ -308,7 +308,7 @@ fn receiver_list(
         .unwrap()
         .list_receivers();
 
-    println!("{:?}", l);
+    println!("{l:?}");
 
     Ok(CommandStatus::Done)
 }

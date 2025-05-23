@@ -1,5 +1,5 @@
 //! Properties
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 use std::{any::Any, cell::UnsafeCell, rc::Rc};
 
 use super::{Result, Value};
@@ -201,7 +201,7 @@ impl<T: Ownable> Prop<T> {
         val.0.downcast::<T::Value>().map_or_else(
             |_| Err("invalid type".into()),
             |v| {
-                *std::ops::DerefMut::deref_mut(self) = Ownable::from_owned(&*v);
+                **self = Ownable::from_owned(&*v);
 
                 Ok(())
             },
@@ -242,7 +242,7 @@ impl<T: 'static + DeserializeOwned> Prop<T> {
     /// Will return `Err` if cannot dump the `val`
     pub fn assign(&mut self, val: Value) -> Result<()> {
         let value = val.dump::<T>()?;
-        *std::ops::DerefMut::deref_mut(self) = value;
+        **self = value;
 
         Ok(())
     }
@@ -276,10 +276,10 @@ mod tests {
     #[test]
     fn test_link_props() {
         let output_prop = Prop::new(12);
-        let gen = output_prop.as_generic();
+        let generic = output_prop.as_generic();
 
         let mut input_prop = Prop::new(1);
-        input_prop.link_value(gen).expect("cannot link");
+        input_prop.link_value(generic).expect("cannot link");
 
         assert_eq!(12, *input_prop);
     }
@@ -299,11 +299,13 @@ mod tests {
     fn test_multi_thread() {
         let prop = Prop::new(1);
 
-        let gen = prop.into_owned_generic();
+        let generic = prop.into_owned_generic();
 
         std::thread::spawn(|| {
             let mut thread_prop = Prop::new(2);
-            thread_prop.load_owned_generic(gen).expect("cannot link");
+            thread_prop
+                .load_owned_generic(generic)
+                .expect("cannot link");
 
             assert_eq!(1, *thread_prop);
         })
