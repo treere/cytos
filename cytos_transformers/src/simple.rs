@@ -66,7 +66,7 @@ impl Stepper for IncrementalGenerator {
 }
 
 #[cfg(test)]
-mod tests {
+mod tests2 {
     use super::*;
 
     #[test]
