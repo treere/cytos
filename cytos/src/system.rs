@@ -2,16 +2,20 @@
 //!
 //! A system is a set of graph linked together
 
-use crossbeam::channel::bounded;
-use crossbeam::channel::unbounded;
-use crossbeam::channel::Receiver;
-use crossbeam::channel::Sender;
 use indexmap::IndexMap;
 use tracing::trace;
 
 use serde::Serialize;
 
 use crate::loader::Registry;
+use crate::queue::BlockReceiver;
+
+use crate::queue::BlockSender;
+use crate::queue::Receiver;
+use crate::queue::Sender;
+use crate::queue::SenderChunk;
+use crate::queue::bounded;
+use crate::queue::unbounded;
 use crate::repr::GraphRepr;
 use crate::repr::SystemLink;
 use crate::repr::SystemRepr;
@@ -22,12 +26,14 @@ use super::graph::StepResult;
 use super::GenericOwnedProp;
 use super::{GraphId, NodeId, ParamId, Result, Value};
 
+use std::thread;
 use std::thread::{Builder, JoinHandle};
+use std::time::Duration;
 
 fn create_runner(
     repr: GraphRepr,
-    receiver: Receiver<InternalCommand>,
-    senders: &IndexMap<GraphId, Sender<InternalCommand>>,
+    receiver: BlockReceiver<InternalCommand>,
+    senders: &IndexMap<GraphId, BlockSender<InternalCommand>>,
     registry: Registry,
     requests: Vec<&SystemLink>,
 ) -> Result<impl FnOnce()> {
@@ -41,7 +47,7 @@ fn create_runner(
 }
 
 fn create_requests(
-    senders: &IndexMap<GraphId, Sender<InternalCommand>>,
+    senders: &IndexMap<GraphId, BlockSender<InternalCommand>>,
     mut requests: Vec<&SystemLink>,
 ) -> Result<LinksToExternal> {
     requests.sort_by_key(|x| x.src.0);
@@ -114,7 +120,7 @@ pub struct System {
     /// Runners where there is a runner per graph
     runners: IndexMap<GraphId, JoinHandle<()>>,
     /// Senders to communicate to graphs
-    senders: IndexMap<GraphId, Sender<(Command, Response)>>,
+    senders: IndexMap<GraphId, BlockSender<(Command, Response)>>,
 }
 
 impl System {
@@ -158,7 +164,7 @@ struct Worker {
     /// The graph
     graph: Graph,
     /// A receiver for the commands
-    receiver: Receiver<InternalCommand>,
+    receiver: BlockReceiver<InternalCommand>,
     /// Requests between graphs
     requests: LinksToExternal,
     /// Queue
@@ -166,7 +172,11 @@ struct Worker {
 }
 
 impl Worker {
-    fn new(graph: Graph, receiver: Receiver<InternalCommand>, requests: LinksToExternal) -> Self {
+    fn new(
+        graph: Graph,
+        receiver: BlockReceiver<InternalCommand>,
+        requests: LinksToExternal,
+    ) -> Self {
         Self {
             graph,
             receiver,
@@ -206,40 +216,51 @@ impl Worker {
     }
 
     fn loop_processing_idle_message(&mut self) -> i8 {
-        while let Ok((command, message)) = self.receiver.recv() {
-            trace!("received command {:?}", command);
-            match command {
-                Command::State(StateCommand::Kill) => return -1,
-                Command::State(StateCommand::Start) => break,
-                Command::State(StateCommand::Status) => message.send_value(Ok("Idle")),
-                Command::State(StateCommand::Stop) => (),
-                Command::Node(node_command) => self.dispatch_node_command(&node_command, message),
-                Command::Structure(structure_command) => {
-                    self.dispatch_structure_command(*structure_command, message);
+        'idle: loop {
+            if let Ok(data) = self.receiver.recv_all() {
+                for (command, message) in data {
+                    trace!("received command {:?}", command);
+                    match command {
+                        Command::State(StateCommand::Kill) => return -1,
+                        Command::State(StateCommand::Start) => break 'idle,
+                        Command::State(StateCommand::Status) => message.send_value(Ok("Idle")),
+                        Command::State(StateCommand::Stop) => (),
+                        Command::Node(node_command) => {
+                            self.dispatch_node_command(&node_command, message);
+                        }
+                        Command::Structure(structure_command) => {
+                            self.dispatch_structure_command(*structure_command, message);
+                        }
+                        Command::Param(param_command) => {
+                            self.dispatch_param_command(param_command, message, &StepResult::Done);
+                        }
+                    }
                 }
-                Command::Param(param_command) => {
-                    self.dispatch_param_command(param_command, message, &StepResult::Done);
-                }
+                thread::sleep(Duration::from_millis(10));
             }
         }
         0
     }
 
     fn loop_processing_running_message(&mut self, cause: &StepResult) -> i8 {
-        while let Ok((command, message)) = self.receiver.try_recv() {
-            trace!("received command {:?}", command);
-            match command {
-                Command::State(StateCommand::Kill) => return -1,
-                Command::State(StateCommand::Stop) => return 1,
-                Command::State(StateCommand::Status) => message.send_value(Ok("Running")),
-                Command::State(StateCommand::Start) => (),
-                Command::Node(node_command) => self.dispatch_node_command(&node_command, message),
-                Command::Structure(structure_command) => {
-                    self.dispatch_structure_command(*structure_command, message);
-                }
+        if let Ok(data) = self.receiver.recv_all() {
+            for (command, message) in data {
+                trace!("received command {:?}", command);
+                match command {
+                    Command::State(StateCommand::Kill) => return -1,
+                    Command::State(StateCommand::Stop) => return 1,
+                    Command::State(StateCommand::Status) => message.send_value(Ok("Running")),
+                    Command::State(StateCommand::Start) => (),
+                    Command::Node(node_command) => {
+                        self.dispatch_node_command(&node_command, message);
+                    }
+                    Command::Structure(structure_command) => {
+                        self.dispatch_structure_command(*structure_command, message);
+                    }
 
-                Command::Param(param_command) => {
-                    self.dispatch_param_command(param_command, message, cause);
+                    Command::Param(param_command) => {
+                        self.dispatch_param_command(param_command, message, cause);
+                    }
                 }
             }
         }
@@ -437,7 +458,7 @@ impl Worker {
 }
 
 pub struct GraphView<'a> {
-    senders: &'a IndexMap<GraphId, Sender<(Command, Response)>>,
+    senders: &'a IndexMap<GraphId, BlockSender<(Command, Response)>>,
     graph: GraphId,
 }
 
@@ -649,7 +670,7 @@ enum StructureCommand {
     /// Link nodes
     AddLink(((NodeId, ParamId), (NodeId, ParamId))),
     /// List receivers
-    ListReceiver(IndexMap<GraphId, Sender<(Command, Response)>>),
+    ListReceiver(IndexMap<GraphId, BlockSender<(Command, Response)>>),
     /// Add a request
     AddReceiver((ExternalDestination, Destination)),
     /// Remove a request
@@ -719,10 +740,10 @@ type InternalCommand = (Command, Response);
 type Destination = (NodeId, ParamId);
 
 /// External address
-type ExternalDestination = (Sender<InternalCommand>, Destination);
+type ExternalDestination = (BlockSender<InternalCommand>, Destination);
 
 /// External addresses
-type ExternalDestinations = (Sender<InternalCommand>, Vec<Destination>);
+type ExternalDestinations = (BlockSender<InternalCommand>, Vec<Destination>);
 
 /// Link between an external and an internal resource
 type LinksToExternal = Vec<(ExternalDestinations, Vec<Destination>)>;

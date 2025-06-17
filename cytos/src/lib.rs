@@ -12,6 +12,7 @@ mod ids;
 pub mod loader;
 mod node;
 pub mod props;
+mod queue;
 pub mod repr;
 pub mod system;
 mod transfomer;
