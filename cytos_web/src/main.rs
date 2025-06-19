@@ -3,18 +3,18 @@ use std::io::Read;
 
 use std::{fs::File, sync::Arc};
 
+use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::delete;
-use axum::Json;
 use axum::{
-    routing::{get, post},
     Router,
+    routing::{get, post},
 };
 use cytos::repr::SystemRepr;
-use cytos::{loader::Registry, System};
-use serde_json::{json, Value};
+use cytos::{System, loader::Registry};
+use serde_json::{Value, json};
 use tower_http::trace::TraceLayer;
 
 type WebSystem = Arc<System>;
@@ -56,30 +56,33 @@ async fn main() {
     let app = Router::new()
         .route("/", get(root))
         .route("/graphs", get(graphs_list))
-        .route("/graphs/:id", get(graph_status))
-        .route("/graphs/:graph_id/start", post(graph_start))
-        .route("/graphs/:graph_id/stop", post(graph_stop))
-        .route("/graphs/:graph_id/nodes", get(node_list))
-        .route("/graphs/:graph_id/links", get(link_list))
-        .route("/graphs/:graph_id/receivers", get(receivers_list))
-        .route("/graphs/:graph_id/receivers", post(receivers_create))
-        .route("/graphs/:graph_id/receivers", delete(receivers_delete))
-        .route("/graphs/:graph_id/nodes/:node_id/inputs", get(node_inputs))
+        .route("/graphs/{id}", get(graph_status))
+        .route("/graphs/{graph_id}/start", post(graph_start))
+        .route("/graphs/{graph_id}/stop", post(graph_stop))
+        .route("/graphs/{graph_id}/nodes", get(node_list))
+        .route("/graphs/{graph_id}/links", get(link_list))
+        .route("/graphs/{graph_id}/receivers", get(receivers_list))
+        .route("/graphs/{graph_id}/receivers", post(receivers_create))
+        .route("/graphs/{graph_id}/receivers", delete(receivers_delete))
         .route(
-            "/graphs/:graph_id/nodes/:node_id/outputs",
+            "/graphs/{graph_id}/nodes/{node_id}/inputs",
+            get(node_inputs),
+        )
+        .route(
+            "/graphs/{graph_id}/nodes/{node_id}/outputs",
             get(node_outputs),
         )
-        .route("/graphs/:graph_id/nodes/link", post(node_link))
+        .route("/graphs/{graph_id}/nodes/link", post(node_link))
         .route(
-            "/graphs/:graph_id/nodes/:node_id/params/:param_id/load",
+            "/graphs/{graph_id}/nodes/{node_id}/params/{param_id}/load",
             post(node_param_load),
         )
         .route(
-            "/graphs/:graph_id/nodes/:node_id/params/:param_id/assign",
+            "/graphs/{graph_id}/nodes/{node_id}/params/{param_id}/assign",
             post(node_param_assign),
         )
         .route(
-            "/graphs/:graph_id/nodes/:node_id/params/:param_id/dump",
+            "/graphs/{graph_id}/nodes/{node_id}/params/{param_id}/dump",
             get(node_param_dump),
         )
         .layer(TraceLayer::new_for_http())
