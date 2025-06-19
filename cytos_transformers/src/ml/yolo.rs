@@ -1,10 +1,11 @@
-use cytos::{loader::DynamicLoadingRegistryWrapper, Prop, Stepper};
+use cytos::{Prop, Stepper, loader::DynamicLoadingRegistryWrapper};
 use cytos_derive::CytosNode;
-use image::{imageops::FilterType, GenericImageView};
-use ndarray::{s, Array, Axis};
+use image::{GenericImageView, imageops::FilterType};
+use ndarray::{Array, Axis, s};
 use ort::{
     inputs,
     session::{Session, SessionOutputs},
+    value::TensorRef,
 };
 use serde::{Deserialize, Serialize};
 
@@ -63,7 +64,7 @@ struct Yolo {
 impl Stepper for Yolo {
     #[allow(clippy::many_single_char_names)]
     fn step(&mut self) -> cytos::Result<()> {
-        let model = self.model.as_ref().unwrap();
+        let model = self.model.as_mut().unwrap();
         let original_img = &self.input.image;
         let img_width = original_img.width();
         let img_height = original_img.height();
@@ -74,16 +75,17 @@ impl Stepper for Yolo {
         for pixel in self.resized.image.pixels() {
             let x = pixel.0 as _;
             let y = pixel.1 as _;
-            let [r, g, b, _] = pixel.2 .0;
+            let [r, g, b, _] = pixel.2.0;
             input[[0, 0, y, x]] = f32::from(r) / 255.;
             input[[0, 1, y, x]] = f32::from(g) / 255.;
             input[[0, 2, y, x]] = f32::from(b) / 255.;
         }
 
-        let outputs: SessionOutputs = model.run(inputs!["images" => input.view()]?)?;
+        let images = TensorRef::from_array_view(&input)?;
+        let outputs: SessionOutputs = model.run(inputs! {"images" => images})?;
         *self.buffer = Buffer(input);
         let output = outputs["output0"]
-            .try_extract_tensor::<f32>()?
+            .try_extract_array::<f32>()?
             .t()
             .into_owned();
 
@@ -160,13 +162,13 @@ struct YoloRunner {
 
 impl Stepper for YoloRunner {
     fn step(&mut self) -> cytos::Result<()> {
-        let model = self.model.as_ref().unwrap();
+        let model = self.model.as_mut().unwrap();
         let input = &(*self.input).0;
-
-        let outputs: SessionOutputs = model.run(inputs!["images" => input.view()]?)?;
+        let images = TensorRef::from_array_view(input)?;
+        let outputs: SessionOutputs = model.run(inputs! { "images" => images})?;
 
         let output = outputs["output0"]
-            .try_extract_tensor::<f32>()?
+            .try_extract_array::<f32>()?
             .t()
             .into_owned();
 
