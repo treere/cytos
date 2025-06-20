@@ -31,7 +31,10 @@ mod internal {
 // #[cfg(feature = "crossbeam")]
 mod internal {
     use super::{Result, SenderChunk};
-    use std::sync::{Arc, Mutex};
+    use std::sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    };
 
     pub type Sender<T> = crossbeam::channel::Sender<T>;
     pub type Receiver<T> = crossbeam::channel::Receiver<T>;
@@ -40,13 +43,15 @@ mod internal {
 
     pub fn unbounded<T>() -> (BlockSender<T>, BlockReceiver<T>) {
         let queue = Arc::new(Mutex::new(Vec::new()));
-        let sender = BlockSender::new(queue.clone());
-        let receiver = BlockReceiver::new(queue);
+        let empty = Arc::new(AtomicBool::new(true));
+        let sender = BlockSender::new(queue.clone(), empty.clone());
+        let receiver = BlockReceiver::new(queue, empty);
         (sender, receiver)
     }
 
     pub struct BlockSender<T> {
         queue: Arc<Mutex<Vec<T>>>,
+        empty: Arc<AtomicBool>,
     }
 
     impl<T> ::std::fmt::Debug for BlockSender<T> {
@@ -59,17 +64,19 @@ mod internal {
         fn clone(&self) -> Self {
             Self {
                 queue: self.queue.clone(),
+                empty: self.empty.clone(),
             }
         }
     }
 
     impl<T> BlockSender<T> {
-        const fn new(queue: Arc<Mutex<Vec<T>>>) -> Self {
-            Self { queue }
+        const fn new(queue: Arc<Mutex<Vec<T>>>, empty: Arc<AtomicBool>) -> Self {
+            Self { queue, empty }
         }
 
         pub fn send(&self, message: T) -> Result<()> {
             self.queue.lock().map_err(|_| "cannot lock")?.push(message);
+            self.empty.store(false, Ordering::Relaxed);
 
             Ok(())
         }
@@ -81,19 +88,24 @@ mod internal {
 
     pub struct BlockReceiver<T> {
         queue: Arc<Mutex<Vec<T>>>,
+        empty: Arc<AtomicBool>,
     }
 
     impl<T> BlockReceiver<T> {
-        const fn new(queue: Arc<Mutex<Vec<T>>>) -> Self {
-            Self { queue }
+        const fn new(queue: Arc<Mutex<Vec<T>>>, empty: Arc<AtomicBool>) -> Self {
+            Self { queue, empty }
         }
     }
     impl<T: 'static> SenderChunk<T> for BlockReceiver<T> {
         fn recv_all(&self) -> Result<impl Iterator<Item = T> + 'static> {
+            if self.empty.load(Ordering::Relaxed) {
+                return Ok(vec![].into_iter());
+            }
             let mut queue = self.queue.lock().unwrap();
             let mut result = vec![];
             if !queue.is_empty() {
                 std::mem::swap(&mut result, &mut *queue);
+                self.empty.store(true, Ordering::Relaxed);
                 drop(queue);
             }
             Ok(result.into_iter())
@@ -147,9 +159,8 @@ mod internal {
 
             let mut handles = vec![];
             for i in 0..num_threads {
-                let sender_clone = BlockSender {
-                    queue: sender.queue.clone(),
-                };
+                let sender_clone = sender.clone();
+
                 handles.push(thread::spawn(move || {
                     for j in 0..messages_per_thread {
                         sender_clone.send(i * messages_per_thread + j).unwrap();
@@ -182,9 +193,8 @@ mod internal {
 
             // Spawn sender threads
             for i in 0..num_threads {
-                let sender_clone = BlockSender {
-                    queue: sender.queue.clone(),
-                };
+                let sender_clone = sender.clone();
+
                 sender_handles.push(thread::spawn(move || {
                     for j in 0..messages_per_thread {
                         sender_clone.send(i * messages_per_thread + j).unwrap();
