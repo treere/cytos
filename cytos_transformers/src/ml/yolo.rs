@@ -1,7 +1,7 @@
-use cytos::{Prop, Stepper, loader::DynamicLoadingRegistryWrapper};
+use cytos::{loader::DynamicLoadingRegistryWrapper, Prop, Stepper};
 use cytos_derive::CytosNode;
-use image::{GenericImageView, imageops::FilterType};
-use ndarray::{Array, Axis, s};
+use image::{imageops::FilterType, GenericImageView};
+use ndarray::{s, Array, Axis};
 use ort::{
     inputs,
     session::{Session, SessionOutputs},
@@ -75,7 +75,7 @@ impl Stepper for Yolo {
         for pixel in self.resized.image.pixels() {
             let x = pixel.0 as _;
             let y = pixel.1 as _;
-            let [r, g, b, _] = pixel.2.0;
+            let [r, g, b, _] = pixel.2 .0;
             input[[0, 0, y, x]] = f32::from(r) / 255.;
             input[[0, 1, y, x]] = f32::from(g) / 255.;
             input[[0, 2, y, x]] = f32::from(b) / 255.;

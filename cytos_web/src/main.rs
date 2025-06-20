@@ -3,18 +3,18 @@ use std::io::Read;
 
 use std::{fs::File, sync::Arc};
 
-use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::delete;
+use axum::Json;
 use axum::{
-    Router,
     routing::{get, post},
+    Router,
 };
 use cytos::repr::SystemRepr;
-use cytos::{System, loader::Registry};
-use serde_json::{Value, json};
+use cytos::{loader::Registry, System};
+use serde_json::{json, Value};
 use tower_http::trace::TraceLayer;
 
 type WebSystem = Arc<System>;
