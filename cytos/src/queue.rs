@@ -74,8 +74,8 @@ mod internal {
             Ok(())
         }
 
-        pub fn same_channel(&self, _other: &Self) -> bool {
-            todo!()
+        pub fn same_channel(&self, other: &Self) -> bool {
+            Arc::ptr_eq(&self.queue, &other.queue)
         }
     }
 
