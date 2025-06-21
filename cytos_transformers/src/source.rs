@@ -1,6 +1,6 @@
 use std::io::Read;
 
-use cytos::{loader::DynamicLoadingRegistryWrapper, Prop, Result, Stepper};
+use cytos::{Prop, Result, Stepper, loader::DynamicLoadingRegistryWrapper};
 use cytos_derive::CytosNode;
 use rscam::Camera;
 

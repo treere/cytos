@@ -1,4 +1,4 @@
-use cytos::{loader::DynamicLoadingRegistryWrapper, Prop, Stepper};
+use cytos::{Prop, Stepper, loader::DynamicLoadingRegistryWrapper};
 use cytos_derive::CytosNode;
 
 #[derive(CytosNode, Default)]

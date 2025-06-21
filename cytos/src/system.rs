@@ -10,12 +10,12 @@ use serde::Serialize;
 use crate::loader::Registry;
 use crate::queue::BlockReceiver;
 
-use crate::queue::bounded;
-use crate::queue::unbounded;
 use crate::queue::BlockSender;
 use crate::queue::Receiver;
 use crate::queue::Sender;
 use crate::queue::SenderChunk;
+use crate::queue::bounded;
+use crate::queue::unbounded;
 use crate::repr::GraphRepr;
 use crate::repr::SystemLink;
 use crate::repr::SystemRepr;
@@ -200,15 +200,16 @@ impl Worker {
             loop {
                 self.request_values().expect("cannot request");
 
-                match self.graph.step() { Ok(cause) => {
-                    match self.loop_processing_running_message(&cause) {
+                match self.graph.step() {
+                    Ok(cause) => match self.loop_processing_running_message(&cause) {
                         -1 => break 'main,
                         1 => break,
                         _ => (),
+                    },
+                    _ => {
+                        break;
                     }
-                } _ => {
-                    break;
-                }}
+                }
             }
             trace!("graph stopping");
             self.graph.terminate().expect("cannot terminate");

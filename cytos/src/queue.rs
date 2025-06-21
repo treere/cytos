@@ -32,8 +32,8 @@ mod internal {
 mod internal {
     use super::{Result, SenderChunk};
     use std::sync::{
-        atomic::{AtomicBool, Ordering},
         Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
     };
 
     pub type Sender<T> = crossbeam::channel::Sender<T>;

@@ -1,6 +1,6 @@
 use super::{
-    props::{GenericOwnedProp, GenericProp},
     ParamId, Result, Value,
+    props::{GenericOwnedProp, GenericProp},
 };
 
 /// Stepper trait

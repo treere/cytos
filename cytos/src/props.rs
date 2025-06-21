@@ -1,5 +1,5 @@
 //! Properties
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 use std::{any::Any, cell::UnsafeCell, rc::Rc};
 
 use super::{Result, Value};
@@ -159,12 +159,13 @@ impl<T: 'static> Prop<T> {
     ///
     /// Will return `Err` if the type is invalid
     pub fn link_value(&mut self, val: GenericProp) -> Result<()> {
-        match val.0.downcast::<UnsafeCell<T>>() { Ok(v) => {
-            self.0 = v;
-            Ok(())
-        } _ => {
-            Err("invalid type".into())
-        }}
+        match val.0.downcast::<UnsafeCell<T>>() {
+            Ok(v) => {
+                self.0 = v;
+                Ok(())
+            }
+            _ => Err("invalid type".into()),
+        }
     }
 
     /// Convert this prop to be a generic prop
@@ -184,12 +185,13 @@ impl<T: Ownable> Prop<T> {
     ///
     /// Will return `Err` if the type is invalid
     pub fn load_owned_generic(&mut self, val: GenericOwnedProp) -> Result<()> {
-        match val.0.downcast::<T::Value>() { Ok(v) => {
-            self.0 = Rc::new(UnsafeCell::new(Ownable::from_owned(&*v)));
-            Ok(())
-        } _ => {
-            Err("invalid type".into())
-        }}
+        match val.0.downcast::<T::Value>() {
+            Ok(v) => {
+                self.0 = Rc::new(UnsafeCell::new(Ownable::from_owned(&*v)));
+                Ok(())
+            }
+            _ => Err("invalid type".into()),
+        }
     }
 
     /// Assign a `GenericOwnedProp` into `self`

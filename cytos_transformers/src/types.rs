@@ -1,5 +1,5 @@
 use cytos::props::Ownable;
-use serde::{ser::SerializeSeq, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, ser::SerializeSeq};
 
 enum FrameKind {
     Rscam(rscam::Frame),

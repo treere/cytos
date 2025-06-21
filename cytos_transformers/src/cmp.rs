@@ -1,8 +1,8 @@
 use std::fmt::Display;
 
-use cytos::{loader::DynamicLoadingRegistryWrapper, props::Ownable, Prop, Stepper};
+use cytos::{Prop, Stepper, loader::DynamicLoadingRegistryWrapper, props::Ownable};
 use cytos_derive::CytosNode;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 
 #[derive(CytosNode, Default)]
 struct Lt<T>

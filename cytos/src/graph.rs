@@ -4,7 +4,7 @@ use crate::{
     repr::{GraphLink, GraphRepr, OnError},
 };
 
-use super::{node::Node, NodeId, ParamId, Result};
+use super::{NodeId, ParamId, Result, node::Node};
 
 use indexmap::IndexMap;
 use tracing::trace;
@@ -231,8 +231,8 @@ mod tests {
     use super::*;
 
     use crate::{
-        test::{Constant, Empty},
         Value,
+        test::{Constant, Empty},
     };
 
     #[test]
@@ -300,10 +300,12 @@ mod tests {
         );
 
         let one = Value::load(&1).expect("cannot load");
-        assert!(graph
-            .get_node_mut(node_id)
-            .and_then(|n| n.load(ParamId(0), one))
-            .is_ok());
+        assert!(
+            graph
+                .get_node_mut(node_id)
+                .and_then(|n| n.load(ParamId(0), one))
+                .is_ok()
+        );
 
         assert!(graph.initialize().is_ok());
         assert!(graph.step().is_ok());

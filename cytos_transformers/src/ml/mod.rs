@@ -1,4 +1,4 @@
-pub use cytos::{loader::DynamicLoadingRegistryWrapper, props::Ownable, Prop, Stepper};
+pub use cytos::{Prop, Stepper, loader::DynamicLoadingRegistryWrapper, props::Ownable};
 use cytos_derive::CytosNode;
 use image::GenericImageView;
 use rustface::{Detector, ImageData};
@@ -118,7 +118,7 @@ impl Stepper for Image2Buffer {
         for pixel in input.pixels() {
             let x = pixel.0 as _;
             let y = pixel.1 as _;
-            let [r, g, b, _] = pixel.2 .0;
+            let [r, g, b, _] = pixel.2.0;
             buffer[[0, 0, y, x]] = f32::from(r) / 255.;
             buffer[[0, 1, y, x]] = f32::from(g) / 255.;
             buffer[[0, 2, y, x]] = f32::from(b) / 255.;

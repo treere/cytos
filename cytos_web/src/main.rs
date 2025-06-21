@@ -3,18 +3,19 @@ use std::io::Read;
 
 use std::{fs::File, sync::Arc};
 
+use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::delete;
-use axum::Json;
 use axum::{
-    routing::{get, post},
     Router,
+    routing::{get, post},
 };
 use cytos::repr::SystemRepr;
-use cytos::{loader::Registry, System};
-use serde_json::{json, Value};
+use cytos::{System, loader::Registry};
+use cytos::{id_number_to_string, id_string_to_number};
+use serde_json::{Value, json};
 use tower_http::trace::TraceLayer;
 
 type WebSystem = Arc<System>;
@@ -85,6 +86,8 @@ async fn main() {
             "/graphs/{graph_id}/nodes/{node_id}/params/{param_id}/dump",
             get(node_param_dump),
         )
+        .route("/id/to_string/{number}", get(id_to_string))
+        .route("/id/to_number/{string}", get(id_to_number))
         .layer(TraceLayer::new_for_http())
         .with_state(shared_state);
 
@@ -232,7 +235,6 @@ async fn node_param_load(
             .load(vec![(node_id.into(), param_id.into(), value)])?;
     Ok(Json(json!(result)))
 }
-
 async fn node_param_assign(
     Path((graph_id, node_id, param_id)): Path<(String, String, String)>,
     State(system): State<WebSystem>,
@@ -242,5 +244,13 @@ async fn node_param_assign(
         system
             .graph(graph_id.into())?
             .assign(vec![(node_id.into(), param_id.into(), value)])?;
+    Ok(Json(json!(result)))
+}
+async fn id_to_string(Path(number): Path<u64>) -> Result<Json<Value>, WebError> {
+    let result = id_number_to_string(number)?;
+    Ok(Json(json!(result)))
+}
+async fn id_to_number(Path(string): Path<String>) -> Result<Json<Value>, WebError> {
+    let result = id_string_to_number(&string)?;
     Ok(Json(json!(result)))
 }

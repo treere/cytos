@@ -1,4 +1,4 @@
-use clap::{value_parser, Arg, Command};
+use clap::{Arg, Command, value_parser};
 use cytos::loader::Registry;
 use cytos::repr::GraphRepr;
 use std::fs::File;

@@ -1,6 +1,6 @@
 use std::io::Cursor;
 
-use cytos::{loader::DynamicLoadingRegistryWrapper, props::Ownable, Prop, Result, Stepper};
+use cytos::{Prop, Result, Stepper, loader::DynamicLoadingRegistryWrapper, props::Ownable};
 use cytos_derive::CytosNode;
 use image::ImageFormat;
 use serde::{Deserialize, Serialize};
@@ -61,12 +61,13 @@ struct ImageDecoder {
 
 impl Stepper for ImageDecoder {
     fn step(&mut self) -> Result<()> {
-        match image::load_from_memory(self.frame.as_u8()) { Ok(image) => {
-            *self.decoded = Image { image };
-            Ok(())
-        } _ => {
-            Err("cannot decode image".into())
-        }}
+        match image::load_from_memory(self.frame.as_u8()) {
+            Ok(image) => {
+                *self.decoded = Image { image };
+                Ok(())
+            }
+            _ => Err("cannot decode image".into()),
+        }
     }
 }
 
