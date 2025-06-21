@@ -70,7 +70,7 @@ pub struct Graph {
 /// # Errors
 ///
 /// Will return `Err` if the `node` step returns `Err`
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[inline(never)]
 pub extern "Rust" fn trace_node_step(_node_id: u64, node: &mut Node) -> Result<()> {
     node.step()
@@ -150,7 +150,7 @@ impl Graph {
             .fold(
                 vec![],
                 |mut links: Vec<(GenericProp, Vec<(NodeId, ParamId)>)>, (prop, vals)| {
-                    if let Some((_, ref mut arr)) = links
+                    if let Some((_, arr)) = links
                         .iter_mut()
                         .find(|(key_prop, _)| key_prop.is_same(&prop))
                     {

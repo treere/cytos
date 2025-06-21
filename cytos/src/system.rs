@@ -36,7 +36,7 @@ fn create_runner(
     senders: &IndexMap<GraphId, BlockSender<InternalCommand>>,
     registry: Registry,
     requests: Vec<&SystemLink>,
-) -> Result<impl FnOnce()> {
+) -> Result<impl FnOnce() + use<>> {
     let requests = create_requests(senders, requests)?;
 
     Ok(move || {
@@ -200,15 +200,15 @@ impl Worker {
             loop {
                 self.request_values().expect("cannot request");
 
-                if let Ok(cause) = self.graph.step() {
+                match self.graph.step() { Ok(cause) => {
                     match self.loop_processing_running_message(&cause) {
                         -1 => break 'main,
                         1 => break,
                         _ => (),
                     }
-                } else {
+                } _ => {
                     break;
-                }
+                }}
             }
             trace!("graph stopping");
             self.graph.terminate().expect("cannot terminate");

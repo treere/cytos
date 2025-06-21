@@ -61,12 +61,12 @@ struct ImageDecoder {
 
 impl Stepper for ImageDecoder {
     fn step(&mut self) -> Result<()> {
-        if let Ok(image) = image::load_from_memory(self.frame.as_u8()) {
+        match image::load_from_memory(self.frame.as_u8()) { Ok(image) => {
             *self.decoded = Image { image };
             Ok(())
-        } else {
+        } _ => {
             Err("cannot decode image".into())
-        }
+        }}
     }
 }
 

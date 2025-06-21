@@ -159,12 +159,12 @@ impl<T: 'static> Prop<T> {
     ///
     /// Will return `Err` if the type is invalid
     pub fn link_value(&mut self, val: GenericProp) -> Result<()> {
-        if let Ok(v) = val.0.downcast::<UnsafeCell<T>>() {
+        match val.0.downcast::<UnsafeCell<T>>() { Ok(v) => {
             self.0 = v;
             Ok(())
-        } else {
+        } _ => {
             Err("invalid type".into())
-        }
+        }}
     }
 
     /// Convert this prop to be a generic prop
@@ -184,12 +184,12 @@ impl<T: Ownable> Prop<T> {
     ///
     /// Will return `Err` if the type is invalid
     pub fn load_owned_generic(&mut self, val: GenericOwnedProp) -> Result<()> {
-        if let Ok(v) = val.0.downcast::<T::Value>() {
+        match val.0.downcast::<T::Value>() { Ok(v) => {
             self.0 = Rc::new(UnsafeCell::new(Ownable::from_owned(&*v)));
             Ok(())
-        } else {
+        } _ => {
             Err("invalid type".into())
-        }
+        }}
     }
 
     /// Assign a `GenericOwnedProp` into `self`
