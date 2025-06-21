@@ -1,5 +1,5 @@
 uprobe:$1:trace_node_step {
-  @node[comm] = arg1;
+  @node[comm] = arg0;
   @start[comm] = nsecs;
 }
 

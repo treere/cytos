@@ -72,7 +72,8 @@ pub struct Graph {
 /// Will return `Err` if the `node` step returns `Err`
 #[unsafe(no_mangle)]
 #[inline(never)]
-pub extern "Rust" fn trace_node_step(_node_id: u64, node: &mut Node) -> Result<()> {
+pub extern "Rust" fn trace_node_step(node_id: u64, node: &mut Node) -> Result<()> {
+    std::hint::black_box(node_id);
     node.step()
 }
 
