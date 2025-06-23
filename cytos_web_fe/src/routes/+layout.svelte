@@ -7,6 +7,7 @@
 	<div>
 		<a href="/">Graph</a>
 		<a href="/map">Map</a>
+		<a href="/utils">Utils</a>
 	</div>
 	<div class="mt-8 flex-grow justify-center">
 		{@render children()}

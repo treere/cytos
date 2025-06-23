@@ -10,12 +10,12 @@ use serde::Serialize;
 use crate::loader::Registry;
 use crate::queue::BlockReceiver;
 
+use crate::queue::bounded;
+use crate::queue::unbounded;
 use crate::queue::BlockSender;
 use crate::queue::Receiver;
 use crate::queue::Sender;
 use crate::queue::SenderChunk;
-use crate::queue::bounded;
-use crate::queue::unbounded;
 use crate::repr::GraphRepr;
 use crate::repr::SystemLink;
 use crate::repr::SystemRepr;
@@ -193,7 +193,6 @@ impl Worker {
             if self.loop_processing_idle_message() < 0 {
                 break;
             }
-
             self.graph.initialize().expect("cannot initialize");
             trace!("graph starting");
 
@@ -218,7 +217,7 @@ impl Worker {
 
     fn loop_processing_idle_message(&mut self) -> i8 {
         'idle: loop {
-            if let Ok(data) = self.receiver.recv_all() {
+            if let Some(data) = self.receiver.recv_all() {
                 for (command, message) in data {
                     trace!("received command {:?}", command);
                     match command {
@@ -244,7 +243,7 @@ impl Worker {
     }
 
     fn loop_processing_running_message(&mut self, cause: &StepResult) -> i8 {
-        if let Ok(data) = self.receiver.recv_all() {
+        if let Some(data) = self.receiver.recv_all() {
             for (command, message) in data {
                 trace!("received command {:?}", command);
                 match command {

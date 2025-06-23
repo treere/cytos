@@ -71,3 +71,15 @@ export const deleteReceiver = async (source: string, target: string) => {
 	});
 	invalidate(`/api/graphs/${t.graph}/receivers`);
 };
+
+export const id2number = async (source: string) => {
+	const response = await fetch(`/api/id/to_number/${source}`);
+	const data = await response.json();
+	return data as string;
+};
+
+export const id2string = async (source: string) => {
+	const response = await fetch(`/api/id/to_string/${source}`);
+	const data = await response.json();
+	return data as string;
+};

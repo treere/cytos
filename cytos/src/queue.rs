@@ -1,7 +1,7 @@
 use super::Result;
 
 pub trait SenderChunk<T> {
-    fn recv_all(&self) -> Result<impl Iterator<Item = T> + 'static>;
+    fn recv_all(&self) -> Option<impl Iterator<Item = T> + 'static>;
 }
 
 #[cfg(feature = "crossbeam")]
@@ -32,8 +32,8 @@ mod internal {
 mod internal {
     use super::{Result, SenderChunk};
     use std::sync::{
-        Arc, Mutex,
         atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
     };
 
     pub type Sender<T> = crossbeam::channel::Sender<T>;
@@ -97,9 +97,9 @@ mod internal {
         }
     }
     impl<T: 'static> SenderChunk<T> for BlockReceiver<T> {
-        fn recv_all(&self) -> Result<impl Iterator<Item = T> + 'static> {
+        fn recv_all(&self) -> Option<impl Iterator<Item = T> + 'static> {
             if self.empty.load(Ordering::Relaxed) {
-                return Ok(vec![].into_iter());
+                return None;
             }
             let mut queue = self.queue.lock().unwrap();
             let mut result = vec![];
@@ -108,7 +108,7 @@ mod internal {
                 self.empty.store(true, Ordering::Relaxed);
                 drop(queue);
             }
-            Ok(result.into_iter())
+            Some(result.into_iter())
         }
     }
 
