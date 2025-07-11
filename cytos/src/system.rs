@@ -15,7 +15,6 @@ use crate::queue::unbounded;
 use crate::queue::BlockSender;
 use crate::queue::Receiver;
 use crate::queue::Sender;
-use crate::queue::SenderChunk;
 use crate::repr::GraphRepr;
 use crate::repr::SystemLink;
 use crate::repr::SystemRepr;
