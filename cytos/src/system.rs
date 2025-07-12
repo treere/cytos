@@ -757,14 +757,12 @@ impl Dispatcher {
     fn request_values(&mut self) -> Result<()> {
         trace!("requesting values start");
         for ((sender, nodes), internals, (message, receiver)) in &self.requests {
-            let response: Vec<_> = match sender.send((
+            sender.send((
                 Command::Param(ParamCommand::OwnedDump(nodes.clone())),
                 message.clone(),
-            )) {
-                Ok(()) => receiver.recv()?,
-                Err(_) => Err("Cannot send".into()),
-            }
-            .map(|r| match r {
+            ))?;
+
+            let response: Vec<_> = receiver.recv()?.map(|r| match r {
                 Internal::Value(_) => unreachable!(),
                 Internal::Prop(v) => v,
             })?;
