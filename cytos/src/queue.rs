@@ -106,8 +106,8 @@ mod tests {
     #[test]
     fn test_empty_queue() {
         let (_sender, mut receiver) = unbounded::<i32>();
-        let messages = receiver.recv_all().unwrap().collect::<Vec<_>>();
-        assert_eq!(messages, Vec::<i32>::new());
+        let messages = receiver.recv_all();
+        assert!(messages.is_none());
     }
 
     #[test]
@@ -117,11 +117,11 @@ mod tests {
         sender.send(1).unwrap();
         sender.send(2).unwrap();
 
-        let messages1 = receiver.recv_all().unwrap().collect::<Vec<_>>();
-        assert_eq!(messages1, vec![1, 2]);
+        let messages = receiver.recv_all().unwrap().collect::<Vec<_>>();
+        assert_eq!(messages, vec![1, 2]);
 
-        let messages2 = receiver.recv_all().unwrap().collect::<Vec<_>>();
-        assert_eq!(messages2, Vec::<i32>::new());
+        let messages = receiver.recv_all();
+        assert!(messages.is_none());
     }
 
     #[test]
@@ -175,18 +175,18 @@ mod tests {
             }));
         }
 
-        // Spawn receiver threads
-        receiver_handles.push(thread::spawn(move || {
-            let messages = receiver.recv_all().unwrap().collect::<Vec<_>>();
-            assert_eq!(messages.len(), 100);
-            let messages = receiver.recv_all().unwrap().collect::<Vec<_>>();
-            assert_eq!(messages.len(), 0);
-        }));
-
         // Join all sender threads
         for handle in sender_handles {
             handle.join().unwrap();
         }
+
+        // Spawn receiver threads
+        receiver_handles.push(thread::spawn(move || {
+            let messages = receiver.recv_all().unwrap().collect::<Vec<_>>();
+            assert_eq!(messages.len(), 100);
+            let messages = receiver.recv_all();
+            assert!(messages.is_none());
+        }));
 
         // Join all receiver threads
         for handle in receiver_handles {
