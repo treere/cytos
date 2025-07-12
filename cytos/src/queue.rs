@@ -93,7 +93,7 @@ mod tests {
 
     #[test]
     fn test_unbounded_queue() {
-        let (sender, receiver) = unbounded::<i32>();
+        let (sender, mut receiver) = unbounded::<i32>();
 
         sender.send(1).unwrap();
         sender.send(2).unwrap();
@@ -105,14 +105,14 @@ mod tests {
 
     #[test]
     fn test_empty_queue() {
-        let (_sender, receiver) = unbounded::<i32>();
+        let (_sender, mut receiver) = unbounded::<i32>();
         let messages = receiver.recv_all().unwrap().collect::<Vec<_>>();
         assert_eq!(messages, Vec::<i32>::new());
     }
 
     #[test]
     fn test_multiple_consume() {
-        let (sender, receiver) = unbounded::<i32>();
+        let (sender, mut receiver) = unbounded::<i32>();
 
         sender.send(1).unwrap();
         sender.send(2).unwrap();
@@ -126,7 +126,7 @@ mod tests {
 
     #[test]
     fn test_concurrent_push() {
-        let (sender, receiver) = unbounded::<i32>();
+        let (sender, mut receiver) = unbounded::<i32>();
         let num_threads = 10;
         let messages_per_thread = 100;
 
@@ -157,7 +157,7 @@ mod tests {
 
     #[test]
     fn test_concurrent_push_consume() {
-        let (sender, receiver) = unbounded::<i32>();
+        let (sender, mut receiver) = unbounded::<i32>();
         let num_threads = 5;
         let messages_per_thread = 20;
 
