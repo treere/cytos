@@ -45,7 +45,7 @@ impl<T> BlockSender<T> {
 
     pub fn send(&self, message: T) -> Result<()> {
         self.queue.lock().map_err(|_| "cannot lock")?.push(message);
-        self.empty.store(false, Ordering::Relaxed);
+        self.empty.store(false, Ordering::Release);
 
         Ok(())
     }
@@ -72,7 +72,7 @@ impl<T> BlockReceiver<T> {
 }
 impl<T: 'static> BlockReceiver<T> {
     pub fn recv_all(&mut self) -> Option<impl Iterator<Item = T> + use<'_, T>> {
-        if self.empty.load(Ordering::Relaxed) {
+        if self.empty.load(Ordering::Acquire) {
             return None;
         }
         let mut queue = self.queue.lock().unwrap();
