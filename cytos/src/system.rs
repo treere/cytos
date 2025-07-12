@@ -755,29 +755,28 @@ impl Dispatcher {
     }
 
     fn request_values(&mut self) -> Result<()> {
-        if !self.requests.is_empty() {
-            trace!("requesting values start");
-            for ((sender, nodes), internals, (message, receiver)) in &self.requests {
-                let response: Vec<_> = match sender.send((
-                    Command::Param(ParamCommand::OwnedDump(nodes.clone())),
-                    message.clone(),
-                )) {
-                    Ok(()) => receiver.recv()?,
-                    Err(_) => Err("Cannot send".into()),
-                }
-                .map(|r| match r {
-                    Internal::Value(_) => unreachable!(),
-                    Internal::Prop(v) => v,
-                })?;
-
-                for ((node_id, param_id), response) in internals.iter().zip(response) {
-                    self.graph
-                        .get_node_mut(*node_id)
-                        .and_then(|n| n.assign_owned(*param_id, response))?;
-                }
+        trace!("requesting values start");
+        for ((sender, nodes), internals, (message, receiver)) in &self.requests {
+            let response: Vec<_> = match sender.send((
+                Command::Param(ParamCommand::OwnedDump(nodes.clone())),
+                message.clone(),
+            )) {
+                Ok(()) => receiver.recv()?,
+                Err(_) => Err("Cannot send".into()),
             }
-            trace!("requesting values end");
+            .map(|r| match r {
+                Internal::Value(_) => unreachable!(),
+                Internal::Prop(v) => v,
+            })?;
+
+            for ((node_id, param_id), response) in internals.iter().zip(response) {
+                self.graph
+                    .get_node_mut(*node_id)
+                    .and_then(|n| n.assign_owned(*param_id, response))?;
+            }
         }
+        trace!("requesting values end");
+
         Ok(())
     }
 }
