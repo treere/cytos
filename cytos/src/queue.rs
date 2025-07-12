@@ -58,26 +58,30 @@ impl<T> BlockSender<T> {
 pub struct BlockReceiver<T> {
     queue: Arc<Mutex<Vec<T>>>,
     empty: Arc<AtomicBool>,
+    buf: Vec<T>,
 }
 
 impl<T> BlockReceiver<T> {
     const fn new(queue: Arc<Mutex<Vec<T>>>, empty: Arc<AtomicBool>) -> Self {
-        Self { queue, empty }
+        Self {
+            queue,
+            empty,
+            buf: vec![],
+        }
     }
 }
 impl<T: 'static> BlockReceiver<T> {
-    pub fn recv_all(&self) -> Option<impl Iterator<Item = T> + 'static> {
+    pub fn recv_all(&mut self) -> Option<impl Iterator<Item = T> + use<'_, T>> {
         if self.empty.load(Ordering::Relaxed) {
             return None;
         }
         let mut queue = self.queue.lock().unwrap();
-        let mut result = vec![];
-        if !queue.is_empty() {
-            std::mem::swap(&mut result, &mut *queue);
-            self.empty.store(true, Ordering::Relaxed);
-            drop(queue);
-        }
-        Some(result.into_iter())
+
+        std::mem::swap(&mut self.buf, &mut *queue);
+        self.empty.store(true, Ordering::Relaxed);
+        drop(queue);
+
+        Some(self.buf.drain(..))
     }
 }
 
