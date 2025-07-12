@@ -68,7 +68,7 @@ fn create_requests(
             senders
                 .get(&g)
                 .cloned()
-                .map(|sender| ((sender, sources), destinations))
+                .map(|sender| ((sender, sources), destinations, Response::new()))
         })
         .collect::<Option<Vec<_>>>()
         .ok_or_else(|| "missin sender".into())
@@ -563,7 +563,11 @@ type ExternalDestination = (BlockSender<InternalCommand>, Destination);
 type ExternalDestinations = (BlockSender<InternalCommand>, Vec<Destination>);
 
 /// Link between an external and an internal resource
-type LinksToExternal = Vec<(ExternalDestinations, Vec<Destination>)>;
+type LinksToExternal = Vec<(
+    ExternalDestinations,
+    Vec<Destination>,
+    (Response, Receiver<ResponseResult>),
+)>;
 
 struct Dispatcher {
     /// The graph
@@ -643,7 +647,7 @@ impl Dispatcher {
                 let senders: Vec<_> = self
                     .requests
                     .iter()
-                    .flat_map(|((s, v1), v2)| {
+                    .flat_map(|((s, v1), v2, _)| {
                         let g = senders
                             .iter()
                             .find(|(_, s2)| s.same_channel(s2))
@@ -663,10 +667,10 @@ impl Dispatcher {
                 (external_sender, external_destination),
                 destination,
             )) => {
-                if let Some(((_, external), internal)) = self
+                if let Some(((_, external), internal, _)) = self
                     .requests
                     .iter_mut()
-                    .find(|((sender, _), _)| external_sender.same_channel(sender))
+                    .find(|((sender, _), _, _)| external_sender.same_channel(sender))
                 {
                     external.push(external_destination);
                     internal.push(destination);
@@ -674,6 +678,7 @@ impl Dispatcher {
                     self.requests.push((
                         (external_sender, vec![external_destination]),
                         vec![destination],
+                        Response::new(),
                     ));
                 }
                 message.send_value(Ok(()));
@@ -682,16 +687,17 @@ impl Dispatcher {
                 (external_sender, external_destination),
                 destination,
             )) => {
-                if let Some(((_, external), internal)) = self
+                if let Some(((_, external), internal, _)) = self
                     .requests
                     .iter_mut()
-                    .find(|((sender, _), _)| external_sender.same_channel(sender))
+                    .find(|((sender, _), _, _)| external_sender.same_channel(sender))
                 {
                     external.retain(|n| *n != external_destination);
                     internal.retain(|n| *n != destination);
                 }
 
-                self.requests.retain(|(_, internal)| !internal.is_empty());
+                self.requests
+                    .retain(|(_, internal, _)| !internal.is_empty());
                 message.send_value(Ok(()));
             }
         }
@@ -751,8 +757,7 @@ impl Dispatcher {
     fn request_values(&mut self) -> Result<()> {
         if !self.requests.is_empty() {
             trace!("requesting values start");
-            let (message, receiver) = Response::new();
-            for ((sender, nodes), internals) in &self.requests {
+            for ((sender, nodes), internals, (message, receiver)) in &self.requests {
                 let response: Vec<_> = match sender.send((
                     Command::Param(ParamCommand::OwnedDump(nodes.clone())),
                     message.clone(),
