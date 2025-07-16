@@ -5,7 +5,7 @@ use std::sync::{
     Arc, Condvar, Mutex,
 };
 
-pub fn bounded<T>(_: usize) -> (Sender<T>, Receiver<T>) {
+pub fn bounded<T>() -> (Sender<T>, Receiver<T>) {
     let value = Arc::new((Mutex::new(None), Condvar::new()));
 
     (Sender(value.clone()), Receiver(value))
@@ -50,7 +50,7 @@ mod bounded_tests {
 
     #[test]
     fn it_works() -> Result<()> {
-        let (tx, rx) = bounded(1);
+        let (tx, rx) = bounded();
 
         tx.send(10)?;
         let value = rx.recv()?;
@@ -62,7 +62,7 @@ mod bounded_tests {
 
     #[test]
     fn it_works_with_threads() -> Result<()> {
-        let (tx, rx) = bounded(1);
+        let (tx, rx) = bounded();
 
         let tx_thread = tx.clone();
         thread::spawn(move || {

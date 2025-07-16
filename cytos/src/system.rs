@@ -218,10 +218,18 @@ impl Worker {
                 for (command, message) in data {
                     trace!("received command {:?}", command);
                     match command {
-                        Command::State(StateCommand::Kill) => return -1,
-                        Command::State(StateCommand::Start) => break 'idle,
+                        Command::State(StateCommand::Kill) => {
+                            message.send_value(Ok(""));
+                            return -1;
+                        }
+                        Command::State(StateCommand::Start) => {
+                            message.send_value(Ok(""));
+                            break 'idle;
+                        }
                         Command::State(StateCommand::Status) => message.send_value(Ok("Idle")),
-                        Command::State(StateCommand::Stop) => (),
+                        Command::State(StateCommand::Stop) => {
+                            message.send_value(Ok(""));
+                        }
                         Command::Node(node_command) => {
                             self.dispatcher
                                 .dispatch_node_command(&node_command, message);
@@ -250,10 +258,18 @@ impl Worker {
             for (command, message) in data {
                 trace!("received command {:?}", command);
                 match command {
-                    Command::State(StateCommand::Kill) => return -1,
-                    Command::State(StateCommand::Stop) => return 1,
+                    Command::State(StateCommand::Kill) => {
+                        message.send_value(Ok(""));
+                        return -1;
+                    }
+                    Command::State(StateCommand::Stop) => {
+                        message.send_value(Ok(""));
+                        return 1;
+                    }
                     Command::State(StateCommand::Status) => message.send_value(Ok("Running")),
-                    Command::State(StateCommand::Start) => (),
+                    Command::State(StateCommand::Start) => {
+                        message.send_value(Ok(""));
+                    }
                     Command::Node(node_command) => {
                         self.dispatcher
                             .dispatch_node_command(&node_command, message);
@@ -529,7 +545,7 @@ pub struct Response {
 impl Response {
     /// Creates a message and returns the received where it is possible to listen to the response
     fn new() -> (Self, Receiver<ResponseResult>) {
-        let (sender, receiver) = bounded::<ResponseResult>(0);
+        let (sender, receiver) = bounded::<ResponseResult>();
 
         (Self { sender }, receiver)
     }
