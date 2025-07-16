@@ -562,7 +562,7 @@ type ExternalDestination = (BlockSender<InternalCommand>, Destination);
 /// External addresses
 type ExternalDestinations = (BlockSender<InternalCommand>, Vec<Destination>);
 
-/// Link between an external and an internal resource
+/// Link between an external and an internal resourcev
 type LinksToExternal = Vec<(
     ExternalDestinations,
     Vec<Destination>,

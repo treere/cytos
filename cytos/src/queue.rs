@@ -2,13 +2,80 @@ use super::Result;
 
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    Arc, Mutex,
+    Arc, Condvar, Mutex,
 };
 
-pub type Sender<T> = crossbeam::channel::Sender<T>;
-pub type Receiver<T> = crossbeam::channel::Receiver<T>;
+pub fn bounded<T>(_: usize) -> (Sender<T>, Receiver<T>) {
+    let value = Arc::new((Mutex::new(None), Condvar::new()));
 
-pub use crossbeam::channel::bounded;
+    (Sender(value.clone()), Receiver(value))
+}
+
+pub struct Sender<T>(Arc<(Mutex<Option<T>>, Condvar)>);
+
+impl<T> Clone for Sender<T> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl<T> Sender<T> {
+    pub fn send(&self, value: T) -> Result<()> {
+        let (lock, cvar) = &*self.0;
+        let _ = lock.lock().map_err(|_| "cannot lock")?.insert(value);
+        cvar.notify_one();
+        Ok(())
+    }
+}
+
+pub struct Receiver<T>(Arc<(Mutex<Option<T>>, Condvar)>);
+
+impl<T> Receiver<T> {
+    pub fn recv(&self) -> Result<T> {
+        let (lock, cvar) = &*self.0;
+        let mut value = lock.lock().map_err(|_| "cannot lock")?;
+        loop {
+            match value.take() {
+                None => value = cvar.wait(value).map_err(|_| "cannot lock cvar")?,
+                Some(v) => return Ok(v),
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod bounded_tests {
+    use super::*;
+    use std::thread;
+
+    #[test]
+    fn it_works() -> Result<()> {
+        let (tx, rx) = bounded(1);
+
+        tx.send(10)?;
+        let value = rx.recv()?;
+
+        assert_eq!(value, 10);
+
+        Ok(())
+    }
+
+    #[test]
+    fn it_works_with_threads() -> Result<()> {
+        let (tx, rx) = bounded(1);
+
+        let tx_thread = tx.clone();
+        thread::spawn(move || {
+            tx_thread.send(10).unwrap();
+        });
+
+        let value = rx.recv()?;
+
+        assert_eq!(value, 10);
+
+        Ok(())
+    }
+}
 
 pub fn unbounded<T>() -> (BlockSender<T>, BlockReceiver<T>) {
     let queue = Arc::new(Mutex::new(Vec::new()));
