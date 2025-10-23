@@ -16,6 +16,7 @@ use crate::queue::BlockSender;
 use crate::queue::Receiver;
 use crate::queue::Sender;
 use crate::repr::GraphRepr;
+use crate::repr::LinkKind;
 use crate::repr::SystemLink;
 use crate::repr::SystemRepr;
 
@@ -49,12 +50,13 @@ fn create_requests(
     senders: &IndexMap<GraphId, BlockSender<InternalCommand>>,
     mut requests: Vec<&SystemLink>,
 ) -> Result<LinksToExternal> {
-    requests.sort_by_key(|x| x.src.0);
+    requests.sort_by_key(|x| (x.src.0, &x.kind));
 
     requests[..]
-        .chunk_by(|a, b| a.src.0 == b.src.0)
+        .chunk_by(|a, b| a.src.0 == b.src.0 && a.kind == b.kind)
         .map(|requests| {
-            let g = requests[0].src.0;
+            let graph_id = requests[0].src.0;
+            let kind = requests[0].kind.clone();
             let (sources, destinations) = requests
                 .iter()
                 .map(|request| {
@@ -65,9 +67,9 @@ fn create_requests(
                 })
                 .unzip();
 
-            senders.get(&g).cloned().map(|sender| {
+            senders.get(&graph_id).cloned().map(|sender| {
                 let (message, receiver) = Response::new();
-                ((sender, sources, message), (destinations, receiver))
+                (kind, (sender, sources, message), (destinations, receiver))
             })
         })
         .collect::<Option<Vec<_>>>()
@@ -577,6 +579,7 @@ type ExternalDestination = (BlockSender<InternalCommand>, Destination);
 
 /// Link between an external and an internal resourcev
 type LinksToExternal = Vec<(
+    LinkKind,
     (BlockSender<InternalCommand>, Vec<Destination>, Response),
     (Vec<Destination>, Receiver<ResponseResult>),
 )>;
@@ -659,7 +662,7 @@ impl Dispatcher {
                 let senders: Vec<_> = self
                     .requests
                     .iter()
-                    .flat_map(|((s, v1, _), (v2, _))| {
+                    .flat_map(|(_kind, (s, v1, _), (v2, _))| {
                         let g = senders
                             .iter()
                             .find(|(_, s2)| s.same_channel(s2))
@@ -679,16 +682,17 @@ impl Dispatcher {
                 (external_sender, external_destination),
                 destination,
             )) => {
-                if let Some(((_, external, _), (internal, _))) = self
+                if let Some((_kind, (_, external, _), (internal, _))) = self
                     .requests
                     .iter_mut()
-                    .find(|((sender, _, _), _)| external_sender.same_channel(sender))
+                    .find(|(_kind, (sender, _, _), _)| external_sender.same_channel(sender))
                 {
                     external.push(external_destination);
                     internal.push(destination);
                 } else {
                     let (message, receiver) = Response::new();
                     self.requests.push((
+                        LinkKind::Wait,
                         (external_sender, vec![external_destination], message),
                         (vec![destination], receiver),
                     ));
@@ -699,17 +703,17 @@ impl Dispatcher {
                 (external_sender, external_destination),
                 destination,
             )) => {
-                if let Some(((_, external, _), (internal, _))) = self
+                if let Some((_kind, (_, external, _), (internal, _))) = self
                     .requests
                     .iter_mut()
-                    .find(|((sender, _, _), _)| external_sender.same_channel(sender))
+                    .find(|(_kind, (sender, _, _), _)| external_sender.same_channel(sender))
                 {
                     external.retain(|n| *n != external_destination);
                     internal.retain(|n| *n != destination);
                 }
 
                 self.requests
-                    .retain(|(_, (internal, _))| !internal.is_empty());
+                    .retain(|(_kind, _, (internal, _))| !internal.is_empty());
                 message.send_value(Ok(()));
             }
         }
@@ -768,13 +772,13 @@ impl Dispatcher {
 
     fn request_values(&mut self) -> Result<()> {
         trace!("requesting values start");
-        for ((sender, nodes, message), _) in &self.requests {
+        for (_kind, (sender, nodes, message), _) in &self.requests {
             sender.send((
                 Command::Param(ParamCommand::OwnedDump(nodes.clone())),
                 message.clone(),
             ))?;
         }
-        for (_, (internals, receiver)) in &self.requests {
+        for (_kind, _, (internals, receiver)) in &self.requests {
             let response: Vec<_> = receiver.recv()?.map(|r| match r {
                 Internal::Value(_) => unreachable!(),
                 Internal::Prop(v) => v,

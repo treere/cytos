@@ -103,4 +103,22 @@ pub struct SystemLink {
 
     /// Destination node
     pub dst: (GraphId, NodeId, ParamId),
+
+    #[serde(default = "LinkKind::wait")]
+    pub kind: LinkKind,
+}
+
+/// Represents the type of link between system nodes
+#[derive(Deserialize, Debug, Clone, Ord, Eq, PartialEq, PartialOrd)]
+pub enum LinkKind {
+    /// Waits the value
+    Wait,
+    /// Continue without waiting the value
+    Continue,
+}
+
+impl LinkKind {
+    const fn wait() -> Self {
+        Self::Wait
+    }
 }
