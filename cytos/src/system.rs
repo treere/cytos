@@ -65,10 +65,10 @@ fn create_requests(
                 })
                 .unzip();
 
-            senders
-                .get(&g)
-                .cloned()
-                .map(|sender| ((sender, sources), destinations, Response::new()))
+            senders.get(&g).cloned().map(|sender| {
+                let (message, receiver) = Response::new();
+                ((sender, sources, message), (destinations, receiver))
+            })
         })
         .collect::<Option<Vec<_>>>()
         .ok_or_else(|| "missin sender".into())
@@ -575,14 +575,10 @@ type Destination = (NodeId, ParamId);
 /// External address
 type ExternalDestination = (BlockSender<InternalCommand>, Destination);
 
-/// External addresses
-type ExternalDestinations = (BlockSender<InternalCommand>, Vec<Destination>);
-
 /// Link between an external and an internal resourcev
 type LinksToExternal = Vec<(
-    ExternalDestinations,
-    Vec<Destination>,
-    (Response, Receiver<ResponseResult>),
+    (BlockSender<InternalCommand>, Vec<Destination>, Response),
+    (Vec<Destination>, Receiver<ResponseResult>),
 )>;
 
 struct Dispatcher {
@@ -663,7 +659,7 @@ impl Dispatcher {
                 let senders: Vec<_> = self
                     .requests
                     .iter()
-                    .flat_map(|((s, v1), v2, _)| {
+                    .flat_map(|((s, v1, _), (v2, _))| {
                         let g = senders
                             .iter()
                             .find(|(_, s2)| s.same_channel(s2))
@@ -683,18 +679,18 @@ impl Dispatcher {
                 (external_sender, external_destination),
                 destination,
             )) => {
-                if let Some(((_, external), internal, _)) = self
+                if let Some(((_, external, _), (internal, _))) = self
                     .requests
                     .iter_mut()
-                    .find(|((sender, _), _, _)| external_sender.same_channel(sender))
+                    .find(|((sender, _, _), _)| external_sender.same_channel(sender))
                 {
                     external.push(external_destination);
                     internal.push(destination);
                 } else {
+                    let (message, receiver) = Response::new();
                     self.requests.push((
-                        (external_sender, vec![external_destination]),
-                        vec![destination],
-                        Response::new(),
+                        (external_sender, vec![external_destination], message),
+                        (vec![destination], receiver),
                     ));
                 }
                 message.send_value(Ok(()));
@@ -703,17 +699,17 @@ impl Dispatcher {
                 (external_sender, external_destination),
                 destination,
             )) => {
-                if let Some(((_, external), internal, _)) = self
+                if let Some(((_, external, _), (internal, _))) = self
                     .requests
                     .iter_mut()
-                    .find(|((sender, _), _, _)| external_sender.same_channel(sender))
+                    .find(|((sender, _, _), _)| external_sender.same_channel(sender))
                 {
                     external.retain(|n| *n != external_destination);
                     internal.retain(|n| *n != destination);
                 }
 
                 self.requests
-                    .retain(|(_, internal, _)| !internal.is_empty());
+                    .retain(|(_, (internal, _))| !internal.is_empty());
                 message.send_value(Ok(()));
             }
         }
@@ -772,12 +768,13 @@ impl Dispatcher {
 
     fn request_values(&mut self) -> Result<()> {
         trace!("requesting values start");
-        for ((sender, nodes), internals, (message, receiver)) in &self.requests {
+        for ((sender, nodes, message), _) in &self.requests {
             sender.send((
                 Command::Param(ParamCommand::OwnedDump(nodes.clone())),
                 message.clone(),
             ))?;
-
+        }
+        for (_, (internals, receiver)) in &self.requests {
             let response: Vec<_> = receiver.recv()?.map(|r| match r {
                 Internal::Value(_) => unreachable!(),
                 Internal::Prop(v) => v,
