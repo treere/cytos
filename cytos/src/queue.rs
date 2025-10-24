@@ -41,6 +41,13 @@ impl<T> Receiver<T> {
             }
         }
     }
+
+    pub fn try_recv(&self) -> Result<Option<T>> {
+        let (lock, _cvar) = &*self.0;
+        let mut value = lock.lock().map_err(|_| "cannot lock")?;
+
+        Ok(value.take())
+    }
 }
 
 #[cfg(test)]
@@ -56,6 +63,23 @@ mod bounded_tests {
         let value = rx.recv()?;
 
         assert_eq!(value, 10);
+
+        Ok(())
+    }
+
+    #[test]
+    fn it_try_works() -> Result<()> {
+        let (tx, rx) = bounded();
+
+        let value = rx.try_recv()?;
+        assert_eq!(value, None);
+        tx.send(10)?;
+
+        let value = rx.try_recv()?;
+        assert_eq!(value, Some(10));
+
+        let value = rx.try_recv()?;
+        assert_eq!(value, None);
 
         Ok(())
     }
