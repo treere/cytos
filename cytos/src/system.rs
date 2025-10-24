@@ -579,8 +579,12 @@ type ExternalDestination = (BlockSender<InternalCommand>, Destination);
 
 struct LinkToExternal {
     kind: LinkKind,
-    sender: (BlockSender<InternalCommand>, Vec<Destination>, Response),
-    receiver: (Vec<Destination>, Receiver<ResponseResult>),
+    sender: BlockSender<InternalCommand>,
+    src: Vec<Destination>,
+    dst: Vec<Destination>,
+    response: Response,
+    receiver: Receiver<ResponseResult>,
+    requested: bool,
 }
 
 impl LinkToExternal {
@@ -594,48 +598,67 @@ impl LinkToExternal {
 
         Self {
             kind,
-            sender: (external_sender, external_destinations, message),
-            receiver: (destinations, receiver),
+            sender: external_sender,
+            src: external_destinations,
+            dst: destinations,
+            response: message,
+            receiver,
+            requested: false,
         }
     }
     fn same_sender(&self, external_sender: &BlockSender<InternalCommand>) -> bool {
-        self.sender.0.same_channel(external_sender)
+        self.sender.same_channel(external_sender)
     }
 
     fn add_destination(&mut self, external_destination: Destination, destination: Destination) {
-        self.sender.1.push(external_destination);
-        self.receiver.0.push(destination);
+        self.src.push(external_destination);
+        self.dst.push(destination);
     }
 
     fn remove_destination(&mut self, external_destination: Destination, destination: Destination) {
-        self.sender.1.retain(|n| *n != external_destination);
-        self.receiver.0.retain(|n| *n != destination);
+        self.src.retain(|n| *n != external_destination);
+        self.dst.retain(|n| *n != destination);
     }
 
     const fn is_empty(&self) -> bool {
-        self.receiver.0.is_empty()
+        self.dst.is_empty()
     }
 
-    fn send_request(&self) -> Result<()> {
-        debug_assert!(self.kind == LinkKind::Wait);
-        let (sender, nodes, message) = &self.sender;
-        sender.send((
-            Command::Param(ParamCommand::OwnedDump(nodes.clone())),
-            message.clone(),
-        ))
+    fn send_request(&mut self) -> Result<()> {
+        if self.requested {
+            Ok(())
+        } else {
+            self.sender
+                .send((
+                    Command::Param(ParamCommand::OwnedDump(self.src.clone())),
+                    self.response.clone(),
+                ))
+                .inspect(|()| self.requested = true)
+        }
     }
 
-    fn iter_response(&self) -> Result<impl Iterator<Item = (&Destination, GenericOwnedProp)>> {
-        let response: Vec<_> = self.receiver.1.recv()?.map(|r| match r {
-            Internal::Value(_) => unreachable!(),
-            Internal::Prop(v) => v,
-        })?;
+    fn iter_response(&mut self) -> Result<impl Iterator<Item = (&Destination, GenericOwnedProp)>> {
+        let response = if self.kind == LinkKind::Wait {
+            self.requested = false;
+            self.receiver.recv()?.map(|r| match r {
+                Internal::Value(_) => unreachable!(),
+                Internal::Prop(v) => v,
+            })?
+        } else if let Some(p) = self.receiver.try_recv()? {
+            self.requested = false;
+            match p? {
+                Internal::Value(_) => unreachable!(),
+                Internal::Prop(v) => v,
+            }
+        } else {
+            vec![]
+        };
 
-        Ok(self.receiver.0.iter().zip(response))
+        Ok(self.dst.iter().zip(response))
     }
 
     fn iter_destinations(&self) -> impl Iterator<Item = (&Destination, &Destination)> {
-        self.sender.1.iter().zip(self.receiver.0.iter())
+        self.src.iter().zip(self.dst.iter())
     }
 }
 
@@ -827,10 +850,10 @@ impl Dispatcher {
 
     fn request_values(&mut self) -> Result<()> {
         trace!("requesting values start");
-        for link in &self.requests {
+        for link in &mut self.requests {
             link.send_request()?;
         }
-        for link in &self.requests {
+        for link in &mut self.requests {
             for ((node_id, param_id), response) in link.iter_response()? {
                 self.graph
                     .get_node_mut(*node_id)
