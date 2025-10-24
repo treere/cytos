@@ -69,7 +69,11 @@ fn create_requests(
 
             senders.get(&graph_id).cloned().map(|sender| {
                 let (message, receiver) = Response::new();
-                (kind, (sender, sources, message), (destinations, receiver))
+                LinkToExternal {
+                    kind,
+                    sender: (sender, sources, message),
+                    receiver: (destinations, receiver),
+                }
             })
         })
         .collect::<Option<Vec<_>>>()
@@ -577,12 +581,14 @@ type Destination = (NodeId, ParamId);
 /// External address
 type ExternalDestination = (BlockSender<InternalCommand>, Destination);
 
+struct LinkToExternal {
+    kind: LinkKind,
+    sender: (BlockSender<InternalCommand>, Vec<Destination>, Response),
+    receiver: (Vec<Destination>, Receiver<ResponseResult>),
+}
+
 /// Link between an external and an internal resourcev
-type LinksToExternal = Vec<(
-    LinkKind,
-    (BlockSender<InternalCommand>, Vec<Destination>, Response),
-    (Vec<Destination>, Receiver<ResponseResult>),
-)>;
+type LinksToExternal = Vec<LinkToExternal>;
 
 struct Dispatcher {
     /// The graph
@@ -662,18 +668,24 @@ impl Dispatcher {
                 let senders: Vec<_> = self
                     .requests
                     .iter()
-                    .flat_map(|(_kind, (s, v1, _), (v2, _))| {
-                        let g = senders
-                            .iter()
-                            .find(|(_, s2)| s.same_channel(s2))
-                            .map(|(g, _)| *g)
-                            .unwrap();
+                    .flat_map(
+                        |LinkToExternal {
+                             kind: _kind,
+                             sender: (s, v1, _),
+                             receiver: (v2, _),
+                         }| {
+                            let g = senders
+                                .iter()
+                                .find(|(_, s2)| s.same_channel(s2))
+                                .map(|(g, _)| *g)
+                                .unwrap();
 
-                        v1.iter()
-                            .zip(v2.iter())
-                            .map(|((n, p), (n2, p2))| ((g, *n, *p), (*n2, *p2)))
-                            .collect::<Vec<_>>()
-                    })
+                            v1.iter()
+                                .zip(v2.iter())
+                                .map(|((n, p), (n2, p2))| ((g, *n, *p), (*n2, *p2)))
+                                .collect::<Vec<_>>()
+                        },
+                    )
                     .collect();
                 message.send_value(Ok(senders));
             }
@@ -682,20 +694,26 @@ impl Dispatcher {
                 (external_sender, external_destination),
                 destination,
             )) => {
-                if let Some((_kind, (_, external, _), (internal, _))) = self
-                    .requests
-                    .iter_mut()
-                    .find(|(_kind, (sender, _, _), _)| external_sender.same_channel(sender))
-                {
+                if let Some(LinkToExternal {
+                    kind: _kind,
+                    sender: (_, external, _),
+                    receiver: (internal, _),
+                }) = self.requests.iter_mut().find(
+                    |LinkToExternal {
+                         kind: _kind,
+                         sender: (sender, _, _),
+                         receiver: _,
+                     }| external_sender.same_channel(sender),
+                ) {
                     external.push(external_destination);
                     internal.push(destination);
                 } else {
                     let (message, receiver) = Response::new();
-                    self.requests.push((
-                        LinkKind::Wait,
-                        (external_sender, vec![external_destination], message),
-                        (vec![destination], receiver),
-                    ));
+                    self.requests.push(LinkToExternal {
+                        kind: LinkKind::Wait,
+                        sender: (external_sender, vec![external_destination], message),
+                        receiver: (vec![destination], receiver),
+                    });
                 }
                 message.send_value(Ok(()));
             }
@@ -703,17 +721,28 @@ impl Dispatcher {
                 (external_sender, external_destination),
                 destination,
             )) => {
-                if let Some((_kind, (_, external, _), (internal, _))) = self
-                    .requests
-                    .iter_mut()
-                    .find(|(_kind, (sender, _, _), _)| external_sender.same_channel(sender))
-                {
+                if let Some(LinkToExternal {
+                    kind: _kind,
+                    sender: (_, external, _),
+                    receiver: (internal, _),
+                }) = self.requests.iter_mut().find(
+                    |LinkToExternal {
+                         kind: _kind,
+                         sender: (sender, _, _),
+                         receiver: _,
+                     }| external_sender.same_channel(sender),
+                ) {
                     external.retain(|n| *n != external_destination);
                     internal.retain(|n| *n != destination);
                 }
 
-                self.requests
-                    .retain(|(_kind, _, (internal, _))| !internal.is_empty());
+                self.requests.retain(
+                    |LinkToExternal {
+                         kind: _kind,
+                         sender: _,
+                         receiver: (internal, _),
+                     }| !internal.is_empty(),
+                );
                 message.send_value(Ok(()));
             }
         }
@@ -772,13 +801,23 @@ impl Dispatcher {
 
     fn request_values(&mut self) -> Result<()> {
         trace!("requesting values start");
-        for (_kind, (sender, nodes, message), _) in &self.requests {
+        for LinkToExternal {
+            kind: _kind,
+            sender: (sender, nodes, message),
+            receiver: _,
+        } in &self.requests
+        {
             sender.send((
                 Command::Param(ParamCommand::OwnedDump(nodes.clone())),
                 message.clone(),
             ))?;
         }
-        for (_kind, _, (internals, receiver)) in &self.requests {
+        for LinkToExternal {
+            kind: _kind,
+            sender: _,
+            receiver: (internals, receiver),
+        } in &self.requests
+        {
             let response: Vec<_> = receiver.recv()?.map(|r| match r {
                 Internal::Value(_) => unreachable!(),
                 Internal::Prop(v) => v,
