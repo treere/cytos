@@ -1,5 +1,5 @@
 use crate::imageio::Image;
-use cytos::{Prop, Result, Stepper, loader::DynamicLoadingRegistryWrapper, props::Ownable};
+use cytos::{loader::DynamicLoadingRegistryWrapper, props::Ownable, Prop, Result, Stepper};
 use cytos_derive::CytosNode;
 use image::DynamicImage;
 use serde::{Deserialize, Serialize};
@@ -132,8 +132,9 @@ impl Stepper for Resize {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Default, Clone, Copy, Debug, PartialEq, Hash, Serialize, Deserialize)]
 enum FilterTypeDef {
+    #[default]
     /// Nearest Neighbor
     Nearest,
 
@@ -148,12 +149,6 @@ enum FilterTypeDef {
 
     /// Lanczos with window 3
     Lanczos3,
-}
-
-impl Default for FilterTypeDef {
-    fn default() -> Self {
-        Self::Nearest
-    }
 }
 
 impl Ownable for FilterTypeDef {

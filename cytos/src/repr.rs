@@ -52,7 +52,7 @@ pub struct InternalNodeRepr {
 }
 
 /// Graph behaviour on node failure
-#[derive(Debug, Deserialize)]
+#[derive(Default, Debug, Deserialize)]
 pub enum OnError {
     /// Skip this processing
     Skip,
@@ -61,13 +61,8 @@ pub enum OnError {
     Continue,
 
     /// Forward the error
+    #[default]
     Fail,
-}
-
-impl Default for OnError {
-    fn default() -> Self {
-        Self::Fail
-    }
 }
 
 /// `SystemRepr`
