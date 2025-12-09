@@ -8,10 +8,10 @@ use crate::types::Frame;
 
 #[derive(CytosNode, Default)]
 struct File {
-    #[input]
+    #[cytos(input)]
     filename: Prop<String>,
 
-    #[output]
+    #[cytos(output)]
     frame: Prop<Frame>,
 }
 
@@ -37,14 +37,14 @@ impl Stepper for File {
 
 #[derive(CytosNode)]
 struct Rscam {
-    #[input]
+    #[cytos(input)]
     filename: Prop<String>,
-    #[input]
+    #[cytos(input)]
     interval: Prop<(u32, u32)>,
-    #[input]
+    #[cytos(input)]
     resolution: Prop<(u32, u32)>,
 
-    #[output]
+    #[cytos(output)]
     frame: Prop<Frame>,
 
     camera: Option<Camera>,

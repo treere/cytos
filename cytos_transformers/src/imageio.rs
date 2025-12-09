@@ -52,10 +52,10 @@ impl Ownable for Image {
 
 #[derive(CytosNode, Default)]
 struct ImageDecoder {
-    #[input]
+    #[cytos(input)]
     frame: Prop<Frame>,
 
-    #[output]
+    #[cytos(output)]
     decoded: Prop<Image>,
 }
 
@@ -73,10 +73,10 @@ impl Stepper for ImageDecoder {
 
 #[derive(CytosNode, Default)]
 struct ImageSave {
-    #[input]
+    #[cytos(input)]
     input: Prop<Image>,
 
-    #[input]
+    #[cytos(input)]
     filename: Prop<String>,
 }
 

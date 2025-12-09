@@ -8,10 +8,10 @@ struct Print<T>
 where
     T: Ownable + Display + Default + DeserializeOwned + Serialize + 'static,
 {
-    #[input]
+    #[cytos(input)]
     name: Prop<String>,
 
-    #[input]
+    #[cytos(input)]
     input: Prop<T>,
 }
 

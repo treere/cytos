@@ -8,12 +8,12 @@ macro_rules! define_function {
     ($struct_name:ident, $image_ops_func:path, $param_type:ty) => {
         #[derive(CytosNode, Default)]
         struct $struct_name {
-            #[input]
+            #[cytos(input)]
             input: Prop<Image>,
-            #[input]
+            #[cytos(input)]
             param: Prop<$param_type>,
 
-            #[output]
+            #[cytos(output)]
             output: Prop<Image>,
         }
 
@@ -31,14 +31,14 @@ macro_rules! define_function {
     ($struct_name:ident, $image_ops_func:path, $param1_type:ty, $param2_type:ty) => {
         #[derive(CytosNode, Default)]
         struct $struct_name {
-            #[input]
+            #[cytos(input)]
             input: Prop<Image>,
-            #[input]
+            #[cytos(input)]
             param1: Prop<$param1_type>,
-            #[input]
+            #[cytos(input)]
             param2: Prop<$param2_type>,
 
-            #[output]
+            #[cytos(output)]
             output: Prop<Image>,
         }
 
@@ -61,11 +61,11 @@ define_function!(Unsharpen, DynamicImage::unsharpen, f32, i32);
 
 #[derive(CytosNode, Default)]
 struct Filter3x3 {
-    #[input]
+    #[cytos(input)]
     input: Prop<Image>,
-    #[input]
+    #[cytos(input)]
     kernel: Prop<Vec<f32>>,
-    #[output]
+    #[cytos(output)]
     output: Prop<Image>,
 }
 
@@ -81,10 +81,10 @@ impl Stepper for Filter3x3 {
 
 #[derive(CytosNode, Default)]
 struct Mean {
-    #[input]
+    #[cytos(input)]
     input: Prop<Image>,
 
-    #[output]
+    #[cytos(output)]
     output: Prop<f64>,
 }
 
@@ -104,19 +104,19 @@ impl Stepper for Mean {
 
 #[derive(CytosNode, Default)]
 struct Resize {
-    #[input]
+    #[cytos(input)]
     input: Prop<Image>,
 
-    #[input]
+    #[cytos(input)]
     width: Prop<u32>,
 
-    #[input]
+    #[cytos(input)]
     height: Prop<u32>,
 
-    #[input]
+    #[cytos(input)]
     filter: Prop<FilterTypeDef>,
 
-    #[output]
+    #[cytos(output)]
     output: Prop<Image>,
 }
 
@@ -177,19 +177,19 @@ impl From<FilterTypeDef> for image::imageops::FilterType {
 
 #[derive(CytosNode, Default)]
 struct ResizeExact {
-    #[input]
+    #[cytos(input)]
     input: Prop<Image>,
 
-    #[input]
+    #[cytos(input)]
     width: Prop<u32>,
 
-    #[input]
+    #[cytos(input)]
     height: Prop<u32>,
 
-    #[input]
+    #[cytos(input)]
     filter: Prop<FilterTypeDef>,
 
-    #[output]
+    #[cytos(output)]
     output: Prop<Image>,
 }
 
@@ -207,13 +207,13 @@ impl Stepper for ResizeExact {
 
 #[derive(CytosNode, Default)]
 struct Crop {
-    #[input]
+    #[cytos(input)]
     input: Prop<Image>,
 
-    #[input]
+    #[cytos(input)]
     rect: Prop<Vec<u32>>,
 
-    #[output]
+    #[cytos(output)]
     output: Prop<Image>,
 }
 

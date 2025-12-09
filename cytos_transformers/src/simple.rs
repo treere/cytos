@@ -3,13 +3,13 @@ use cytos_derive::CytosNode;
 
 #[derive(CytosNode)]
 struct AddValue {
-    #[input]
+    #[cytos(input)]
     input: Prop<u64>,
 
-    #[input]
+    #[cytos(input)]
     increment: Prop<u64>,
 
-    #[output]
+    #[cytos(output)]
     output: Prop<u64>,
 }
 
@@ -54,7 +54,7 @@ mod tests {
 
 #[derive(CytosNode, Default)]
 struct IncrementalGenerator {
-    #[output]
+    #[cytos(output)]
     output: Prop<u64>,
 }
 

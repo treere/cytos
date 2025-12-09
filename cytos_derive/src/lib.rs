@@ -1,12 +1,12 @@
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use quote::quote;
-use syn::{Data, DataStruct, DeriveInput, Field, Fields, LitInt, parse_macro_input};
+use syn::{parse_macro_input, Data, DataStruct, DeriveInput, Field, Fields, LitInt};
 
 const INPUT_PROP_TYPE: &str = "input";
 const OUTPUT_PROP_TYPE: &str = "output";
 
-#[proc_macro_derive(CytosNode, attributes(input, output))]
+#[proc_macro_derive(CytosNode, attributes(cytos))]
 pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
     let DeriveInput {
         ident,
@@ -314,9 +314,22 @@ fn filter_fields_by_type<'a>(
     fields: &'a Fields,
     types: &'a str,
 ) -> impl Iterator<Item = &'a Field> {
-    fields
-        .iter()
-        .filter(|field| field.attrs.iter().any(|attr| attr.path().is_ident(types)))
+    fields.iter().filter(|field| {
+        field.attrs.iter().any(|attr| {
+            if attr.path().is_ident("cytos") {
+                attr.parse_nested_meta(|meta| {
+                    if meta.path.is_ident(types) {
+                        Ok(())
+                    } else {
+                        Err(meta.error("expected input or output"))
+                    }
+                })
+                .is_ok()
+            } else {
+                false
+            }
+        })
+    })
 }
 
 fn ident_to_lit(ident: &'_ Option<Ident>) -> proc_macro2::TokenStream {

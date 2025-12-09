@@ -8,16 +8,16 @@ struct MarkovFilter<T>
 where
     T: Ownable + Display + Default + DeserializeOwned + PartialOrd + Serialize + 'static,
 {
-    #[input]
+    #[cytos(input)]
     input: Prop<T>,
 
-    #[input]
+    #[cytos(input)]
     low: Prop<T>,
 
-    #[input]
+    #[cytos(input)]
     high: Prop<T>,
 
-    #[output]
+    #[cytos(output)]
     output: Prop<bool>,
 }
 

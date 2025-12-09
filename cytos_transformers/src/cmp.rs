@@ -9,13 +9,13 @@ struct Lt<T>
 where
     T: Ownable + Display + Default + DeserializeOwned + Serialize + 'static + PartialOrd,
 {
-    #[input]
+    #[cytos(input)]
     op1: Prop<T>,
 
-    #[input]
+    #[cytos(input)]
     op2: Prop<T>,
 
-    #[output]
+    #[cytos(output)]
     output: Prop<bool>,
 }
 
@@ -34,13 +34,13 @@ struct Lte<T>
 where
     T: Ownable + Display + Default + DeserializeOwned + Serialize + 'static + PartialOrd,
 {
-    #[input]
+    #[cytos(input)]
     op1: Prop<T>,
 
-    #[input]
+    #[cytos(input)]
     op2: Prop<T>,
 
-    #[output]
+    #[cytos(output)]
     output: Prop<bool>,
 }
 
@@ -59,13 +59,13 @@ struct Gt<T>
 where
     T: Ownable + Display + Default + DeserializeOwned + Serialize + 'static + PartialOrd,
 {
-    #[input]
+    #[cytos(input)]
     op1: Prop<T>,
 
-    #[input]
+    #[cytos(input)]
     op2: Prop<T>,
 
-    #[output]
+    #[cytos(output)]
     output: Prop<bool>,
 }
 
@@ -84,13 +84,13 @@ struct Gte<T>
 where
     T: Ownable + Display + Default + DeserializeOwned + Serialize + 'static + PartialOrd,
 {
-    #[input]
+    #[cytos(input)]
     op1: Prop<T>,
 
-    #[input]
+    #[cytos(input)]
     op2: Prop<T>,
 
-    #[output]
+    #[cytos(output)]
     output: Prop<bool>,
 }
 
@@ -109,13 +109,13 @@ struct Eq<T>
 where
     T: Ownable + Display + Default + DeserializeOwned + Serialize + 'static + PartialEq,
 {
-    #[input]
+    #[cytos(input)]
     op1: Prop<T>,
 
-    #[input]
+    #[cytos(input)]
     op2: Prop<T>,
 
-    #[output]
+    #[cytos(output)]
     output: Prop<bool>,
 }
 

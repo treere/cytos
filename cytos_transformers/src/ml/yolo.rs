@@ -46,16 +46,16 @@ const YOLO_CLASS_LABELS: [&str; 80] = [
 
 #[derive(CytosNode, Default)]
 struct Yolo {
-    #[input]
+    #[cytos(input)]
     input: Prop<Image>,
 
-    #[output]
+    #[cytos(output)]
     resized: Prop<Image>,
 
-    #[output]
+    #[cytos(output)]
     buffer: Prop<Buffer>,
 
-    #[output]
+    #[cytos(output)]
     results: Prop<Vec<(BoundingBox, &'static str, f32)>>,
 
     model: Option<Session>,
@@ -151,10 +151,10 @@ impl Stepper for Yolo {
 
 #[derive(CytosNode, Default)]
 struct YoloRunner {
-    #[input]
+    #[cytos(input)]
     input: Prop<Buffer>,
 
-    #[output]
+    #[cytos(output)]
     output: Prop<Vec<Vec<f32>>>,
 
     model: Option<Session>,
@@ -195,16 +195,16 @@ impl Stepper for YoloRunner {
 
 #[derive(CytosNode, Default)]
 struct YoloDecoder {
-    #[input]
+    #[cytos(input)]
     original: Prop<Image>,
 
-    #[input]
+    #[cytos(input)]
     detections: Prop<Vec<Vec<f32>>>,
 
-    #[input]
+    #[cytos(input)]
     threshold: Prop<f32>,
 
-    #[output]
+    #[cytos(output)]
     results: Prop<Vec<(BoundingBox, &'static str, f32)>>,
 }
 

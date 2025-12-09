@@ -30,13 +30,13 @@ impl Ownable for Rectangle {
 
 #[derive(CytosNode, Default)]
 struct FaceDetection {
-    #[input]
+    #[cytos(input)]
     image: Prop<Image>,
 
-    #[input]
+    #[cytos(input)]
     model: Prop<String>,
 
-    #[output]
+    #[cytos(output)]
     facesinfo: Prop<Vec<Rectangle>>,
 
     detector: Option<Box<dyn Detector>>,
@@ -100,10 +100,10 @@ impl Ownable for Buffer {
 
 #[derive(CytosNode, Default)]
 struct Image2Buffer {
-    #[input]
+    #[cytos(input)]
     input: Prop<Image>,
 
-    #[output]
+    #[cytos(output)]
     output: Prop<Buffer>,
 }
 

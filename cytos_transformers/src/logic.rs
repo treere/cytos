@@ -3,13 +3,13 @@ use cytos_derive::CytosNode;
 
 #[derive(CytosNode, Default)]
 struct And {
-    #[input]
+    #[cytos(input)]
     op1: Prop<bool>,
 
-    #[input]
+    #[cytos(input)]
     op2: Prop<bool>,
 
-    #[output]
+    #[cytos(output)]
     output: Prop<bool>,
 }
 
@@ -22,13 +22,13 @@ impl Stepper for And {
 
 #[derive(CytosNode, Default)]
 struct Or {
-    #[input]
+    #[cytos(input)]
     op1: Prop<bool>,
 
-    #[input]
+    #[cytos(input)]
     op2: Prop<bool>,
 
-    #[output]
+    #[cytos(output)]
     output: Prop<bool>,
 }
 
@@ -41,13 +41,13 @@ impl Stepper for Or {
 
 #[derive(CytosNode, Default)]
 struct Xor {
-    #[input]
+    #[cytos(input)]
     op1: Prop<bool>,
 
-    #[input]
+    #[cytos(input)]
     op2: Prop<bool>,
 
-    #[output]
+    #[cytos(output)]
     output: Prop<bool>,
 }
 
@@ -60,10 +60,10 @@ impl Stepper for Xor {
 
 #[derive(CytosNode, Default)]
 struct Not {
-    #[input]
+    #[cytos(input)]
     op1: Prop<bool>,
 
-    #[output]
+    #[cytos(output)]
     output: Prop<bool>,
 }
 

@@ -7,13 +7,13 @@ use std::{thread, time};
 
 #[derive(CytosNode)]
 struct Timer {
-    #[output]
+    #[cytos(output)]
     output: Prop<Duration>,
 
-    #[output]
+    #[cytos(output)]
     fps: Prop<f64>,
 
-    #[input]
+    #[cytos(input)]
     every: Prop<u64>,
 
     instant: Instant,
@@ -50,7 +50,7 @@ impl Stepper for Timer {
 
 #[derive(CytosNode, Default)]
 struct Sleep {
-    #[input]
+    #[cytos(input)]
     millis: Prop<u64>,
 }
 

@@ -8,13 +8,13 @@ struct WebSender<T>
 where
     T: Ownable + Display + Default + DeserializeOwned + Serialize + 'static,
 {
-    #[input]
+    #[cytos(input)]
     url: Prop<String>,
 
-    #[input]
+    #[cytos(input)]
     header: Prop<Option<(String, String)>>,
 
-    #[input]
+    #[cytos(input)]
     input: Prop<T>,
 }
 
