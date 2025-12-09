@@ -1,5 +1,5 @@
 use crate::imageio::Image;
-use cytos::{loader::DynamicLoadingRegistryWrapper, props::Ownable, Prop, Result, Stepper};
+use cytos::{Prop, Result, Stepper, loader::DynamicLoadingRegistryWrapper, props::Ownable};
 use cytos_derive::CytosNode;
 use image::DynamicImage;
 use serde::{Deserialize, Serialize};

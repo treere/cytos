@@ -63,8 +63,42 @@ impl Stepper for Sleep {
     }
 }
 
+#[derive(CytosNode)]
+struct RateLimiter {
+    #[cytos(input)]
+    hz: Prop<f64>,
+
+    last_step: Option<Instant>,
+}
+
+impl Default for RateLimiter {
+    fn default() -> Self {
+        Self {
+            hz: Prop::new(60.0),
+            last_step: None,
+        }
+    }
+}
+
+impl Stepper for RateLimiter {
+    fn step(&mut self) -> cytos::Result<()> {
+        let now = Instant::now();
+        if let Some(last) = self.last_step {
+            let elapsed = now.duration_since(last);
+            let target_period = Duration::from_secs_f64(1.0 / *self.hz);
+            if elapsed < target_period {
+                let sleep_duration = target_period.checked_sub(elapsed).unwrap();
+                thread::sleep(sleep_duration);
+            }
+        }
+        self.last_step = Some(Instant::now());
+        Ok(())
+    }
+}
+
 pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
     registry
         .add("Sleep", Sleep::default)
-        .add("Timer", Timer::default);
+        .add("Timer", Timer::default)
+        .add("RateLimiter", RateLimiter::default);
 }
