@@ -110,12 +110,5 @@ fn graph_size(c: &mut Criterion) {
     group.finish();
 }
 
-fn criterion_benchmark(c: &mut Criterion) {
-    c.bench_function("step with x nodes", |b| {
-        let mut graph = create_graph(10);
-        b.iter(|| black_box(graph.step()))
-    });
-}
-
 criterion_group!(benches, graph_size);
 criterion_main!(benches);
