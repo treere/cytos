@@ -1,8 +1,8 @@
 use super::Result;
 
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     Arc, Condvar, Mutex,
+    atomic::{AtomicBool, Ordering},
 };
 
 pub fn bounded<T>() -> (Sender<T>, Receiver<T>) {

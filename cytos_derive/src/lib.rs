@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use quote::quote;
-use syn::{parse_macro_input, Data, DataStruct, DeriveInput, Field, Fields, LitInt};
+use syn::{Data, DataStruct, DeriveInput, Field, Fields, LitInt, parse_macro_input};
 
 const INPUT_PROP_TYPE: &str = "input";
 const OUTPUT_PROP_TYPE: &str = "output";
