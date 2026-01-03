@@ -1,6 +1,12 @@
 use cytos::{Prop, Result, Stepper, loader::DynamicLoadingRegistryWrapper};
+/// Simple utility transformer nodes for Cytos.
+///
+/// This module provides basic arithmetic and data generation nodes,
+/// including incremental counters and value adders.
 use cytos_derive::CytosNode;
 
+/// Node that adds an increment value to an input.
+/// Defaults to adding 1 if no increment is specified.
 #[derive(CytosNode)]
 struct AddValue {
     #[cytos(input)]
@@ -52,6 +58,8 @@ mod tests {
     }
 }
 
+/// Node that generates incrementing unsigned 64-bit integers.
+/// Starts at 0 and increments by 1 each step.
 #[derive(CytosNode, Default)]
 struct IncrementalGenerator {
     #[cytos(output)]
@@ -94,6 +102,7 @@ mod tests2 {
     }
 }
 
+/// Registers the simple utility nodes into the Cytos registry.
 pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
     registry
         .add("IncrementalGenerator", IncrementalGenerator::default)

@@ -1,3 +1,7 @@
+/// Image input/output transformer nodes for Cytos.
+///
+/// This module provides nodes for loading images from frames and saving images to files.
+/// It includes serialization support for images via PNG encoding.
 use std::io::Cursor;
 
 use cytos::{Prop, Result, Stepper, loader::DynamicLoadingRegistryWrapper, props::Ownable};
@@ -7,6 +11,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::Frame;
 
+/// Serializable representation of an image using PNG encoding.
+/// Used for serializing images in Cytos dataflows.
 #[derive(Serialize, Deserialize)]
 pub struct SerdeImage {
     buffer: Vec<u8>,
@@ -32,9 +38,12 @@ impl From<Image> for SerdeImage {
     }
 }
 
+/// Wrapper around `image::DynamicImage` that implements `Ownable` and serialization.
+/// Supports serialization via PNG encoding for use in Cytos dataflows.
 #[derive(Default, Clone, Serialize, Deserialize)]
 #[serde(try_from = "SerdeImage", into = "SerdeImage")]
 pub struct Image {
+    /// The underlying dynamic image.
     pub image: image::DynamicImage,
 }
 
@@ -50,6 +59,8 @@ impl Ownable for Image {
     }
 }
 
+/// Node that decodes a frame into an image.
+/// Takes a `Frame` input and outputs a decoded `Image`.
 #[derive(CytosNode, Default)]
 struct ImageDecoder {
     #[cytos(input)]
@@ -71,6 +82,8 @@ impl Stepper for ImageDecoder {
     }
 }
 
+/// Node that saves an image to a file.
+/// Takes an `Image` and a filename, saves the image to disk.
 #[derive(CytosNode, Default)]
 struct ImageSave {
     #[cytos(input)]
@@ -90,6 +103,7 @@ impl Stepper for ImageSave {
     }
 }
 
+/// Registers the image I/O nodes into the Cytos registry.
 pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
     registry
         .add("ImageDecoder", ImageDecoder::default)

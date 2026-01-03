@@ -1,3 +1,17 @@
+//! # Cytos Transformers
+//!
+//! This crate provides a collection of transformer nodes for the Cytos dataflow framework.
+//! These nodes enable various functionalities including:
+//!
+//! - Image processing (decoding, saving, operations like blur, resize, crop)
+//! - Logic operations (comparisons, boolean gates)
+//! - Machine learning (face detection, YOLO object detection)
+//! - Signal processing (printing, web sending)
+//! - Time management (timers, rate limiters, sleep)
+//! - Data sources (file reading, camera capture)
+//!
+//! Each module contains nodes that can be loaded into the Cytos registry for use in dataflow graphs.
+
 #![deny(clippy::perf)]
 #![deny(clippy::style)]
 #![deny(clippy::complexity)]
@@ -25,6 +39,24 @@ mod web_sender;
 
 use cytos::loader::DynamicLoadingRegistryWrapper;
 
+/// Loads all transformer nodes from this crate into the provided registry.
+///
+/// This function registers nodes from all modules:
+/// - `imageio`: Image decoding and saving
+/// - `imageops`: Image manipulation operations
+/// - `logic`: Boolean logic operations
+/// - `cmp`: Comparison operations
+/// - `ml`: Machine learning nodes (face detection, YOLO)
+/// - `print`: Value printing nodes
+/// - `signal`: Signal processing nodes
+/// - `simple`: Basic arithmetic and generation nodes
+/// - `source`: Data source nodes (files, cameras)
+/// - `time`: Time-related nodes (timers, sleep)
+/// - `web_sender`: HTTP request sending nodes
+///
+/// # Safety
+/// This function is marked as unsafe due to the `no_mangle` extern "C" attribute,
+/// but the implementation itself is safe.
 #[unsafe(no_mangle)]
 pub extern "C" fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
     imageio::load_registry(registry);

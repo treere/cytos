@@ -1,9 +1,15 @@
+/// Comparison transformer nodes for Cytos.
+///
+/// This module provides nodes for comparing values of various types.
+/// All comparison nodes take two inputs (`op1` and `op2`) and produce a boolean output.
 use std::fmt::Display;
 
 use cytos::{Prop, Stepper, loader::DynamicLoadingRegistryWrapper, props::Ownable};
 use cytos_derive::CytosNode;
 use serde::{Serialize, de::DeserializeOwned};
 
+/// Less-than comparison node.
+/// Outputs `true` if `op1 < op2`, `false` otherwise.
 #[derive(CytosNode, Default)]
 struct Lt<T>
 where
@@ -29,6 +35,8 @@ where
     }
 }
 
+/// Less-than-or-equal comparison node.
+/// Outputs `true` if `op1 <= op2`, `false` otherwise.
 #[derive(CytosNode, Default)]
 struct Lte<T>
 where
@@ -54,6 +62,8 @@ where
     }
 }
 
+/// Greater-than comparison node.
+/// Outputs `true` if `op1 > op2`, `false` otherwise.
 #[derive(CytosNode, Default)]
 struct Gt<T>
 where
@@ -79,6 +89,8 @@ where
     }
 }
 
+/// Greater-than-or-equal comparison node.
+/// Outputs `true` if `op1 >= op2`, `false` otherwise.
 #[derive(CytosNode, Default)]
 struct Gte<T>
 where
@@ -104,6 +116,8 @@ where
     }
 }
 
+/// Equality comparison node.
+/// Outputs `true` if `op1 == op2`, `false` otherwise.
 #[derive(CytosNode, Default)]
 struct Eq<T>
 where
@@ -139,6 +153,7 @@ macro_rules! load_reg {
     };
 }
 
+/// Registers all comparison nodes for supported types (bool, integers, floats).
 pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
     load_reg!(registry, bool);
     load_reg!(registry, u8);

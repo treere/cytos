@@ -2,6 +2,7 @@
 name = "cytos_transformers"
 version = "0.1.0"
 edition = "2024"
+description = "A collection of transformer nodes for the Cytos dataflow framework, including image processing, logic operations, machine learning, and I/O utilities."
 
 [lib]
 crate-type = ["cdylib"]
