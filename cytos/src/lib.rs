@@ -29,13 +29,13 @@ pub mod props;
 mod queue;
 pub mod repr;
 pub mod system;
-mod transfomer;
+mod transformer;
 pub mod value;
 
 use std::error::Error;
 
 pub use self::props::{GenericOwnedProp, Prop};
-pub use self::transfomer::{Stepper, Transformer};
+pub use self::transformer::{Stepper, Transformer};
 pub use ids::{GraphId, NodeId, ParamId, id_number_to_string, id_string_to_number};
 pub use system::System;
 pub use value::Value;

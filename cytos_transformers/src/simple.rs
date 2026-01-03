@@ -81,7 +81,7 @@ mod tests2 {
     fn test_create_at_zero() {
         let incremental = IncrementalGenerator::default();
 
-        assert_eq!(*incremental.output, 0)
+        assert_eq!(*incremental.output, 0);
     }
 
     #[test]
@@ -89,7 +89,7 @@ mod tests2 {
         let mut incremental = IncrementalGenerator::default();
 
         incremental.step().expect("cannot fail");
-        assert_eq!(*incremental.output, 1)
+        assert_eq!(*incremental.output, 1);
     }
 
     #[test]
@@ -98,7 +98,7 @@ mod tests2 {
 
         incremental.step().expect("cannot fail");
         incremental.step().expect("cannot fail");
-        assert_eq!(*incremental.output, 2)
+        assert_eq!(*incremental.output, 2);
     }
 }
 

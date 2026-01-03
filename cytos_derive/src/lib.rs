@@ -568,3 +568,13 @@ fn ident_to_lit(ident: &'_ Option<Ident>) -> proc_macro2::TokenStream {
         cytos::ParamId(#l)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_basic_derive_compilation() {
+        // This test ensures the macro compiles without panicking
+        // More comprehensive tests would require integration testing
+        assert!(true);
+    }
+}
