@@ -134,8 +134,12 @@ impl Graph {
 
     /// Collect the links between nodes
     ///
+    /// Returns a vector of vectors, where each inner vector contains tuples of (`NodeId`, `ParamId`)
+    /// representing the connections for each parameter.
+    ///
     /// # Panics
-    /// Cannot take a node
+    ///
+    /// Panics if an output or input parameter is missing for a node.
     pub fn collect_links(&self) -> Vec<Vec<(NodeId, ParamId)>> {
         self.nodes
             .iter()
@@ -172,16 +176,21 @@ impl Graph {
             .collect()
     }
 
-    /// List nodes
+    /// Returns a list of all node IDs in the graph.
     pub fn list_nodes(&self) -> Vec<NodeId> {
         self.nodes.keys().copied().collect()
     }
 
-    /// Connects a output data to an input one.
+    /// Connects an output parameter from one node to an input parameter of another node.
+    ///
+    /// # Arguments
+    ///
+    /// * `src` - A tuple of (`NodeId`, `ParamId`) specifying the source output parameter.
+    /// * `dst` - A tuple of (`NodeId`, `ParamId`) specifying the destination input parameter.
     ///
     /// # Errors
     ///
-    /// Will return `Err` if a node is missing or if the linking process fails
+    /// Will return `Err` if the source node, destination node, or parameters are not found.
     pub fn link(
         &mut self,
         (src_node_id, src_param_id): (NodeId, ParamId),

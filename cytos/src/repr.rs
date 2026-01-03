@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{GraphId, NodeId, ParamId, Value};
 use serde::Deserialize;
 
-/// Node deserializable rapresentation
+/// A deserializable representation of a node.
 #[derive(Deserialize, Debug)]
 pub struct NodeRepr {
     /// Type of the node
@@ -15,7 +15,7 @@ pub struct NodeRepr {
     pub props: HashMap<ParamId, Value>,
 }
 
-/// Graph representatio to be loaded
+/// A representation of a graph to be loaded and executed.
 #[derive(Deserialize, Debug)]
 pub struct GraphRepr {
     /// List of links between nodes
@@ -26,7 +26,7 @@ pub struct GraphRepr {
     pub nodes: Vec<InternalNodeRepr>,
 }
 
-/// Link between nodes
+/// A link between two nodes in a graph, connecting an output parameter to an input parameter.
 #[derive(Deserialize, Debug)]
 pub struct GraphLink {
     /// Source node param
@@ -36,7 +36,7 @@ pub struct GraphLink {
     pub dst: (NodeId, ParamId),
 }
 
-/// Node depresentation from the braph point
+/// A node representation within a graph, including its name and error handling behavior.
 #[derive(Deserialize, Debug)]
 pub struct InternalNodeRepr {
     /// Name

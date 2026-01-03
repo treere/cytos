@@ -1,3 +1,9 @@
+//! Queue module providing bounded and unbounded communication channels.
+//!
+//! This module implements two types of queues for inter-thread communication:
+//! - Bounded queues: Single-item blocking channels
+//! - Unbounded queues: Multi-item non-blocking channels
+
 use super::Result;
 
 use std::sync::{
@@ -5,12 +11,28 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
 };
 
+/// Creates a bounded queue channel where the receiver blocks until a value is sent.
+///
+/// This is a single-slot channel: sending will overwrite any previous unsent value,
+/// and receiving blocks until a value is available.
+///
+/// # Type Parameters
+///
+/// * `T` - The type of values to send through the channel.
+///
+/// # Returns
+///
+/// A tuple of (Sender<T>, Receiver<T>) for communicating between threads.
 pub fn bounded<T>() -> (Sender<T>, Receiver<T>) {
     let value = Arc::new((Mutex::new(None), Condvar::new()));
 
     (Sender(value.clone()), Receiver(value))
 }
 
+/// Sender for a bounded queue channel.
+///
+/// Allows sending values to the corresponding receiver. Sending is non-blocking
+/// and will overwrite any previous value that hasn't been received yet.
 pub struct Sender<T>(Arc<(Mutex<Option<T>>, Condvar)>);
 
 impl<T> Clone for Sender<T> {
@@ -20,6 +42,18 @@ impl<T> Clone for Sender<T> {
 }
 
 impl<T> Sender<T> {
+    /// Sends a value through the channel.
+    ///
+    /// This operation is non-blocking. If a previous value hasn't been received yet,
+    /// it will be overwritten.
+    ///
+    /// # Arguments
+    ///
+    /// * `value` - The value to send.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the internal mutex cannot be locked.
     pub fn send(&self, value: T) -> Result<()> {
         let (lock, cvar) = &*self.0;
         let _ = lock.lock().map_err(|_| "cannot lock")?.insert(value);
@@ -28,9 +62,18 @@ impl<T> Sender<T> {
     }
 }
 
+/// Receiver for a bounded queue channel.
+///
+/// Provides blocking and non-blocking receive operations for values sent
+/// through the corresponding sender.
 pub struct Receiver<T>(Arc<(Mutex<Option<T>>, Condvar)>);
 
 impl<T> Receiver<T> {
+    /// Receives a value from the channel, blocking until one is available.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the internal mutex cannot be locked.
     pub fn recv(&self) -> Result<T> {
         let (lock, cvar) = &*self.0;
         let mut value = lock.lock().map_err(|_| "cannot lock")?;
@@ -42,6 +85,16 @@ impl<T> Receiver<T> {
         }
     }
 
+    /// Attempts to receive a value from the channel without blocking.
+    ///
+    /// # Returns
+    ///
+    /// * `Some(value)` if a value was available.
+    /// * `None` if no value is currently available.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the internal mutex cannot be locked.
     pub fn try_recv(&self) -> Result<Option<T>> {
         let (lock, _cvar) = &*self.0;
         let mut value = lock.lock().map_err(|_| "cannot lock")?;
@@ -101,6 +154,18 @@ mod bounded_tests {
     }
 }
 
+/// Creates an unbounded queue channel for multi-item communication.
+///
+/// This channel allows sending multiple values that accumulate until received.
+/// The receiver can retrieve all available values at once.
+///
+/// # Type Parameters
+///
+/// * `T` - The type of values to send through the channel.
+///
+/// # Returns
+///
+/// A tuple of (`BlockSender`<T>, `BlockReceiver`<T>) for communicating between threads.
 pub fn unbounded<T>() -> (BlockSender<T>, BlockReceiver<T>) {
     let queue = Arc::new(Mutex::new(Vec::new()));
     let empty = Arc::new(AtomicBool::new(true));
@@ -109,6 +174,10 @@ pub fn unbounded<T>() -> (BlockSender<T>, BlockReceiver<T>) {
     (sender, receiver)
 }
 
+/// Sender for an unbounded queue channel.
+///
+/// Allows sending multiple values that accumulate in the channel.
+/// Sending is non-blocking and thread-safe.
 pub struct BlockSender<T> {
     queue: Arc<Mutex<Vec<T>>>,
     empty: Arc<AtomicBool>,
@@ -134,6 +203,17 @@ impl<T> BlockSender<T> {
         Self { queue, empty }
     }
 
+    /// Sends a value through the unbounded channel.
+    ///
+    /// Values accumulate until received by the receiver.
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - The value to send.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the internal mutex cannot be locked.
     pub fn send(&self, message: T) -> Result<()> {
         self.queue.lock().map_err(|_| "cannot lock")?.push(message);
         self.empty.store(false, Ordering::Release);
@@ -141,11 +221,24 @@ impl<T> BlockSender<T> {
         Ok(())
     }
 
+    /// Checks if two senders belong to the same channel.
+    ///
+    /// # Arguments
+    ///
+    /// * `other` - Another sender to compare with.
+    ///
+    /// # Returns
+    ///
+    /// `true` if both senders operate on the same channel, `false` otherwise.
     pub fn same_channel(&self, other: &Self) -> bool {
         Arc::ptr_eq(&self.queue, &other.queue)
     }
 }
 
+/// Receiver for an unbounded queue channel.
+///
+/// Provides operations to receive all accumulated values at once.
+/// Receiving is non-blocking if no values are available.
 pub struct BlockReceiver<T> {
     queue: Arc<Mutex<Vec<T>>>,
     empty: Arc<AtomicBool>,
@@ -162,6 +255,15 @@ impl<T> BlockReceiver<T> {
     }
 }
 impl<T: 'static> BlockReceiver<T> {
+    /// Receives all currently available values from the channel.
+    ///
+    /// This operation is non-blocking. If no values are available, returns `None`.
+    /// Otherwise, returns an iterator over all accumulated values.
+    ///
+    /// # Returns
+    ///
+    /// * `Some(iterator)` containing all available values.
+    /// * `None` if no values are currently available.
     pub fn recv_all(&mut self) -> Option<impl Iterator<Item = T> + use<'_, T>> {
         if self.empty.load(Ordering::Acquire) {
             return None;

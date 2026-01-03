@@ -1,87 +1,173 @@
+//! Transformer module defining the core traits for processing nodes.
+//!
+//! This module provides the `Stepper` and `Transformer` traits that define
+//! the interface for nodes in the processing pipeline.
+
 use super::{
     ParamId, Result, Value,
     props::{GenericOwnedProp, GenericProp},
 };
 
-/// Stepper trait
+/// A trait for objects that can perform computation steps.
+///
+/// Implementors of this trait can be initialized, stepped through computations,
+/// and terminated.
 #[ptr_meta::pointee]
 pub trait Stepper {
-    /// Initialize data
+    /// Initializes the stepper before processing begins.
+    ///
+    /// This method is called once before any steps are performed.
+    /// The default implementation does nothing.
     ///
     /// # Errors
-    /// If the initialize fails
+    ///
+    /// Returns an error if initialization fails.
     fn initialize(&mut self) -> Result<()> {
         Ok(())
     }
 
-    /// Do one computation step
+    /// Performs one computation step.
+    ///
+    /// This method is called repeatedly to process data.
     ///
     /// # Errors
-    /// If cannot process the step
+    ///
+    /// Returns an error if the step cannot be processed.
     fn step(&mut self) -> Result<()>;
 
-    /// Terminate execution
+    /// Terminates the stepper after processing is complete.
+    ///
+    /// This method is called once after all steps are done.
+    /// The default implementation does nothing.
     ///
     /// # Errors
-    /// If cannot stop
+    ///
+    /// Returns an error if termination fails.
     fn terminate(&mut self) -> Result<()> {
         Ok(())
     }
 }
 
-/// Transformer trait
+/// A trait for objects that can transform data with inputs and outputs.
+///
+/// Transformers can link to other transformers, load configuration values,
+/// and provide access to their input and output parameters.
 pub trait Transformer: Stepper {
-    /// Set input
+    /// Links an input parameter to a property from another transformer.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The parameter ID to link.
+    /// * `val` - The property to link to this parameter.
     ///
     /// # Errors
-    /// If cannot link
+    ///
+    /// Returns an error if the parameter cannot be linked.
     fn link(&mut self, name: ParamId, val: GenericProp) -> Result<()>;
 
-    /// Load
+    /// Loads a configuration value for a parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The parameter ID to load the value for.
+    /// * `val` - The value to load.
     ///
     /// # Errors
-    /// If cannot load
+    ///
+    /// Returns an error if the value cannot be loaded.
     fn load(&mut self, name: ParamId, val: Value) -> Result<()>;
 
-    /// Assign
+    /// Assigns a runtime value to a parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The parameter ID to assign the value to.
+    /// * `val` - The value to assign.
     ///
     /// # Errors
-    /// If cannot assign
+    ///
+    /// Returns an error if the value cannot be assigned.
     fn assign(&mut self, name: ParamId, val: Value) -> Result<()>;
 
-    /// Dump
+    /// Dumps the current value of a parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The parameter ID to dump.
     ///
     /// # Errors
-    /// If cannot dump
+    ///
+    /// Returns an error if the value cannot be dumped.
     fn dump(&self, name: ParamId) -> Result<Value>;
 
-    /// Load owned
+    /// Loads an owned property for a parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The parameter ID to load the property for.
+    /// * `val` - The owned property to load.
     ///
     /// # Errors
-    /// If cannot load
+    ///
+    /// Returns an error if the property cannot be loaded.
     fn load_owned(&mut self, name: ParamId, val: GenericOwnedProp) -> Result<()>;
 
-    /// Assign owned
+    /// Assigns an owned property to a parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The parameter ID to assign the property to.
+    /// * `val` - The owned property to assign.
     ///
     /// # Errors
-    /// If cannot assig
+    ///
+    /// Returns an error if the property cannot be assigned.
     fn assign_owned(&mut self, name: ParamId, val: GenericOwnedProp) -> Result<()>;
 
-    /// Dump owned
+    /// Dumps the current owned property of a parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The parameter ID to dump.
     ///
     /// # Errors
-    /// If cannot dump as owned
+    ///
+    /// Returns an error if the property cannot be dumped.
     fn dump_owned(&self, name: ParamId) -> Result<GenericOwnedProp>;
 
-    /// Get ouput by name
+    /// Gets an output property by parameter name.
+    ///
+    /// # Arguments
+    ///
+    /// * `val` - The parameter ID of the output.
+    ///
+    /// # Returns
+    ///
+    /// The output property if it exists, `None` otherwise.
     fn output(&self, val: ParamId) -> Option<GenericProp>;
 
-    /// Get input by name
+    /// Gets an input property by parameter name.
+    ///
+    /// # Arguments
+    ///
+    /// * `val` - The parameter ID of the input.
+    ///
+    /// # Returns
+    ///
+    /// The input property if it exists, `None` otherwise.
     fn input(&self, val: ParamId) -> Option<GenericProp>;
 
-    /// Get input names
+    /// Gets the names of all input parameters.
+    ///
+    /// # Returns
+    ///
+    /// A vector of parameter IDs for all inputs.
     fn input_names(&self) -> Vec<ParamId>;
 
-    /// Get output names
+    /// Gets the names of all output parameters.
+    ///
+    /// # Returns
+    ///
+    /// A vector of parameter IDs for all outputs.
     fn output_names(&self) -> Vec<ParamId>;
 }

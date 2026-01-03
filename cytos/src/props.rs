@@ -134,7 +134,9 @@ create_ownable_clone_container!(std::collections::BinaryHeap<T>);
 create_ownable_clone_container_doubled!(std::collections::HashMap<K,V>);
 create_ownable_clone_container_doubled!(std::collections::BTreeMap<K,V>);
 
-/// Generic Property as owned
+/// A generic owned property that can hold any `Send + Sync + 'static` type.
+///
+/// This is used for transferring ownership of properties between threads or components.
 pub struct GenericOwnedProp(Box<dyn Any + Send + Sync + 'static>);
 
 impl std::fmt::Debug for GenericOwnedProp {
@@ -143,7 +145,9 @@ impl std::fmt::Debug for GenericOwnedProp {
     }
 }
 
-/// Internal prop structure
+/// A property that holds a value of type T with interior mutability.
+///
+/// Uses `Rc<UnsafeCell<T>>` for shared mutable access without requiring mutable references.
 #[derive(Default)]
 pub struct Prop<T>(Rc<UnsafeCell<T>>);
 

@@ -1,6 +1,10 @@
 use crate::props::GenericProp;
 use crate::{GenericOwnedProp, ParamId, Prop, Result, Stepper, Transformer, Value};
 
+/// An empty transformer implementation for testing purposes.
+///
+/// This struct implements both `Stepper` and `Transformer` traits but always returns errors
+/// for operations, making it useful for testing error handling in the system.
 #[derive(Default)]
 pub struct Empty {}
 

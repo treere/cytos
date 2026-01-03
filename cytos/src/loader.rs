@@ -7,7 +7,7 @@ use libloading::{Library, Symbol};
 use std::{collections::HashMap, sync::Arc};
 
 #[derive(Clone)]
-/// A wrapper around a function that returns a transfomer
+/// A wrapper around a function that returns a transformer.
 struct FactoryContainer(Arc<dyn Fn() -> Box<dyn Transformer> + Send + Sync>);
 
 impl FactoryContainer {

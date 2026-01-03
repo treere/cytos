@@ -116,7 +116,9 @@ impl SystemRepr {
     }
 }
 
-/// System
+/// A system that manages multiple graphs running concurrently in separate threads.
+///
+/// Each graph is executed in its own thread and can communicate via links defined in the system representation.
 #[derive(Default)]
 pub struct System {
     /// Runners where there is a runner per graph
@@ -293,6 +295,7 @@ impl Worker {
     }
 }
 
+/// A view into a specific graph within the system, allowing interaction with its state and nodes.
 pub struct GraphView<'a> {
     senders: &'a IndexMap<GraphId, BlockSender<(Command, Response)>>,
     graph: GraphId,
@@ -316,42 +319,47 @@ impl GraphView<'_> {
         })
     }
 
-    /// Kill a sender
+    /// Kill the graph processing.
     ///
     /// # Errors
-    /// If the receiver cannot proress the request
+    ///
+    /// Returns an error if the receiver cannot process the request.
     pub fn kill(&self) -> Result<Value> {
         self.command(Command::State(StateCommand::Kill))
     }
 
-    /// Start a sender
+    /// Start the graph processing.
     ///
     /// # Errors
-    /// If the receiver cannot proress the request
+    ///
+    /// Returns an error if the receiver cannot process the request.
     pub fn start(&self) -> Result<Value> {
         self.command(Command::State(StateCommand::Start))
     }
 
-    /// Stop a sender
+    /// Stop the graph processing.
     ///
     /// # Errors
-    /// If the receiver cannot proress the request
+    ///
+    /// Returns an error if the receiver cannot process the request.
     pub fn stop(&self) -> Result<Value> {
         self.command(Command::State(StateCommand::Stop))
     }
 
-    /// Get the status of a sender
+    /// Get the status of the graph.
     ///
     /// # Errors
-    /// If the receiver cannot proress the request
+    ///
+    /// Returns an error if the receiver cannot process the request.
     pub fn status(&self) -> Result<Value> {
         self.command(Command::State(StateCommand::Status))
     }
 
-    /// List the nodes of a sender
+    /// List the nodes in the graph.
     ///
     /// # Errors
-    /// If the receiver cannot proress the request
+    ///
+    /// Returns an error if the receiver cannot process the request.
     pub fn list_nodes(&self) -> Result<Value> {
         self.command(Command::Node(NodeCommand::ListNodes))
     }
