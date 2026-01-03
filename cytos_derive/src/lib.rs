@@ -1,3 +1,30 @@
+//! Cytos Derive
+//!
+//! This crate provides the `CytosNode` derive macro, which automatically implements the
+//! `Transformer` trait for structs in the cytos graph processing system. The macro
+//! generates implementations for linking, loading, assigning, and dumping parameters
+//! based on field attributes.
+//!
+//! # Usage
+//!
+//! To use the derive macro, annotate a struct with `#[derive(CytosNode)]` and mark
+//! fields with `#[cytos(input)]` for input parameters or `#[cytos(output)]` for
+//! output parameters.
+//!
+//! ```rust,ignore
+//! use cytos_derive::CytosNode;
+//!
+//! #[derive(CytosNode)]
+//! struct MyNode {
+//!     #[cytos(input)]
+//!     input1: cytos::props::GenericProp,
+//!     #[cytos(output)]
+//!     output1: cytos::props::GenericProp,
+//! }
+//! ```
+//!
+//! The macro will generate the necessary methods to integrate the struct as a node
+//! in the cytos graph.
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use quote::quote;
@@ -6,6 +33,15 @@ use syn::{Data, DataStruct, DeriveInput, Field, Fields, LitInt, parse_macro_inpu
 const INPUT_PROP_TYPE: &str = "input";
 const OUTPUT_PROP_TYPE: &str = "output";
 
+/// Derives the `CytosNode` trait for a struct, implementing the `Transformer` interface.
+///
+/// This macro generates implementations for parameter linking, loading, assignment, and
+/// dumping based on the struct's fields annotated with `#[cytos(input)]` or
+/// `#[cytos(output)]`.
+///
+/// # Panics
+///
+/// Panics if applied to anything other than a struct.
 #[proc_macro_derive(CytosNode, attributes(cytos))]
 pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
     let DeriveInput {
@@ -60,6 +96,23 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
     .into()
 }
 
+/// Creates the implementation for the `link` method.
+///
+/// Generates a match statement that calls `link_value` on the appropriate input field
+/// based on the parameter name.
+///
+/// # Arguments
+///
+/// * `fields` - The fields of the struct to process.
+///
+/// # Returns
+///
+/// A `TokenStream` containing the generated `link` method implementation.
+///
+/// # Errors
+///
+/// The generated method returns an error if the parameter name does not correspond
+/// to any input field.
 fn create_link(fields: &Fields) -> proc_macro2::TokenStream {
     let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
         .map(|field| {
@@ -80,6 +133,23 @@ fn create_link(fields: &Fields) -> proc_macro2::TokenStream {
     }
 }
 
+/// Creates the implementation for the `assign` method.
+///
+/// Generates a match statement that calls `assign` on the appropriate input field
+/// based on the parameter name.
+///
+/// # Arguments
+///
+/// * `fields` - The fields of the struct to process.
+///
+/// # Returns
+///
+/// A `TokenStream` containing the generated `assign` method implementation.
+///
+/// # Errors
+///
+/// The generated method returns an error if the parameter name does not correspond
+/// to any input field.
 fn create_assign(fields: &Fields) -> proc_macro2::TokenStream {
     let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
         .map(|field| {
@@ -106,6 +176,23 @@ fn create_assign(fields: &Fields) -> proc_macro2::TokenStream {
     }
 }
 
+/// Creates the implementation for the `load` method.
+///
+/// Generates a match statement that calls `load` on the appropriate input field
+/// based on the parameter name.
+///
+/// # Arguments
+///
+/// * `fields` - The fields of the struct to process.
+///
+/// # Returns
+///
+/// A `TokenStream` containing the generated `load` method implementation.
+///
+/// # Errors
+///
+/// The generated method returns an error if the parameter name does not correspond
+/// to any input field.
 fn create_load(fields: &Fields) -> proc_macro2::TokenStream {
     let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
         .map(|field| {
@@ -132,6 +219,23 @@ fn create_load(fields: &Fields) -> proc_macro2::TokenStream {
     }
 }
 
+/// Creates the implementation for the `dump` method.
+///
+/// Generates a match statement that calls `dump` on the appropriate input or output field
+/// based on the parameter name.
+///
+/// # Arguments
+///
+/// * `fields` - The fields of the struct to process.
+///
+/// # Returns
+///
+/// A `TokenStream` containing the generated `dump` method implementation.
+///
+/// # Errors
+///
+/// The generated method returns an error if the parameter name does not correspond
+/// to any input or output field.
 fn create_dump(fields: &Fields) -> proc_macro2::TokenStream {
     let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
         .chain(filter_fields_by_type(fields, OUTPUT_PROP_TYPE))
@@ -158,6 +262,23 @@ fn create_dump(fields: &Fields) -> proc_macro2::TokenStream {
     }
 }
 
+/// Creates the implementation for the `load_owned` method.
+///
+/// Generates a match statement that calls `load_owned_generic` on the appropriate input field
+/// based on the parameter name.
+///
+/// # Arguments
+///
+/// * `fields` - The fields of the struct to process.
+///
+/// # Returns
+///
+/// A `TokenStream` containing the generated `load_owned` method implementation.
+///
+/// # Errors
+///
+/// The generated method returns an error if the parameter name does not correspond
+/// to any input field.
 fn create_load_owned(fields: &Fields) -> proc_macro2::TokenStream {
     let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
         .map(|field| {
@@ -184,6 +305,23 @@ fn create_load_owned(fields: &Fields) -> proc_macro2::TokenStream {
     }
 }
 
+/// Creates the implementation for the `assign_owned` method.
+///
+/// Generates a match statement that calls `assign_owned_generic` on the appropriate input field
+/// based on the parameter name.
+///
+/// # Arguments
+///
+/// * `fields` - The fields of the struct to process.
+///
+/// # Returns
+///
+/// A `TokenStream` containing the generated `assign_owned` method implementation.
+///
+/// # Errors
+///
+/// The generated method returns an error if the parameter name does not correspond
+/// to any input field.
 fn create_assign_owned(fields: &Fields) -> proc_macro2::TokenStream {
     let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
         .map(|field| {
@@ -210,6 +348,23 @@ fn create_assign_owned(fields: &Fields) -> proc_macro2::TokenStream {
     }
 }
 
+/// Creates the implementation for the `dump_owned` method.
+///
+/// Generates a match statement that calls `into_owned_generic` on the appropriate input or output field
+/// based on the parameter name.
+///
+/// # Arguments
+///
+/// * `fields` - The fields of the struct to process.
+///
+/// # Returns
+///
+/// A `TokenStream` containing the generated `dump_owned` method implementation.
+///
+/// # Errors
+///
+/// The generated method returns an error if the parameter name does not correspond
+/// to any input or output field.
 fn create_dump_owned(fields: &Fields) -> proc_macro2::TokenStream {
     let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
         .chain(filter_fields_by_type(fields, OUTPUT_PROP_TYPE))
@@ -236,6 +391,18 @@ fn create_dump_owned(fields: &Fields) -> proc_macro2::TokenStream {
     }
 }
 
+/// Creates the implementation for the `input` method.
+///
+/// Generates a match statement that returns `as_generic` on the appropriate input field
+/// based on the parameter name, or `None` if not found.
+///
+/// # Arguments
+///
+/// * `fields` - The fields of the struct to process.
+///
+/// # Returns
+///
+/// A `TokenStream` containing the generated `input` method implementation.
 fn create_input(fields: &Fields) -> proc_macro2::TokenStream {
     let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
         .map(|field| {
@@ -256,6 +423,17 @@ fn create_input(fields: &Fields) -> proc_macro2::TokenStream {
     }
 }
 
+/// Creates the implementation for the `input_names` method.
+///
+/// Generates a vector containing the parameter IDs for all input fields.
+///
+/// # Arguments
+///
+/// * `fields` - The fields of the struct to process.
+///
+/// # Returns
+///
+/// A `TokenStream` containing the generated `input_names` method implementation.
 fn create_input_names(fields: &Fields) -> proc_macro2::TokenStream {
     let input_names = filter_fields_by_type(fields, INPUT_PROP_TYPE)
         .map(|field| {
@@ -273,6 +451,18 @@ fn create_input_names(fields: &Fields) -> proc_macro2::TokenStream {
     }
 }
 
+/// Creates the implementation for the `output` method.
+///
+/// Generates a match statement that returns `as_generic` on the appropriate output field
+/// based on the parameter name, or `None` if not found.
+///
+/// # Arguments
+///
+/// * `fields` - The fields of the struct to process.
+///
+/// # Returns
+///
+/// A `TokenStream` containing the generated `output` method implementation.
 fn create_output(fields: &Fields) -> proc_macro2::TokenStream {
     let outputs = filter_fields_by_type(fields, OUTPUT_PROP_TYPE)
         .map(|field| {
@@ -293,6 +483,17 @@ fn create_output(fields: &Fields) -> proc_macro2::TokenStream {
     }
 }
 
+/// Creates the implementation for the `output_names` method.
+///
+/// Generates a vector containing the parameter IDs for all output fields.
+///
+/// # Arguments
+///
+/// * `fields` - The fields of the struct to process.
+///
+/// # Returns
+///
+/// A `TokenStream` containing the generated `output_names` method implementation.
 fn create_output_names(fields: &Fields) -> proc_macro2::TokenStream {
     let output_names = filter_fields_by_type(fields, OUTPUT_PROP_TYPE)
         .map(|field| {
@@ -310,6 +511,18 @@ fn create_output_names(fields: &Fields) -> proc_macro2::TokenStream {
     }
 }
 
+/// Filters fields by their cytos attribute type.
+///
+/// Returns an iterator over fields that have the specified `#[cytos(...)]` attribute.
+///
+/// # Arguments
+///
+/// * `fields` - The fields to filter.
+/// * `types` - The type to match, either "input" or "output".
+///
+/// # Returns
+///
+/// An iterator yielding references to fields matching the type.
 fn filter_fields_by_type<'a>(
     fields: &'a Fields,
     types: &'a str,
@@ -332,6 +545,17 @@ fn filter_fields_by_type<'a>(
     })
 }
 
+/// Converts a field identifier to a `ParamId` literal.
+///
+/// Parses the identifier as a base-36 number and constructs a `cytos::ParamId`.
+///
+/// # Arguments
+///
+/// * `ident` - The optional identifier to convert.
+///
+/// # Panics
+///
+/// Panics if the identifier is `None` or cannot be parsed as a base-36 number.
 fn ident_to_lit(ident: &'_ Option<Ident>) -> proc_macro2::TokenStream {
     let lit = format!("{}", ident.clone().expect("missing ident"));
     let lit = format!(
