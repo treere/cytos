@@ -4,6 +4,7 @@ use super::{
 };
 
 /// Stepper trait
+#[ptr_meta::pointee]
 pub trait Stepper {
     /// Initialize data
     ///

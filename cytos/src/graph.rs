@@ -1,4 +1,5 @@
 use crate::{
+    Stepper,
     loader::Registry,
     props::GenericProp,
     repr::{GraphLink, GraphRepr, OnError},
@@ -7,6 +8,7 @@ use crate::{
 use super::{NodeId, ParamId, Result, node::Node};
 
 use indexmap::IndexMap;
+use ptr_meta::DynMetadata;
 use tracing::trace;
 
 /// Result of a step
@@ -39,7 +41,8 @@ impl GraphRepr {
 
         for node_repr in self.nodes {
             let node = node_repr.node.into_node(loader)?;
-            nodes.insert(node_repr.name, node);
+            let vtable = extract_vtable(&node);
+            nodes.insert(node_repr.name, (node, vtable));
             on_errors.insert(node_repr.name, node_repr.on_error);
         }
 
@@ -59,7 +62,7 @@ impl GraphRepr {
 #[derive(Default)]
 pub struct Graph {
     /// Nodes
-    nodes: IndexMap<NodeId, Node>,
+    nodes: IndexMap<NodeId, (Node, DynMetadata<dyn Stepper>)>,
 
     /// Defines the error handling strategy for each node in case of failure during `step()`.
     on_errors: IndexMap<NodeId, OnError>,
@@ -72,9 +75,24 @@ pub struct Graph {
 /// Will return `Err` if the `node` step returns `Err`
 #[unsafe(no_mangle)]
 #[inline(never)]
-pub extern "Rust" fn trace_node_step(node_id: u64, node: &mut Node) -> Result<()> {
+pub extern "Rust" fn trace_node_step(
+    node_id: u64,
+    node: &mut Node,
+    vtable: &DynMetadata<dyn Stepper>,
+) -> Result<()> {
     std::hint::black_box(node_id);
-    node.step()
+
+    let stepper = ptr_meta::from_raw_parts_mut::<dyn Stepper>(
+        std::ptr::from_mut::<dyn Stepper>(&mut **node).cast(),
+        *vtable,
+    );
+    unsafe { (*stepper).step() }
+}
+
+fn extract_vtable(node: &Node) -> DynMetadata<dyn Stepper> {
+    let data: &dyn Stepper = &**node;
+
+    ptr_meta::metadata(data)
 }
 
 impl Graph {
@@ -85,7 +103,7 @@ impl Graph {
     /// Will return `Err` if the `node` initialize returns `Err`
     pub fn initialize(&mut self) -> Result<()> {
         trace!("start initialize");
-        for node in self.nodes.values_mut() {
+        for (node, _) in self.nodes.values_mut() {
             node.initialize()?;
         }
 
@@ -100,8 +118,8 @@ impl Graph {
     /// Will return `Err` if one of the node returns an `Err` and it cannot be handled.
     pub fn step(&mut self) -> Result<StepResult> {
         trace!("start step");
-        for (node_id, node) in &mut self.nodes {
-            match trace_node_step(node_id.0, node) {
+        for (node_id, (node, vtable)) in &mut self.nodes {
+            match trace_node_step(node_id.0, node, vtable) {
                 Ok(()) => (),
                 Err(x) => match self.on_errors.get(node_id).unwrap_or(&OnError::Fail) {
                     OnError::Skip => return Ok(StepResult::Skip),
@@ -121,7 +139,7 @@ impl Graph {
     /// Will return `Err` if one `node` terminate returns `Err`
     pub fn terminate(&mut self) -> Result<()> {
         trace!("start terminate");
-        for node in self.nodes.values_mut() {
+        for (node, _) in self.nodes.values_mut() {
             node.terminate()?;
         }
 
@@ -136,7 +154,7 @@ impl Graph {
     pub fn collect_links(&self) -> Vec<Vec<(NodeId, ParamId)>> {
         self.nodes
             .iter()
-            .flat_map(|(n, p)| {
+            .flat_map(|(n, (p, _))| {
                 let output = p
                     .output_names()
                     .into_iter()
@@ -200,6 +218,7 @@ impl Graph {
     pub fn get_node(&self, node_id: NodeId) -> Result<&Node> {
         self.nodes
             .get(&node_id)
+            .map(|(n, _)| n)
             .ok_or_else(|| format!("missing node {node_id:?}").into())
     }
 
@@ -211,6 +230,7 @@ impl Graph {
     pub fn get_node_mut(&mut self, node_id: NodeId) -> Result<&mut Node> {
         self.nodes
             .get_mut(&node_id)
+            .map(|(n, _)| n)
             .ok_or_else(|| format!("missing node {node_id:?}").into())
     }
 
@@ -245,11 +265,12 @@ mod tests {
     #[test]
     fn test_graph_with_empty_node() {
         let node: Node = Box::new(Empty::default());
+        let vtable = extract_vtable(&node);
 
         let node_id = NodeId(0);
 
         let graph = Graph {
-            nodes: IndexMap::from_iter(vec![(node_id, node)].into_iter()),
+            nodes: IndexMap::from_iter(vec![(node_id, (node, vtable))].into_iter()),
             on_errors: IndexMap::from_iter(vec![(node_id, OnError::Continue)].into_iter()),
         };
 
@@ -275,11 +296,12 @@ mod tests {
     #[test]
     fn test_graph_with_constant_node() {
         let node: Node = Box::new(Constant::default());
+        let vtable = extract_vtable(&node);
 
         let node_id = NodeId(0);
 
         let mut graph = Graph {
-            nodes: IndexMap::from_iter(vec![(node_id, node)].into_iter()),
+            nodes: IndexMap::from_iter(vec![(node_id, (node, vtable))].into_iter()),
             on_errors: IndexMap::from_iter(vec![(node_id, OnError::Continue)].into_iter()),
         };
 
