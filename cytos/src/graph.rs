@@ -77,7 +77,7 @@ pub struct Graph {
 pub extern "Rust" fn trace_node_step(node_id: u64, node: &mut Node) -> Result<()> {
     std::hint::black_box(node_id);
 
-    node.step()
+    node.stepper().step()
 }
 
 impl Graph {
@@ -89,7 +89,7 @@ impl Graph {
     pub fn initialize(&mut self) -> Result<()> {
         trace!("start initialize");
         for node in self.nodes.values_mut() {
-            node.initialize()?;
+            node.stepper().initialize()?;
         }
 
         trace!("end initialize");
@@ -125,7 +125,7 @@ impl Graph {
     pub fn terminate(&mut self) -> Result<()> {
         trace!("start terminate");
         for node in self.nodes.values_mut() {
-            node.terminate()?;
+            node.stepper().terminate()?;
         }
 
         trace!("end terminate");

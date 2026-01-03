@@ -1,5 +1,3 @@
-use ptr_meta::DynMetadata;
-
 use super::{Result, Transformer};
 use crate::{Stepper, loader::Registry, repr::NodeRepr};
 
@@ -8,34 +6,26 @@ use crate::{Stepper, loader::Registry, repr::NodeRepr};
 /// A node is only a pointer to a transformer
 pub struct Node {
     internal: Box<dyn Transformer>,
-    vtable: DynMetadata<dyn Stepper>,
+    stepper: *mut dyn Stepper,
 }
 
 impl Node {
-    pub fn new(internal: Box<dyn Transformer + 'static>) -> Self {
+    pub fn new(mut internal: Box<dyn Transformer + 'static>) -> Self {
         let vtable = {
             let data: &dyn Stepper = &*internal;
 
             ptr_meta::metadata(data)
         };
-
-        Self { internal, vtable }
-    }
-
-    pub fn initialize(&mut self) -> Result<()> {
-        self.internal.initialize()
-    }
-
-    pub fn terminate(&mut self) -> Result<()> {
-        self.internal.terminate()
-    }
-
-    pub fn step(&mut self) -> Result<()> {
         let stepper = ptr_meta::from_raw_parts_mut::<dyn Stepper>(
-            std::ptr::from_mut::<dyn Stepper>(&mut *self.internal).cast(),
-            self.vtable,
+            std::ptr::from_mut::<dyn Stepper>(&mut *internal).cast(),
+            vtable,
         );
-        unsafe { (*stepper).step() }
+
+        Self { internal, stepper }
+    }
+
+    pub fn stepper(&mut self) -> &mut dyn Stepper {
+        unsafe { &mut *self.stepper }
     }
 
     pub fn transformer(&self) -> &dyn Transformer {
