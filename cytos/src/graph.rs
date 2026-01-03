@@ -1,4 +1,5 @@
 use crate::{
+    Stepper, Transformer,
     loader::Registry,
     props::GenericProp,
     repr::{GraphLink, GraphRepr, OnError},
@@ -39,6 +40,7 @@ impl GraphRepr {
 
         for node_repr in self.nodes {
             let node = node_repr.node.into_node(loader)?;
+
             nodes.insert(node_repr.name, node);
             on_errors.insert(node_repr.name, node_repr.on_error);
         }
@@ -72,9 +74,10 @@ pub struct Graph {
 /// Will return `Err` if the `node` step returns `Err`
 #[unsafe(no_mangle)]
 #[inline(never)]
-pub extern "Rust" fn trace_node_step(node_id: u64, node: &mut Node) -> Result<()> {
+pub extern "Rust" fn trace_node_step(node_id: u64, stepper: &mut dyn Stepper) -> Result<()> {
     std::hint::black_box(node_id);
-    node.step()
+
+    stepper.step()
 }
 
 impl Graph {
@@ -86,7 +89,7 @@ impl Graph {
     pub fn initialize(&mut self) -> Result<()> {
         trace!("start initialize");
         for node in self.nodes.values_mut() {
-            node.initialize()?;
+            node.stepper().initialize()?;
         }
 
         trace!("end initialize");
@@ -101,7 +104,7 @@ impl Graph {
     pub fn step(&mut self) -> Result<StepResult> {
         trace!("start step");
         for (node_id, node) in &mut self.nodes {
-            match trace_node_step(node_id.0, node) {
+            match trace_node_step(node_id.0, node.stepper()) {
                 Ok(()) => (),
                 Err(x) => match self.on_errors.get(node_id).unwrap_or(&OnError::Fail) {
                     OnError::Skip => return Ok(StepResult::Skip),
@@ -122,7 +125,7 @@ impl Graph {
     pub fn terminate(&mut self) -> Result<()> {
         trace!("start terminate");
         for node in self.nodes.values_mut() {
-            node.terminate()?;
+            node.stepper().terminate()?;
         }
 
         trace!("end terminate");
@@ -138,13 +141,15 @@ impl Graph {
             .iter()
             .flat_map(|(n, p)| {
                 let output = p
+                    .transformer()
                     .output_names()
                     .into_iter()
-                    .map(|q| (p.output(q).unwrap(), (*n, q)));
+                    .map(|q| (p.transformer().output(q).unwrap(), (*n, q)));
                 let input = p
+                    .transformer()
                     .input_names()
                     .into_iter()
-                    .map(|q| (p.input(q).unwrap(), (*n, q)));
+                    .map(|q| (p.transformer().input(q).unwrap(), (*n, q)));
 
                 output.chain(input)
             })
@@ -197,9 +202,10 @@ impl Graph {
     /// # Errors
     ///
     /// Will return `Err` if a node is missing
-    pub fn get_node(&self, node_id: NodeId) -> Result<&Node> {
+    pub fn get_node(&self, node_id: NodeId) -> Result<&dyn Transformer> {
         self.nodes
             .get(&node_id)
+            .map(Node::transformer)
             .ok_or_else(|| format!("missing node {node_id:?}").into())
     }
 
@@ -208,9 +214,10 @@ impl Graph {
     /// # Errors
     ///
     /// Will return `Err` if a node is missing
-    pub fn get_node_mut(&mut self, node_id: NodeId) -> Result<&mut Node> {
+    pub fn get_node_mut(&mut self, node_id: NodeId) -> Result<&mut dyn Transformer> {
         self.nodes
             .get_mut(&node_id)
+            .map(Node::transformer_mut)
             .ok_or_else(|| format!("missing node {node_id:?}").into())
     }
 
@@ -244,7 +251,7 @@ mod tests {
 
     #[test]
     fn test_graph_with_empty_node() {
-        let node: Node = Box::new(Empty::default());
+        let node: Node = Node::new(Box::new(Empty::default()));
 
         let node_id = NodeId(0);
 
@@ -274,7 +281,7 @@ mod tests {
 
     #[test]
     fn test_graph_with_constant_node() {
-        let node: Node = Box::new(Constant::default());
+        let node = Node::new(Box::new(Constant::default()));
 
         let node_id = NodeId(0);
 
