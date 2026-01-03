@@ -205,7 +205,7 @@ impl Graph {
     pub fn get_node(&self, node_id: NodeId) -> Result<&dyn Transformer> {
         self.nodes
             .get(&node_id)
-            .map(|n| n.transformer())
+            .map(Node::transformer)
             .ok_or_else(|| format!("missing node {node_id:?}").into())
     }
 
@@ -217,7 +217,7 @@ impl Graph {
     pub fn get_node_mut(&mut self, node_id: NodeId) -> Result<&mut dyn Transformer> {
         self.nodes
             .get_mut(&node_id)
-            .map(|n| n.transformer_mut())
+            .map(Node::transformer_mut)
             .ok_or_else(|| format!("missing node {node_id:?}").into())
     }
 
