@@ -31,6 +31,7 @@ impl Node {
     pub fn transformer(&self) -> &dyn Transformer {
         &*self.internal
     }
+
     pub fn transformer_mut(&mut self) -> &mut dyn Transformer {
         &mut *self.internal
     }
