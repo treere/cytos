@@ -88,6 +88,7 @@ impl Graph {
     /// # Errors
     ///
     /// Will return `Err` if one of the node returns an `Err` and it cannot be handled.
+    #[inline(never)]
     pub fn step(&mut self) -> Result<StepResult> {
         trace!("start step");
         for (node_id, node) in &mut self.nodes {
