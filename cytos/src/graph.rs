@@ -89,6 +89,7 @@ impl Graph {
     ///
     /// Will return `Err` if one of the node returns an `Err` and it cannot be handled.
     #[inline(never)]
+    #[unsafe(export_name = "cytos_graph_step")]
     pub fn step(&mut self) -> Result<StepResult> {
         trace!("start step");
         for (node_id, node) in &mut self.nodes {
