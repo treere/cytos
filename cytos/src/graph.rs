@@ -1,5 +1,5 @@
 use crate::{
-    Stepper, Transformer,
+    Transformer,
     loader::Registry,
     props::GenericProp,
     repr::{GraphLink, GraphRepr, OnError},
@@ -67,19 +67,6 @@ pub struct Graph {
     on_errors: IndexMap<NodeId, OnError>,
 }
 
-/// A frapper arount node step to make it observable
-///
-/// # Errors
-///
-/// Will return `Err` if the `node` step returns `Err`
-#[unsafe(no_mangle)]
-#[inline(never)]
-pub extern "Rust" fn trace_node_step(node_id: u64, stepper: &mut dyn Stepper) -> Result<()> {
-    std::hint::black_box(node_id);
-
-    stepper.step()
-}
-
 impl Graph {
     /// Initialize the nodes
     ///
@@ -104,7 +91,7 @@ impl Graph {
     pub fn step(&mut self) -> Result<StepResult> {
         trace!("start step");
         for (node_id, node) in &mut self.nodes {
-            match trace_node_step(node_id.0, node.stepper()) {
+            match node.stepper().step() {
                 Ok(()) => (),
                 Err(x) => match self.on_errors.get(node_id).unwrap_or(&OnError::Fail) {
                     OnError::Skip => return Ok(StepResult::Skip),
