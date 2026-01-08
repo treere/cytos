@@ -104,12 +104,12 @@ fn library_list(status: Rc<Mutex<Status>>) -> Result<CommandStatus, anyhow::Erro
 
 fn library_add(status: Rc<Mutex<Status>>, library: String) -> Result<CommandStatus, anyhow::Error> {
     let mut status = status.lock().or(Err(anyhow!("cannot lock")))?;
-    let mut registry = Registry::default();
-    registry
+    status
+        .system
         .load_library(&library)
         .or(Err(anyhow!("cannot load library")))?;
 
-    for f in registry.list_factories() {
+    for f in status.system.registry().list_factories() {
         println!("{f}");
     }
 
@@ -205,6 +205,35 @@ fn node_remove(
 
     println!("{result:?}");
 
+    Ok(CommandStatus::Done)
+}
+
+fn describe_node(
+    status: Rc<Mutex<Status>>,
+    graph_id: String,
+    node_id: String,
+) -> Result<CommandStatus, anyhow::Error> {
+    let status = status.lock().or(Err(anyhow!("cannot lock")))?;
+    let result = status
+        .system
+        .graph(graph_id.into())
+        .unwrap()
+        .describe_node(node_id.into())
+        .and_then(|val| val.dump::<cytos::NodeMetadata>())
+        .map_err(|x| anyhow!(x.to_string()))?;
+
+    println!("{result:#?}");
+    Ok(CommandStatus::Done)
+}
+
+fn describe_factory(
+    status: Rc<Mutex<Status>>,
+    factory_name: String,
+) -> Result<CommandStatus, anyhow::Error> {
+    let status = status.lock().or(Err(anyhow!("cannot lock")))?;
+    let metadata = status.system.get_factory_metadata(&factory_name);
+
+    println!("{metadata:#?}");
     Ok(CommandStatus::Done)
 }
 
@@ -449,6 +478,20 @@ fn node_dump_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
+fn describe_node_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+    command! {
+        "Describe a graph node",
+        (graph: String, node: String) => |graph: String, node:String| describe_node(status.clone(), graph, node)
+    }
+}
+
+fn describe_factory_command(status: Rc<Mutex<Status>>) -> Command<'static> {
+    command! {
+        "Describe a factory",
+        (factory: String) => |factory: String| describe_factory(status.clone(), factory)
+    }
+}
+
 fn node_load_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Load to an input/output of a graph node",
@@ -535,6 +578,8 @@ fn main() -> Result<(), &'static str> {
         .add("node_dump", node_dump_command(status.clone()))
         .add("node_load", node_load_command(status.clone()))
         .add("node_assign", node_assign_command(status.clone()))
+        .add("describe_node", describe_node_command(status.clone()))
+        .add("describe_factory", describe_factory_command(status.clone()))
         .add("link_nodes", link_nodes_command(status.clone()))
         .add("link_list", link_list_command(status.clone()))
         .add("receiver_list", receiver_list_command(status.clone()))

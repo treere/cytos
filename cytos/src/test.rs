@@ -1,5 +1,10 @@
+use std::collections::HashMap;
+
 use crate::props::GenericProp;
-use crate::{GenericOwnedProp, ParamId, Prop, Result, Stepper, Transformer, Value};
+use crate::{
+    GenericOwnedProp, MetadataProvider, NodeMetadata, ParamId, Prop, Result, Stepper, Transformer,
+    Value,
+};
 
 /// An empty transformer implementation for testing purposes.
 ///
@@ -57,6 +62,16 @@ impl Transformer for Empty {
 
     fn output_names(&self) -> Vec<ParamId> {
         vec![]
+    }
+}
+
+impl MetadataProvider for Empty {
+    fn metadata() -> NodeMetadata {
+        NodeMetadata {
+            name: "Empty".to_string(),
+            description: "Test empty node".to_string(),
+            params: HashMap::new(),
+        }
     }
 }
 

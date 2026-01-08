@@ -2,7 +2,7 @@
 
 use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
 use cytos::{
-    Stepper, Transformer,
+    MetadataProvider, NodeMetadata, Stepper, Transformer,
     graph::Graph,
     loader::Registry,
     repr::{GraphRepr, InternalNodeRepr, NodeRepr, OnError},
@@ -74,6 +74,16 @@ fn create_graph(nodes_count: u64) -> Graph {
 
         fn output_names(&self) -> Vec<cytos::ParamId> {
             todo!()
+        }
+    }
+
+    impl MetadataProvider for Add {
+        fn metadata() -> NodeMetadata {
+            NodeMetadata {
+                name: "Add".to_string(),
+                description: "Benchmark add node".to_string(),
+                params: HashMap::new(),
+            }
         }
     }
 

@@ -1,5 +1,5 @@
 use crate::{
-    Transformer,
+    NodeMetadata, Transformer,
     loader::Registry,
     props::GenericProp,
     repr::{GraphLink, GraphRepr, OnError},
@@ -219,6 +219,27 @@ impl Graph {
             .ok_or_else(|| format!("missing node {node_id:?}").into())
     }
 
+    /// Get metadata for a node
+    ///
+    /// # Arguments
+    ///
+    /// * `node_id` - The ID of the node
+    /// * `registry` - The registry containing factory metadata
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if a node is missing
+    pub fn get_node_metadata<'a>(
+        &self,
+        node_id: NodeId,
+        registry: &'a Registry,
+    ) -> Result<&'a NodeMetadata> {
+        self.nodes
+            .get(&node_id)
+            .and_then(|node| node.metadata(registry))
+            .ok_or_else(|| format!("missing node {node_id:?}").into())
+    }
+
     /// Remove a node
     ///
     /// # Errors
@@ -249,7 +270,7 @@ mod tests {
 
     #[test]
     fn test_graph_with_empty_node() {
-        let node: Node = Node::new(Box::new(Empty::default()));
+        let node: Node = Node::new(Box::new(Empty::default()), "Empty".to_string());
 
         let node_id = NodeId(0);
 
@@ -279,7 +300,7 @@ mod tests {
 
     #[test]
     fn test_graph_with_constant_node() {
-        let node = Node::new(Box::new(Constant::default()));
+        let node = Node::new(Box::new(Constant::default()), "Constant".to_string());
 
         let node_id = NodeId(0);
 

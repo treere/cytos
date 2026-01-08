@@ -1,6 +1,6 @@
 //! Module to handle dynamic library loading
 
-use crate::{Result, Transformer};
+use crate::{MetadataProvider, NodeMetadata, Result, Transformer};
 
 use libloading::{Library, Symbol};
 
@@ -33,14 +33,15 @@ pub struct DynamicLoadingRegistryWrapper<'a> {
 
 impl DynamicLoadingRegistryWrapper<'_> {
     /// Add a dynamic factory by name removing the previous one.
-    pub fn add<K: Transformer + 'static>(
+    pub fn add<K: Transformer + MetadataProvider + 'static>(
         &mut self,
         name: &str,
         factory: impl (Fn() -> K) + 'static + Send + Sync,
     ) -> &mut Self {
+        let metadata = Some(K::metadata());
         self.registry.add_by_type(
             name,
-            FactoryType::Dynamic((FactoryContainer::new(factory), self.lib.clone())),
+            FactoryType::Dynamic(((FactoryContainer::new(factory), metadata), self.lib.clone())),
         );
         self
     }
@@ -50,10 +51,10 @@ impl DynamicLoadingRegistryWrapper<'_> {
 #[derive(Clone)]
 enum FactoryType {
     /// A simple static factory
-    Plain(FactoryContainer),
+    Plain((FactoryContainer, Option<NodeMetadata>)),
 
     /// A factory that is in a library
-    Dynamic((FactoryContainer, Arc<Library>)),
+    Dynamic(((FactoryContainer, Option<NodeMetadata>), Arc<Library>)),
 }
 
 /// Registry of transformers
@@ -69,12 +70,16 @@ pub struct Registry {
 
 impl Registry {
     /// Add a factory by name removing the previous one.
-    pub fn add<K: Transformer + 'static>(
+    pub fn add<K: Transformer + MetadataProvider + 'static>(
         &mut self,
         name: &str,
         factory: impl (Fn() -> K) + 'static + Send + Sync,
     ) -> &mut Self {
-        self.add_by_type(name, FactoryType::Plain(FactoryContainer::new(factory)));
+        let metadata = Some(K::metadata());
+        self.add_by_type(
+            name,
+            FactoryType::Plain((FactoryContainer::new(factory), metadata)),
+        );
         self
     }
 
@@ -94,8 +99,19 @@ impl Registry {
             .ok_or_else(|| format!("cannot find \"{name}\""))?;
 
         match factory {
-            FactoryType::Plain(factory) | FactoryType::Dynamic((factory, _)) => Ok(factory.get()),
+            FactoryType::Plain((factory, _)) | FactoryType::Dynamic(((factory, _), _)) => {
+                Ok(factory.get())
+            }
         }
+    }
+
+    /// Returns metadata for a factory by name
+    pub fn get_metadata(&self, name: &str) -> Option<&NodeMetadata> {
+        self.factories.get(name).and_then(|factory| match factory {
+            FactoryType::Plain((_, metadata)) | FactoryType::Dynamic(((_, metadata), _)) => {
+                metadata.as_ref()
+            }
+        })
     }
 
     /// Return the list of afailable factories

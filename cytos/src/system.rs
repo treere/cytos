@@ -7,6 +7,7 @@ use tracing::trace;
 
 use serde::Serialize;
 
+use crate::NodeMetadata;
 use crate::Transformer;
 use crate::loader::Registry;
 use crate::queue::BlockReceiver;
@@ -43,7 +44,7 @@ fn create_runner(
     Ok(move || {
         let graph = repr.into_graph(&registry).expect("Cannot build graph");
 
-        Worker::new(graph, receiver, requests).run();
+        Worker::new(graph, receiver, requests, registry).run();
     })
 }
 
@@ -112,7 +113,11 @@ impl SystemRepr {
             })
             .collect::<Result<IndexMap<_, _>>>()?;
 
-        Ok(System { runners, senders })
+        Ok(System {
+            registry: registry.clone(),
+            runners,
+            senders,
+        })
     }
 }
 
@@ -121,6 +126,8 @@ impl SystemRepr {
 /// Each graph is executed in its own thread and can communicate via links defined in the system representation.
 #[derive(Default)]
 pub struct System {
+    /// The registry of available factories
+    registry: Registry,
     /// Runners where there is a runner per graph
     runners: IndexMap<GraphId, JoinHandle<()>>,
     /// Senders to communicate to graphs
@@ -131,6 +138,25 @@ impl System {
     /// Iterator on graph names
     pub fn graphs(&self) -> impl Iterator<Item = &GraphId> {
         self.runners.keys()
+    }
+
+    /// Get metadata for a factory
+    pub fn get_factory_metadata(&self, name: &str) -> Option<&NodeMetadata> {
+        self.registry.get_metadata(name)
+    }
+
+    /// Get a reference to the registry
+    pub const fn registry(&self) -> &Registry {
+        &self.registry
+    }
+
+    /// Load a library into the registry
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if the library cannot be loaded
+    pub fn load_library(&mut self, file: &str) -> Result<()> {
+        self.registry.load_library(file)
     }
 
     /// Return a specific graph view
@@ -177,6 +203,7 @@ impl Worker {
         graph: Graph,
         receiver: BlockReceiver<InternalCommand>,
         requests: LinksToExternal,
+        registry: Registry,
     ) -> Self {
         Self {
             receiver,
@@ -184,6 +211,7 @@ impl Worker {
                 graph,
                 requests,
                 queue: Vec::default(),
+                registry,
             },
         }
     }
@@ -380,6 +408,22 @@ impl GraphView<'_> {
         self.command(Command::Node(NodeCommand::ListOutputs(node_id)))
     }
 
+    /// Describe a node instance
+    ///
+    /// # Errors
+    /// If the receiver cannot process the request
+    pub fn describe_node(&self, node_id: NodeId) -> Result<Value> {
+        self.command(Command::Node(NodeCommand::DescribeNode(node_id)))
+    }
+
+    /// Describe a factory type
+    ///
+    /// # Errors
+    /// If the receiver cannot process the request
+    pub fn describe_factory(&self, factory_name: String) -> Result<Value> {
+        self.command(Command::Node(NodeCommand::DescribeFactory(factory_name)))
+    }
+
     /// Remove a node
     ///
     /// # Errors
@@ -493,6 +537,10 @@ enum NodeCommand {
     ListOutputs(NodeId),
     /// Remove a node
     RemoveNode(NodeId),
+    /// Describe a node instance
+    DescribeNode(NodeId),
+    /// Describe a factory type
+    DescribeFactory(String),
 }
 
 #[derive(Debug)]
@@ -681,6 +729,8 @@ struct Dispatcher {
     requests: LinksToExternal,
     /// Queue
     queue: Vec<(ParamCommand, Response)>,
+    /// Registry for factory metadata
+    registry: Registry,
 }
 
 impl Dispatcher {
@@ -706,6 +756,12 @@ impl Dispatcher {
                 message.send_value(self.graph.get_node(*node).map(Transformer::output_names));
             }
             NodeCommand::RemoveNode(node) => message.send_value(self.graph.remove(*node)),
+            NodeCommand::DescribeNode(node) => {
+                message.send_value(self.graph.get_node_metadata(*node, &self.registry).cloned());
+            }
+            NodeCommand::DescribeFactory(name) => {
+                message.send_value(Ok(self.registry.get_metadata(name).cloned()));
+            }
         }
     }
 

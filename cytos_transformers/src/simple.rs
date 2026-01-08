@@ -9,12 +9,15 @@ use cytos_derive::CytosNode;
 /// Defaults to adding 1 if no increment is specified.
 #[derive(CytosNode)]
 struct AddValue {
+    /// The base value to add to
     #[cytos(input)]
     input: Prop<u64>,
 
+    /// The amount to increment by
     #[cytos(input)]
     increment: Prop<u64>,
 
+    /// The result of input + increment
     #[cytos(output)]
     output: Prop<u64>,
 }
@@ -62,6 +65,7 @@ mod tests {
 /// Starts at 0 and increments by 1 each step.
 #[derive(CytosNode, Default)]
 struct IncrementalGenerator {
+    /// The current counter value, incremented each step
     #[cytos(output)]
     output: Prop<u64>,
 }

@@ -24,6 +24,7 @@
 pub mod graph;
 mod ids;
 pub mod loader;
+mod metadata;
 mod node;
 pub mod props;
 mod queue;
@@ -37,6 +38,7 @@ use std::error::Error;
 pub use self::props::{GenericOwnedProp, Prop};
 pub use self::transformer::{Stepper, Transformer};
 pub use ids::{GraphId, NodeId, ParamId, id_number_to_string, id_string_to_number};
+pub use metadata::{MetadataProvider, NodeMetadata, ParamDirection, ParamInfo};
 pub use system::System;
 pub use value::Value;
 

@@ -27,11 +27,81 @@
 //! in the cytos graph.
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
-use quote::quote;
-use syn::{Data, DataStruct, DeriveInput, Field, Fields, LitInt, parse_macro_input};
+use quote::{ToTokens, quote};
+use syn::{Attribute, Data, DataStruct, DeriveInput, Field, Fields, LitInt, parse_macro_input};
 
 const INPUT_PROP_TYPE: &str = "input";
 const OUTPUT_PROP_TYPE: &str = "output";
+
+/// Information about a field for metadata generation
+struct FieldInfo {
+    ident: Ident,
+    param_id: proc_macro2::TokenStream,
+    docs: String,
+    type_name: String,
+    direction: &'static str,
+}
+
+/// Extracts documentation comments from attributes
+fn extract_docs(attrs: &[Attribute]) -> String {
+    attrs
+        .iter()
+        .filter_map(|attr| {
+            if attr.path().is_ident("doc") {
+                if let Ok(syn::Expr::Lit(syn::ExprLit {
+                    lit: syn::Lit::Str(lit_str),
+                    ..
+                })) = attr.parse_args::<syn::Expr>()
+                {
+                    Some(lit_str.value().trim().to_string())
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Gets field information for metadata generation
+fn get_field_infos(fields: &Fields, direction: &'static str) -> Vec<FieldInfo> {
+    fields
+        .iter()
+        .filter_map(|field| {
+            let has_attr = field.attrs.iter().any(|attr| {
+                if attr.path().is_ident("cytos") {
+                    attr.parse_nested_meta(|meta| {
+                        if meta.path.is_ident(direction) {
+                            Ok(())
+                        } else {
+                            Err(meta.error("expected input or output"))
+                        }
+                    })
+                    .is_ok()
+                } else {
+                    false
+                }
+            });
+            if has_attr {
+                let ident = field.ident.clone().unwrap();
+                let param_id = ident_to_lit(&Some(ident.clone()));
+                let docs = extract_docs(&field.attrs);
+                let type_name = field.ty.to_token_stream().to_string();
+                Some(FieldInfo {
+                    ident,
+                    param_id,
+                    docs,
+                    type_name,
+                    direction,
+                })
+            } else {
+                None
+            }
+        })
+        .collect()
+}
 
 /// Derives the `CytosNode` trait for a struct, implementing the `Transformer` interface.
 ///
@@ -48,6 +118,7 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
         ident,
         data,
         generics,
+        attrs,
         ..
     } = parse_macro_input!(input);
 
@@ -73,7 +144,55 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
     let output = create_output(fields);
     let output_names = create_output_names(fields);
 
+    // Collect metadata information
+    let input_infos = get_field_infos(fields, INPUT_PROP_TYPE);
+    let output_infos = get_field_infos(fields, OUTPUT_PROP_TYPE);
+    let all_infos = input_infos.iter().chain(&output_infos).collect::<Vec<_>>();
+
+    let struct_docs = extract_docs(&attrs);
+    let struct_name = ident.to_string();
+
+    let param_entries = all_infos.iter().map(|fi| {
+        let param_id = &fi.param_id;
+        let name = fi.ident.to_string();
+        let description = if fi.docs.is_empty() {
+            name.clone()
+        } else {
+            fi.docs.clone()
+        };
+        let direction = match fi.direction {
+            INPUT_PROP_TYPE => quote!(cytos::ParamDirection::Input),
+            OUTPUT_PROP_TYPE => quote!(cytos::ParamDirection::Output),
+            _ => unreachable!(),
+        };
+        let type_name = &fi.type_name;
+        quote! {
+            (#param_id, cytos::ParamInfo {
+                name: #name.to_string(),
+                description: #description.to_string(),
+                direction: #direction,
+                type_name: #type_name.to_string(),
+            })
+        }
+    });
+
+    let metadata_impl = quote! {
+        impl #generics cytos::MetadataProvider for #ident #generics #gwhere {
+            fn metadata() -> cytos::NodeMetadata {
+                cytos::NodeMetadata {
+                    name: #struct_name.to_string(),
+                    description: #struct_docs.to_string(),
+                    params: std::collections::HashMap::from([
+                        #(#param_entries),*
+                    ]),
+                }
+            }
+        }
+    };
+
     quote! {
+        #metadata_impl
+
         impl  #generics cytos::Transformer for #ident #generics  #gwhere  {
             #link
 

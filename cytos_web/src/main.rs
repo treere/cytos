@@ -73,6 +73,11 @@ async fn main() {
             "/graphs/{graph_id}/nodes/{node_id}/outputs",
             get(node_outputs),
         )
+        .route(
+            "/graphs/{graph_id}/nodes/{node_id}/describe",
+            get(node_describe),
+        )
+        .route("/factories/{factory_name}/describe", get(factory_describe))
         .route("/graphs/{graph_id}/nodes/link", post(node_link))
         .route(
             "/graphs/{graph_id}/nodes/{node_id}/params/{param_id}/load",
@@ -197,6 +202,24 @@ async fn node_outputs(
     let result = system
         .graph(graph_id.into())?
         .list_outputs(node_id.into())?;
+    Ok(Json(json!(result)))
+}
+
+async fn node_describe(
+    Path((graph_id, node_id)): Path<(String, String)>,
+    State(system): State<WebSystem>,
+) -> Result<Json<Value>, WebError> {
+    let result = system
+        .graph(graph_id.into())?
+        .describe_node(node_id.into())?;
+    Ok(Json(json!(result)))
+}
+
+async fn factory_describe(
+    Path(factory_name): Path<String>,
+    State(system): State<WebSystem>,
+) -> Result<Json<Value>, WebError> {
+    let result = system.get_factory_metadata(&factory_name);
     Ok(Json(json!(result)))
 }
 

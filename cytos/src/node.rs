@@ -1,4 +1,4 @@
-use super::{Result, Transformer};
+use super::{NodeMetadata, Result, Transformer};
 use crate::{Stepper, loader::Registry, repr::NodeRepr};
 
 /// A node in the processing graph.
@@ -8,6 +8,7 @@ use crate::{Stepper, loader::Registry, repr::NodeRepr};
 pub struct Node {
     internal: Box<dyn Transformer>,
     stepper: *mut dyn Stepper,
+    factory_name: String,
 }
 
 impl Node {
@@ -16,7 +17,8 @@ impl Node {
     /// # Arguments
     ///
     /// * `internal` - The transformer to wrap in this node.
-    pub fn new(mut internal: Box<dyn Transformer + 'static>) -> Self {
+    /// * `factory_name` - The name of the factory used to create this node.
+    pub fn new(mut internal: Box<dyn Transformer + 'static>, factory_name: String) -> Self {
         let vtable = {
             let data: &dyn Stepper = &*internal;
 
@@ -27,7 +29,11 @@ impl Node {
             vtable,
         );
 
-        Self { internal, stepper }
+        Self {
+            internal,
+            stepper,
+            factory_name,
+        }
     }
 
     /// Gets a mutable reference to the stepper interface.
@@ -56,6 +62,19 @@ impl Node {
     pub fn transformer_mut(&mut self) -> &mut dyn Transformer {
         &mut *self.internal
     }
+
+    /// Gets the metadata for this node.
+    ///
+    /// # Arguments
+    ///
+    /// * `registry` - The registry containing factory metadata.
+    ///
+    /// # Returns
+    ///
+    /// The node's metadata if available.
+    pub fn metadata<'a>(&self, registry: &'a Registry) -> Option<&'a NodeMetadata> {
+        registry.get_metadata(&self.factory_name)
+    }
 }
 
 impl NodeRepr {
@@ -71,6 +90,6 @@ impl NodeRepr {
             transformer.load(prop, value)?;
         }
 
-        Ok(Node::new(transformer))
+        Ok(Node::new(transformer, self.typ))
     }
 }

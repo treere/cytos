@@ -1,0 +1,14 @@
+{
+  "graphs": {
+    "test": {
+      "nodes": [
+        {
+          "name": "node1",
+          "type": "AddValue",
+          "props": {}
+        }
+      ],
+      "links": []
+    }
+  }
+}
