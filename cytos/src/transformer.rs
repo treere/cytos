@@ -3,6 +3,8 @@
 //! This module provides the `Stepper` and `Transformer` traits that define
 //! the interface for nodes in the processing pipeline.
 
+use crate::props::GenericPropInterface;
+
 use super::{
     ParamId, Result, Value,
     props::{GenericOwnedProp, GenericProp},
@@ -53,18 +55,6 @@ pub trait Stepper {
 /// Transformers can link to other transformers, load configuration values,
 /// and provide access to their input and output parameters.
 pub trait Transformer: Stepper {
-    /// Links an input parameter to a property from another transformer.
-    ///
-    /// # Arguments
-    ///
-    /// * `name` - The parameter ID to link.
-    /// * `val` - The property to link to this parameter.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the parameter cannot be linked.
-    fn link(&mut self, name: ParamId, val: GenericProp) -> Result<()>;
-
     /// Loads a configuration value for a parameter.
     ///
     /// # Arguments
@@ -134,6 +124,28 @@ pub trait Transformer: Stepper {
     ///
     /// Returns an error if the property cannot be dumped.
     fn dump_owned(&self, name: ParamId) -> Result<GenericOwnedProp>;
+
+    /// Gets a reference to a property by parameter ID.
+    ///
+    /// # Arguments
+    ///
+    /// * `val` - The parameter ID of the property.
+    ///
+    /// # Returns
+    ///
+    /// A reference to the property as a `GenericPropInterface` if it exists, `None` otherwise.
+    fn get_prop(&self, val: ParamId) -> Option<&dyn GenericPropInterface>;
+
+    /// Gets a mutable reference to a property by parameter ID.
+    ///
+    /// # Arguments
+    ///
+    /// * `val` - The parameter ID of the property.
+    ///
+    /// # Returns
+    ///
+    /// A mutable reference to the property as a `GenericPropInterface` if it exists, `None` otherwise.
+    fn get_prop_mut(&mut self, val: ParamId) -> Option<&mut dyn GenericPropInterface>;
 
     /// Gets an output property by parameter name.
     ///

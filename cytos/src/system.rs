@@ -799,7 +799,9 @@ impl Dispatcher {
                 self.graph
                     .get_node_mut(dst.0)
                     .unwrap()
-                    .link(dst.1, s)
+                    .get_prop_mut(dst.1)
+                    .unwrap()
+                    .link(s)
                     .unwrap();
 
                 message.send_value(Ok(()));

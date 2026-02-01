@@ -265,6 +265,29 @@ impl<T: 'static + Serialize> Prop<T> {
     }
 }
 
+/// Interface for linking generic properties.
+///
+/// This trait provides a common interface for properties that can be linked
+/// to other generic properties in the graph system.
+pub trait GenericPropInterface {
+    /// Links this property to another generic property.
+    ///
+    /// # Arguments
+    ///
+    /// * `val` - The generic property to link to.
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if the type is invalid or the link cannot be established.
+    fn link(&mut self, val: GenericProp) -> Result<()>;
+}
+
+impl<T: 'static> GenericPropInterface for Prop<T> {
+    fn link(&mut self, val: GenericProp) -> Result<()> {
+        self.link_value(val)
+    }
+}
+
 /// Generic prop
 pub struct GenericProp(Rc<dyn Any>);
 

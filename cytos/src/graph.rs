@@ -188,9 +188,12 @@ impl Graph {
         let output = self
             .get_node(src_node_id)?
             .output(src_param_id)
-            .ok_or("cannot find param")?;
+            .ok_or("cannot find src param")?;
 
-        self.get_node_mut(dst_node_id)?.link(dst_param_id, output)?;
+        self.get_node_mut(dst_node_id)?
+            .get_prop_mut(dst_param_id)
+            .ok_or("cannot find dst param")?
+            .link(output)?;
 
         Ok(())
     }
