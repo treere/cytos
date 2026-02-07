@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use cytos::{
-    NodeMetadata, Stepper, Transformer,
+    NodeMetadata, PropInspector, Stepper,
     loader::Registry,
     repr::{GraphRepr, InternalNodeRepr, NodeRepr, OnError},
 };
@@ -17,56 +17,23 @@ impl Stepper for Add {
     }
 }
 
-impl Transformer for Add {
-    fn link(&mut self, name: cytos::ParamId, val: cytos::props::GenericProp) -> cytos::Result<()> {
-        todo!()
-    }
-
-    fn load(&mut self, name: cytos::ParamId, val: cytos::Value) -> cytos::Result<()> {
-        todo!()
-    }
-
-    fn assign(&mut self, name: cytos::ParamId, val: cytos::Value) -> cytos::Result<()> {
-        todo!()
-    }
-
-    fn dump(&self, name: cytos::ParamId) -> cytos::Result<cytos::Value> {
-        todo!()
-    }
-
-    fn load_owned(
-        &mut self,
-        name: cytos::ParamId,
-        val: cytos::GenericOwnedProp,
-    ) -> cytos::Result<()> {
-        todo!()
-    }
-
-    fn assign_owned(
-        &mut self,
-        name: cytos::ParamId,
-        val: cytos::GenericOwnedProp,
-    ) -> cytos::Result<()> {
-        todo!()
-    }
-
-    fn dump_owned(&self, name: cytos::ParamId) -> cytos::Result<cytos::GenericOwnedProp> {
-        todo!()
-    }
-
-    fn output(&self, val: cytos::ParamId) -> Option<cytos::props::GenericProp> {
-        todo!()
-    }
-
-    fn input(&self, val: cytos::ParamId) -> Option<cytos::props::GenericProp> {
-        todo!()
-    }
-
+impl PropInspector for Add {
     fn input_names(&self) -> Vec<cytos::ParamId> {
         todo!()
     }
 
     fn output_names(&self) -> Vec<cytos::ParamId> {
+        todo!()
+    }
+
+    fn get_prop(&self, val: cytos::ParamId) -> Option<&dyn cytos::props::GenericPropInterface> {
+        todo!()
+    }
+
+    fn get_prop_mut(
+        &mut self,
+        val: cytos::ParamId,
+    ) -> Option<&mut dyn cytos::props::GenericPropInterface> {
         todo!()
     }
 }

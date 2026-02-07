@@ -2,7 +2,7 @@
 
 use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
 use cytos::{
-    MetadataProvider, NodeMetadata, Stepper, Transformer,
+    MetadataProvider, NodeMetadata, PropInspector, Stepper,
     graph::Graph,
     loader::Registry,
     repr::{GraphRepr, InternalNodeRepr, NodeRepr, OnError},
@@ -19,7 +19,7 @@ fn create_graph(nodes_count: u64) -> Graph {
         }
     }
 
-    impl Transformer for Add {
+    impl PropInspector for Add {
         fn link(
             &mut self,
             name: cytos::ParamId,

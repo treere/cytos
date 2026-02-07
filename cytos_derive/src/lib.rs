@@ -1,7 +1,7 @@
 //! Cytos Derive
 //!
 //! This crate provides the `CytosNode` derive macro, which automatically implements the
-//! `Transformer` trait for structs in the cytos graph processing system. The macro
+//! `PropInspector` trait for structs in the cytos graph processing system. The macro
 //! generates implementations for linking, loading, assigning, and dumping parameters
 //! based on field attributes.
 //!
@@ -103,7 +103,7 @@ fn get_field_infos(fields: &Fields, direction: &'static str) -> Vec<FieldInfo> {
         .collect()
 }
 
-/// Derives the `CytosNode` trait for a struct, implementing the `Transformer` interface.
+/// Derives the `CytosNode` trait for a struct, implementing the `PropInspector` interface.
 ///
 /// This macro generates implementations for parameter linking, loading, assignment, and
 /// dumping based on the struct's fields annotated with `#[cytos(input)]` or
@@ -128,20 +128,10 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
         unreachable!()
     };
 
-    let link = create_link(fields);
+    let get_prop = create_get_prop(fields);
+    let get_prop_mut = create_get_prop_mut(fields);
 
-    let load = create_load(fields);
-    let assign = create_assign(fields);
-    let dump = create_dump(fields);
-
-    let load_owned = create_load_owned(fields);
-    let assign_owned = create_assign_owned(fields);
-    let dump_owned = create_dump_owned(fields);
-
-    let input = create_input(fields);
     let input_names = create_input_names(fields);
-
-    let output = create_output(fields);
     let output_names = create_output_names(fields);
 
     // Collect metadata information
@@ -193,32 +183,21 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
     quote! {
         #metadata_impl
 
-        impl  #generics cytos::Transformer for #ident #generics  #gwhere  {
-            #link
+        impl  #generics cytos::PropInspector for #ident #generics  #gwhere  {
+            #get_prop
+            #get_prop_mut
 
-
-            #load
-            #assign
-            #dump
-
-            #load_owned
-            #assign_owned
-            #dump_owned
-
-            #input
             #input_names
-
-            #output
             #output_names
         }
     }
     .into()
 }
 
-/// Creates the implementation for the `link` method.
+/// Creates the implementation for the `get_prop` method.
 ///
-/// Generates a match statement that calls `link_value` on the appropriate input field
-/// based on the parameter name.
+/// Generates a match statement that returns a reference to the appropriate input or output field
+/// as a `GenericPropInterface` based on the parameter name, or `None` if not found.
 ///
 /// # Arguments
 ///
@@ -226,36 +205,40 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
 ///
 /// # Returns
 ///
-/// A `TokenStream` containing the generated `link` method implementation.
-///
-/// # Errors
-///
-/// The generated method returns an error if the parameter name does not correspond
-/// to any input field.
-fn create_link(fields: &Fields) -> proc_macro2::TokenStream {
+/// A `TokenStream` containing the generated `get_prop` method implementation.
+fn create_get_prop(fields: &Fields) -> proc_macro2::TokenStream {
     let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
         .map(|field| {
-            let ident = &field.ident;
-            let lit = ident_to_lit(ident);
-            quote! {#lit => self.#ident.link_value(val),}
+            let i = &field.ident;
+            let f = ident_to_lit(i);
+            quote! {#f => Some(&self.#i),}
+        })
+        .collect::<Vec<_>>();
+
+    let outputs = filter_fields_by_type(fields, OUTPUT_PROP_TYPE)
+        .map(|field| {
+            let i = &field.ident;
+            let f = ident_to_lit(i);
+            quote! {#f => Some(&self.#i),}
         })
         .collect::<Vec<_>>();
 
     quote! {
-        fn link(&mut self, name: cytos::ParamId, val: cytos::props::GenericProp)
-                -> cytos::Result<()> {
-            match name {
+        fn get_prop(&self, val: cytos::ParamId)
+                 -> Option<&dyn cytos::props::GenericPropInterface> {
+            match val {
                 #(#inputs)*
-                _ => Err("missing input link data".into()),
+                #(#outputs)*
+                _ => None,
             }
         }
     }
 }
 
-/// Creates the implementation for the `assign` method.
+/// Creates the implementation for the `get_prop_mut` method.
 ///
-/// Generates a match statement that calls `assign` on the appropriate input field
-/// based on the parameter name.
+/// Generates a match statement that returns a mutable reference to the appropriate input or output field
+/// as a `GenericPropInterface` based on the parameter name, or `None` if not found.
 ///
 /// # Arguments
 ///
@@ -263,279 +246,30 @@ fn create_link(fields: &Fields) -> proc_macro2::TokenStream {
 ///
 /// # Returns
 ///
-/// A `TokenStream` containing the generated `assign` method implementation.
-///
-/// # Errors
-///
-/// The generated method returns an error if the parameter name does not correspond
-/// to any input field.
-fn create_assign(fields: &Fields) -> proc_macro2::TokenStream {
+/// A `TokenStream` containing the generated `get_prop_mut` method implementation.
+fn create_get_prop_mut(fields: &Fields) -> proc_macro2::TokenStream {
     let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
         .map(|field| {
             let i = &field.ident;
             let f = ident_to_lit(i);
-            quote! {#f => self.#i.assign(value),}
+            quote! {#f => Some(&mut self.#i),}
         })
         .collect::<Vec<_>>();
 
-    {
-        quote!(
-            fn assign(
-                &mut self,
-                name: cytos::ParamId,
-                value: cytos::Value,
-            ) -> cytos::Result<()> {
-                match name {
-                    #(#inputs)*
-                    _ => Err("parameter not found".into()),
-                }
-
-            }
-        )
-    }
-}
-
-/// Creates the implementation for the `load` method.
-///
-/// Generates a match statement that calls `load` on the appropriate input field
-/// based on the parameter name.
-///
-/// # Arguments
-///
-/// * `fields` - The fields of the struct to process.
-///
-/// # Returns
-///
-/// A `TokenStream` containing the generated `load` method implementation.
-///
-/// # Errors
-///
-/// The generated method returns an error if the parameter name does not correspond
-/// to any input field.
-fn create_load(fields: &Fields) -> proc_macro2::TokenStream {
-    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
+    let outputs = filter_fields_by_type(fields, OUTPUT_PROP_TYPE)
         .map(|field| {
             let i = &field.ident;
             let f = ident_to_lit(i);
-            quote! {#f => self.#i.load(value),}
-        })
-        .collect::<Vec<_>>();
-
-    {
-        quote!(
-            fn load(
-                &mut self,
-                name: cytos::ParamId,
-                value: cytos::Value,
-            ) -> cytos::Result<()> {
-                match name {
-                    #(#inputs)*
-                    _ => Err("parameter not found".into()),
-                }
-
-            }
-        )
-    }
-}
-
-/// Creates the implementation for the `dump` method.
-///
-/// Generates a match statement that calls `dump` on the appropriate input or output field
-/// based on the parameter name.
-///
-/// # Arguments
-///
-/// * `fields` - The fields of the struct to process.
-///
-/// # Returns
-///
-/// A `TokenStream` containing the generated `dump` method implementation.
-///
-/// # Errors
-///
-/// The generated method returns an error if the parameter name does not correspond
-/// to any input or output field.
-fn create_dump(fields: &Fields) -> proc_macro2::TokenStream {
-    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
-        .chain(filter_fields_by_type(fields, OUTPUT_PROP_TYPE))
-        .map(|field| {
-            let i = &field.ident;
-            let f = ident_to_lit(i);
-            quote! {#f => self.#i.dump(),}
-        })
-        .collect::<Vec<_>>();
-
-    {
-        quote!(
-            fn dump(
-                & self,
-                name: cytos::ParamId
-            ) -> cytos::Result<cytos::Value> {
-                match name {
-                    #(#inputs)*
-                    _ => Err("parameter not found".into()),
-                }
-
-            }
-        )
-    }
-}
-
-/// Creates the implementation for the `load_owned` method.
-///
-/// Generates a match statement that calls `load_owned_generic` on the appropriate input field
-/// based on the parameter name.
-///
-/// # Arguments
-///
-/// * `fields` - The fields of the struct to process.
-///
-/// # Returns
-///
-/// A `TokenStream` containing the generated `load_owned` method implementation.
-///
-/// # Errors
-///
-/// The generated method returns an error if the parameter name does not correspond
-/// to any input field.
-fn create_load_owned(fields: &Fields) -> proc_macro2::TokenStream {
-    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
-        .map(|field| {
-            let i = &field.ident;
-            let f = ident_to_lit(i);
-            quote! {#f => self.#i.load_owned_generic(value),}
-        })
-        .collect::<Vec<_>>();
-
-    {
-        quote!(
-            fn load_owned(
-                &mut self,
-                name: cytos::ParamId,
-                value: cytos::GenericOwnedProp,
-            ) -> cytos::Result<()> {
-                match name {
-                    #(#inputs)*
-                    _ => Err("parameter not found".into()),
-                }
-
-            }
-        )
-    }
-}
-
-/// Creates the implementation for the `assign_owned` method.
-///
-/// Generates a match statement that calls `assign_owned_generic` on the appropriate input field
-/// based on the parameter name.
-///
-/// # Arguments
-///
-/// * `fields` - The fields of the struct to process.
-///
-/// # Returns
-///
-/// A `TokenStream` containing the generated `assign_owned` method implementation.
-///
-/// # Errors
-///
-/// The generated method returns an error if the parameter name does not correspond
-/// to any input field.
-fn create_assign_owned(fields: &Fields) -> proc_macro2::TokenStream {
-    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
-        .map(|field| {
-            let i = &field.ident;
-            let f = ident_to_lit(i);
-            quote! {#f => self.#i.assign_owned_generic(value),}
-        })
-        .collect::<Vec<_>>();
-
-    {
-        quote!(
-            fn assign_owned(
-                &mut self,
-                name: cytos::ParamId,
-                value: cytos::GenericOwnedProp,
-            ) -> cytos::Result<()> {
-                match name {
-                    #(#inputs)*
-                    _ => Err("parameter not found".into()),
-                }
-
-            }
-        )
-    }
-}
-
-/// Creates the implementation for the `dump_owned` method.
-///
-/// Generates a match statement that calls `into_owned_generic` on the appropriate input or output field
-/// based on the parameter name.
-///
-/// # Arguments
-///
-/// * `fields` - The fields of the struct to process.
-///
-/// # Returns
-///
-/// A `TokenStream` containing the generated `dump_owned` method implementation.
-///
-/// # Errors
-///
-/// The generated method returns an error if the parameter name does not correspond
-/// to any input or output field.
-fn create_dump_owned(fields: &Fields) -> proc_macro2::TokenStream {
-    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
-        .chain(filter_fields_by_type(fields, OUTPUT_PROP_TYPE))
-        .map(|field| {
-            let i = &field.ident;
-            let f = ident_to_lit(i);
-            quote! {#f => Ok(self.#i.into_owned_generic()),}
-        })
-        .collect::<Vec<_>>();
-
-    {
-        quote!(
-            fn dump_owned(
-                & self,
-                name: cytos::ParamId
-            ) -> cytos::Result<cytos::GenericOwnedProp> {
-                match name {
-                    #(#inputs)*
-                    _ => Err("parameter not found".into()),
-                }
-
-            }
-        )
-    }
-}
-
-/// Creates the implementation for the `input` method.
-///
-/// Generates a match statement that returns `as_generic` on the appropriate input field
-/// based on the parameter name, or `None` if not found.
-///
-/// # Arguments
-///
-/// * `fields` - The fields of the struct to process.
-///
-/// # Returns
-///
-/// A `TokenStream` containing the generated `input` method implementation.
-fn create_input(fields: &Fields) -> proc_macro2::TokenStream {
-    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
-        .map(|field| {
-            let i = &field.ident;
-            let f = ident_to_lit(i);
-            quote! {#f => Some(self.#i.as_generic()),}
+            quote! {#f => Some(&mut self.#i),}
         })
         .collect::<Vec<_>>();
 
     quote! {
-        fn input(&self, val: cytos::ParamId)
-                 -> Option<cytos::props::GenericProp> {
+        fn get_prop_mut(&mut self, val: cytos::ParamId)
+                 -> Option<&mut dyn cytos::props::GenericPropInterface> {
             match val {
                 #(#inputs)*
+                #(#outputs)*
                 _ => None,
             }
         }
@@ -566,38 +300,6 @@ fn create_input_names(fields: &Fields) -> proc_macro2::TokenStream {
             vec![
                 #(#input_names),*
             ]
-        }
-    }
-}
-
-/// Creates the implementation for the `output` method.
-///
-/// Generates a match statement that returns `as_generic` on the appropriate output field
-/// based on the parameter name, or `None` if not found.
-///
-/// # Arguments
-///
-/// * `fields` - The fields of the struct to process.
-///
-/// # Returns
-///
-/// A `TokenStream` containing the generated `output` method implementation.
-fn create_output(fields: &Fields) -> proc_macro2::TokenStream {
-    let outputs = filter_fields_by_type(fields, OUTPUT_PROP_TYPE)
-        .map(|field| {
-            let i = &field.ident;
-            let f = ident_to_lit(i);
-            quote! {#f => Some(self.#i.as_generic()),}
-        })
-        .collect::<Vec<_>>();
-
-    quote! {
-        fn output(&self, val: cytos::ParamId)
-                  -> Option<cytos::props::GenericProp> {
-            match val {
-                #(#outputs)*
-                _ => None,
-            }
         }
     }
 }

@@ -3,10 +3,9 @@
 //! This module provides the `Stepper` and `Transformer` traits that define
 //! the interface for nodes in the processing pipeline.
 
-use super::{
-    ParamId, Result, Value,
-    props::{GenericOwnedProp, GenericProp},
-};
+use crate::props::GenericPropInterface;
+
+use super::{ParamId, Result};
 
 /// A trait for objects that can perform computation steps.
 ///
@@ -52,110 +51,28 @@ pub trait Stepper {
 ///
 /// Transformers can link to other transformers, load configuration values,
 /// and provide access to their input and output parameters.
-pub trait Transformer: Stepper {
-    /// Links an input parameter to a property from another transformer.
+pub trait PropInspector: Stepper {
+    /// Gets a reference to a property by parameter ID.
     ///
     /// # Arguments
     ///
-    /// * `name` - The parameter ID to link.
-    /// * `val` - The property to link to this parameter.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the parameter cannot be linked.
-    fn link(&mut self, name: ParamId, val: GenericProp) -> Result<()>;
-
-    /// Loads a configuration value for a parameter.
-    ///
-    /// # Arguments
-    ///
-    /// * `name` - The parameter ID to load the value for.
-    /// * `val` - The value to load.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the value cannot be loaded.
-    fn load(&mut self, name: ParamId, val: Value) -> Result<()>;
-
-    /// Assigns a runtime value to a parameter.
-    ///
-    /// # Arguments
-    ///
-    /// * `name` - The parameter ID to assign the value to.
-    /// * `val` - The value to assign.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the value cannot be assigned.
-    fn assign(&mut self, name: ParamId, val: Value) -> Result<()>;
-
-    /// Dumps the current value of a parameter.
-    ///
-    /// # Arguments
-    ///
-    /// * `name` - The parameter ID to dump.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the value cannot be dumped.
-    fn dump(&self, name: ParamId) -> Result<Value>;
-
-    /// Loads an owned property for a parameter.
-    ///
-    /// # Arguments
-    ///
-    /// * `name` - The parameter ID to load the property for.
-    /// * `val` - The owned property to load.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the property cannot be loaded.
-    fn load_owned(&mut self, name: ParamId, val: GenericOwnedProp) -> Result<()>;
-
-    /// Assigns an owned property to a parameter.
-    ///
-    /// # Arguments
-    ///
-    /// * `name` - The parameter ID to assign the property to.
-    /// * `val` - The owned property to assign.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the property cannot be assigned.
-    fn assign_owned(&mut self, name: ParamId, val: GenericOwnedProp) -> Result<()>;
-
-    /// Dumps the current owned property of a parameter.
-    ///
-    /// # Arguments
-    ///
-    /// * `name` - The parameter ID to dump.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the property cannot be dumped.
-    fn dump_owned(&self, name: ParamId) -> Result<GenericOwnedProp>;
-
-    /// Gets an output property by parameter name.
-    ///
-    /// # Arguments
-    ///
-    /// * `val` - The parameter ID of the output.
+    /// * `val` - The parameter ID of the property.
     ///
     /// # Returns
     ///
-    /// The output property if it exists, `None` otherwise.
-    fn output(&self, val: ParamId) -> Option<GenericProp>;
+    /// A reference to the property as a `GenericPropInterface` if it exists, `None` otherwise.
+    fn get_prop(&self, val: ParamId) -> Option<&dyn GenericPropInterface>;
 
-    /// Gets an input property by parameter name.
+    /// Gets a mutable reference to a property by parameter ID.
     ///
     /// # Arguments
     ///
-    /// * `val` - The parameter ID of the input.
+    /// * `val` - The parameter ID of the property.
     ///
     /// # Returns
     ///
-    /// The input property if it exists, `None` otherwise.
-    fn input(&self, val: ParamId) -> Option<GenericProp>;
+    /// A mutable reference to the property as a `GenericPropInterface` if it exists, `None` otherwise.
+    fn get_prop_mut(&mut self, val: ParamId) -> Option<&mut dyn GenericPropInterface>;
 
     /// Gets the names of all input parameters.
     ///

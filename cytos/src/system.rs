@@ -8,7 +8,7 @@ use tracing::trace;
 use serde::Serialize;
 
 use crate::NodeMetadata;
-use crate::Transformer;
+use crate::PropInspector;
 use crate::loader::Registry;
 use crate::queue::BlockReceiver;
 
@@ -750,10 +750,10 @@ impl Dispatcher {
         match node_command {
             NodeCommand::ListNodes => message.send_value(Ok(self.graph.list_nodes())),
             NodeCommand::ListInputs(node) => {
-                message.send_value(self.graph.get_node(*node).map(Transformer::input_names));
+                message.send_value(self.graph.get_node(*node).map(PropInspector::input_names));
             }
             NodeCommand::ListOutputs(node) => {
-                message.send_value(self.graph.get_node(*node).map(Transformer::output_names));
+                message.send_value(self.graph.get_node(*node).map(PropInspector::output_names));
             }
             NodeCommand::RemoveNode(node) => message.send_value(self.graph.remove(*node)),
             NodeCommand::DescribeNode(node) => {
@@ -770,14 +770,22 @@ impl Dispatcher {
             ParamCommand::Assign(vec) => {
                 let p: Result<Vec<_>> = vec
                     .into_iter()
-                    .map(|(n, p, v)| self.graph.get_node_mut(n).and_then(|n| n.assign(p, v)))
+                    .map(|(n, p, v)| {
+                        self.graph
+                            .get_node_mut(n)
+                            .and_then(|n| n.get_prop_mut(p).unwrap().assign(v))
+                    })
                     .collect();
                 message.send_value(p);
             }
             ParamCommand::Load(vec) => {
                 let p: Result<Vec<_>> = vec
                     .into_iter()
-                    .map(|(n, p, v)| self.graph.get_node_mut(n).and_then(|n| n.load(p, v)))
+                    .map(|(n, p, v)| {
+                        self.graph
+                            .get_node_mut(n)
+                            .and_then(|n| n.get_prop_mut(p).unwrap().load(v))
+                    })
                     .collect();
                 message.send_value(p);
             }
@@ -795,11 +803,13 @@ impl Dispatcher {
             StructureCommand::ListLinks => message.send_value(Ok(self.graph.collect_links())),
             StructureCommand::AddLink((src, dst)) => {
                 let s = self.graph.get_node(src.0).unwrap();
-                let s = (*s).output(src.1).unwrap();
+                let s = (*s).get_prop(src.1).unwrap().as_generic();
                 self.graph
                     .get_node_mut(dst.0)
                     .unwrap()
-                    .link(dst.1, s)
+                    .get_prop_mut(dst.1)
+                    .unwrap()
+                    .link(s)
                     .unwrap();
 
                 message.send_value(Ok(()));
@@ -886,7 +896,11 @@ impl Dispatcher {
             ParamCommand::Dump(vec) => {
                 let dump: Result<Vec<_>> = vec
                     .into_iter()
-                    .map(|(node, param)| self.graph.get_node(node).and_then(|n| n.dump(param)))
+                    .map(|(node, param)| {
+                        self.graph
+                            .get_node(node)
+                            .and_then(|n| n.get_prop(param).unwrap().dump())
+                    })
                     .collect();
                 message.send_value(dump);
             }
@@ -894,7 +908,9 @@ impl Dispatcher {
                 let dump: Result<Vec<_>> = vec
                     .into_iter()
                     .map(|(node, param)| {
-                        self.graph.get_node(node).and_then(|n| n.dump_owned(param))
+                        self.graph
+                            .get_node(node)
+                            .and_then(|n| n.get_prop(param).unwrap().dump_owned())
                     })
                     .collect();
 
@@ -922,7 +938,7 @@ impl Dispatcher {
             for ((node_id, param_id), response) in link.iter_response()? {
                 self.graph
                     .get_node_mut(*node_id)
-                    .and_then(|n| n.assign_owned(*param_id, response))?;
+                    .and_then(|n| n.get_prop_mut(*param_id).unwrap().assign_owned(response))?;
             }
         }
         trace!("requesting values end");

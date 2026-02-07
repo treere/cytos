@@ -1,5 +1,5 @@
 use crate::{
-    NodeMetadata, Transformer,
+    NodeMetadata, PropInspector,
     loader::Registry,
     props::GenericProp,
     repr::{GraphLink, GraphRepr, OnError},
@@ -137,12 +137,12 @@ impl Graph {
                     .transformer()
                     .output_names()
                     .into_iter()
-                    .map(|q| (p.transformer().output(q).unwrap(), (*n, q)));
+                    .map(|q| (p.transformer().get_prop(q).unwrap().as_generic(), (*n, q)));
                 let input = p
                     .transformer()
                     .input_names()
                     .into_iter()
-                    .map(|q| (p.transformer().input(q).unwrap(), (*n, q)));
+                    .map(|q| (p.transformer().get_prop(q).unwrap().as_generic(), (*n, q)));
 
                 output.chain(input)
             })
@@ -187,10 +187,14 @@ impl Graph {
     ) -> Result<()> {
         let output = self
             .get_node(src_node_id)?
-            .output(src_param_id)
-            .ok_or("cannot find param")?;
+            .get_prop(src_param_id)
+            .ok_or("cannot find src param")?
+            .as_generic();
 
-        self.get_node_mut(dst_node_id)?.link(dst_param_id, output)?;
+        self.get_node_mut(dst_node_id)?
+            .get_prop_mut(dst_param_id)
+            .ok_or("cannot find dst param")?
+            .link(output)?;
 
         Ok(())
     }
@@ -200,7 +204,7 @@ impl Graph {
     /// # Errors
     ///
     /// Will return `Err` if a node is missing
-    pub fn get_node(&self, node_id: NodeId) -> Result<&dyn Transformer> {
+    pub fn get_node(&self, node_id: NodeId) -> Result<&dyn PropInspector> {
         self.nodes
             .get(&node_id)
             .map(Node::transformer)
@@ -212,7 +216,7 @@ impl Graph {
     /// # Errors
     ///
     /// Will return `Err` if a node is missing
-    pub fn get_node_mut(&mut self, node_id: NodeId) -> Result<&mut dyn Transformer> {
+    pub fn get_node_mut(&mut self, node_id: NodeId) -> Result<&mut dyn PropInspector> {
         self.nodes
             .get_mut(&node_id)
             .map(Node::transformer_mut)
@@ -330,7 +334,7 @@ mod tests {
         assert!(
             graph
                 .get_node_mut(node_id)
-                .and_then(|n| n.load(ParamId(0), one))
+                .and_then(|n| n.get_prop_mut(ParamId(0)).unwrap().load(one))
                 .is_ok()
         );
 
@@ -341,7 +345,9 @@ mod tests {
         let input: i32 = graph
             .get_node(node_id)
             .expect("missing node")
-            .dump(ParamId(0))
+            .get_prop(ParamId(0))
+            .expect("missing prop")
+            .dump()
             .expect("dump")
             .dump()
             .expect("value");
@@ -349,8 +355,10 @@ mod tests {
         let output: i32 = graph
             .get_node(node_id)
             .expect("missing node")
-            .dump(ParamId(1))
-            .expect("dump")
+            .get_prop(ParamId(1))
+            .expect("missing prop")
+            .dump()
+            .expect("value")
             .dump()
             .expect("value");
 
