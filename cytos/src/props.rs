@@ -229,42 +229,6 @@ impl<T> std::ops::DerefMut for Prop<T> {
     }
 }
 
-impl<T: 'static + DeserializeOwned> Prop<T> {
-    /// Load a value into a prop
-    ///
-    /// # Errors
-    ///
-    /// Will return `Err` if cannot dump the `val`
-    pub fn load_inner(&mut self, val: Value) -> Result<()> {
-        let value = val.dump()?;
-        self.0 = Rc::new(UnsafeCell::new(value));
-        Ok(())
-    }
-
-    /// Assign a value into a prop
-    ///
-    /// # Errors
-    ///
-    /// Will return `Err` if cannot dump the `val`
-    pub fn assign_inner(&mut self, val: Value) -> Result<()> {
-        let value = val.dump::<T>()?;
-        **self = value;
-
-        Ok(())
-    }
-}
-
-impl<T: 'static + Serialize> Prop<T> {
-    /// Dump the value of a prop
-    ///
-    /// # Errors
-    ///
-    /// Will return `Err` if cannot load self into a `Value`
-    pub fn inner_dump(&self) -> Result<Value> {
-        Value::load(&**self)
-    }
-}
-
 /// Interface for linking generic properties.
 ///
 /// This trait provides a common interface for properties that can be linked
@@ -321,15 +285,20 @@ impl<T: DeserializeOwned + Serialize + 'static> GenericPropInterface for Prop<T>
     }
 
     fn load(&mut self, val: Value) -> Result<()> {
-        self.load_inner(val)
+        let value = val.dump()?;
+        self.0 = Rc::new(UnsafeCell::new(value));
+        Ok(())
     }
 
     fn assign(&mut self, val: Value) -> Result<()> {
-        self.assign_inner(val)
+        let value = val.dump::<T>()?;
+        **self = value;
+
+        Ok(())
     }
 
     fn dump(&self) -> Result<Value> {
-        self.inner_dump()
+        Value::load(&**self)
     }
 }
 
@@ -361,7 +330,7 @@ mod tests {
     #[test]
     fn test_dump_load_prop() {
         let prop = Prop::new(1);
-        let dump = prop.inner_dump().expect("cannot dump");
+        let dump = prop.dump().expect("cannot dump");
 
         let mut prop = Prop::new(2);
         prop.load(dump).expect("cannot load");
