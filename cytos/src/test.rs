@@ -93,8 +93,8 @@ impl Transformer for Constant {
 
     fn get_prop(&self, val: ParamId) -> Option<&dyn crate::props::GenericPropInterface> {
         match val {
-            ParamId(0) => Some(&self.output),
-            ParamId(1) => Some(&self.input),
+            ParamId(0) => Some(&self.input),
+            ParamId(1) => Some(&self.output),
             _ => None,
         }
     }
@@ -104,8 +104,8 @@ impl Transformer for Constant {
         val: ParamId,
     ) -> Option<&mut dyn crate::props::GenericPropInterface> {
         match val {
-            ParamId(0) => Some(&mut self.output),
-            ParamId(1) => Some(&mut self.input),
+            ParamId(0) => Some(&mut self.input),
+            ParamId(1) => Some(&mut self.output),
             _ => None,
         }
     }
