@@ -5,10 +5,7 @@
 
 use crate::props::GenericPropInterface;
 
-use super::{
-    ParamId, Result,
-    props::{GenericOwnedProp, GenericProp},
-};
+use super::{ParamId, Result, props::GenericProp};
 
 /// A trait for objects that can perform computation steps.
 ///
@@ -55,17 +52,6 @@ pub trait Stepper {
 /// Transformers can link to other transformers, load configuration values,
 /// and provide access to their input and output parameters.
 pub trait Transformer: Stepper {
-    /// Dumps the current owned property of a parameter.
-    ///
-    /// # Arguments
-    ///
-    /// * `name` - The parameter ID to dump.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the property cannot be dumped.
-    fn dump_owned(&self, name: ParamId) -> Result<GenericOwnedProp>;
-
     /// Gets a reference to a property by parameter ID.
     ///
     /// # Arguments

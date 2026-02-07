@@ -128,8 +128,6 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
         unreachable!()
     };
 
-    let dump_owned = create_dump_owned(fields);
-
     let get_prop = create_get_prop(fields);
     let get_prop_mut = create_get_prop_mut(fields);
 
@@ -189,8 +187,6 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
         #metadata_impl
 
         impl  #generics cytos::Transformer for #ident #generics  #gwhere  {
-            #dump_owned
-
             #get_prop
             #get_prop_mut
 
@@ -202,49 +198,6 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
         }
     }
     .into()
-}
-
-/// Creates the implementation for the `dump_owned` method.
-///
-/// Generates a match statement that calls `into_owned_generic` on the appropriate input or output field
-/// based on the parameter name.
-///
-/// # Arguments
-///
-/// * `fields` - The fields of the struct to process.
-///
-/// # Returns
-///
-/// A `TokenStream` containing the generated `dump_owned` method implementation.
-///
-/// # Errors
-///
-/// The generated method returns an error if the parameter name does not correspond
-/// to any input or output field.
-fn create_dump_owned(fields: &Fields) -> proc_macro2::TokenStream {
-    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
-        .chain(filter_fields_by_type(fields, OUTPUT_PROP_TYPE))
-        .map(|field| {
-            let i = &field.ident;
-            let f = ident_to_lit(i);
-            quote! {#f => Ok(self.#i.into_owned_generic()),}
-        })
-        .collect::<Vec<_>>();
-
-    {
-        quote!(
-            fn dump_owned(
-                & self,
-                name: cytos::ParamId
-            ) -> cytos::Result<cytos::GenericOwnedProp> {
-                match name {
-                    #(#inputs)*
-                    _ => Err("parameter not found".into()),
-                }
-
-            }
-        )
-    }
 }
 
 /// Creates the implementation for the `get_prop` method.

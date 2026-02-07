@@ -908,7 +908,9 @@ impl Dispatcher {
                 let dump: Result<Vec<_>> = vec
                     .into_iter()
                     .map(|(node, param)| {
-                        self.graph.get_node(node).and_then(|n| n.dump_owned(param))
+                        self.graph
+                            .get_node(node)
+                            .and_then(|n| n.get_prop(param).unwrap().dump_owned())
                     })
                     .collect();
 

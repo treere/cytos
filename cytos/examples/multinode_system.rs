@@ -18,10 +18,6 @@ impl Stepper for Add {
 }
 
 impl Transformer for Add {
-    fn dump_owned(&self, name: cytos::ParamId) -> cytos::Result<cytos::GenericOwnedProp> {
-        todo!()
-    }
-
     fn output(&self, val: cytos::ParamId) -> Option<cytos::props::GenericProp> {
         todo!()
     }

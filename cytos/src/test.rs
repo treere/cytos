@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 
 use crate::props::GenericProp;
-use crate::{
-    GenericOwnedProp, MetadataProvider, NodeMetadata, ParamId, Prop, Result, Stepper, Transformer,
-};
+use crate::{MetadataProvider, NodeMetadata, ParamId, Prop, Result, Stepper, Transformer};
 
 /// An empty transformer implementation for testing purposes.
 ///
@@ -19,10 +17,6 @@ impl Stepper for Empty {
 }
 
 impl Transformer for Empty {
-    fn dump_owned(&self, _name: ParamId) -> Result<GenericOwnedProp> {
-        Err("no data".into())
-    }
-
     fn get_prop(&self, _val: ParamId) -> Option<&dyn crate::props::GenericPropInterface> {
         None
     }
@@ -75,14 +69,6 @@ impl Stepper for Constant {
 }
 
 impl Transformer for Constant {
-    fn dump_owned(&self, name: ParamId) -> Result<GenericOwnedProp> {
-        match name {
-            ParamId(0) => Ok(self.input.into_owned_generic()),
-            ParamId(1) => Ok(self.output.into_owned_generic()),
-            _ => Err("".into()),
-        }
-    }
-
     fn output(&self, name: ParamId) -> Option<GenericProp> {
         match name {
             ParamId(1) => Some(self.output.as_generic()),

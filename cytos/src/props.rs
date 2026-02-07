@@ -178,12 +178,6 @@ impl<T: 'static> Prop<T> {
     }
 }
 
-impl<T: Ownable> Prop<T> {
-    pub fn into_owned_generic(&self) -> GenericOwnedProp {
-        GenericOwnedProp(Box::new(self.to_ownable()))
-    }
-}
-
 impl<T> std::ops::Deref for Prop<T> {
     type Target = T;
 
@@ -264,6 +258,13 @@ pub trait GenericPropInterface {
     ///
     /// Returns an error if the property cannot be assigned.
     fn assign_owned(&mut self, val: GenericOwnedProp) -> Result<()>;
+
+    /// Dumps the current owned property of a parameter.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the property cannot be dumped.
+    fn dump_owned(&self) -> Result<GenericOwnedProp>;
 }
 
 impl<T: DeserializeOwned + Serialize + Ownable + 'static> GenericPropInterface for Prop<T> {
@@ -308,6 +309,10 @@ impl<T: DeserializeOwned + Serialize + Ownable + 'static> GenericPropInterface f
             },
         )
     }
+
+    fn dump_owned(&self) -> Result<GenericOwnedProp> {
+        Ok(GenericOwnedProp(Box::new(self.to_ownable())))
+    }
 }
 
 /// Generic prop
@@ -350,7 +355,7 @@ mod tests {
     fn test_multi_thread() {
         let prop = Prop::new(1);
 
-        let generic = prop.into_owned_generic();
+        let generic = prop.dump_owned().unwrap();
 
         std::thread::spawn(|| {
             let mut thread_prop = Prop::new(2);
