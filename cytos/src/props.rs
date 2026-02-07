@@ -145,48 +145,6 @@ impl std::fmt::Debug for GenericOwnedProp {
     }
 }
 
-/// A property that holds a value of type T with interior mutability.
-///
-/// Uses `Rc<UnsafeCell<T>>` for shared mutable access without requiring mutable references.
-#[derive(Default)]
-pub struct Prop<T>(Rc<UnsafeCell<T>>);
-
-impl<T: 'static> Prop<T> {
-    /// Create a prop
-    pub fn new(val: T) -> Self {
-        Self(Rc::new(UnsafeCell::new(val)))
-    }
-
-    /// Link that prop to another prop
-    ///
-    /// # Errors
-    ///
-    /// Will return `Err` if the type is invalid
-    pub fn link_value(&mut self, val: GenericProp) -> Result<()> {
-        match val.0.downcast::<UnsafeCell<T>>() {
-            Ok(v) => {
-                self.0 = v;
-                Ok(())
-            }
-            _ => Err("invalid type".into()),
-        }
-    }
-}
-
-impl<T> std::ops::Deref for Prop<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        unsafe { &*self.0.get() }
-    }
-}
-
-impl<T> std::ops::DerefMut for Prop<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe { &mut *self.0.get() }
-    }
-}
-
 /// Interface for linking generic properties.
 ///
 /// This trait provides a common interface for properties that can be linked
@@ -259,7 +217,7 @@ pub trait GenericPropInterface {
     /// # Errors
     ///
     /// Returns an error if the property cannot be dumped.
-    fn dump_owned(&self) -> Result<GenericOwnedProp>;
+    fn as_owned(&self) -> GenericOwnedProp;
     ///
     /// Gets an output property by parameter name.
     ///
@@ -271,6 +229,48 @@ pub trait GenericPropInterface {
     ///
     /// The output property if it exists, `None` otherwise.
     fn as_generic(&self) -> GenericProp;
+}
+
+/// A property that holds a value of type T with interior mutability.
+///
+/// Uses `Rc<UnsafeCell<T>>` for shared mutable access without requiring mutable references.
+#[derive(Default)]
+pub struct Prop<T>(Rc<UnsafeCell<T>>);
+
+impl<T: 'static> Prop<T> {
+    /// Create a prop
+    pub fn new(val: T) -> Self {
+        Self(Rc::new(UnsafeCell::new(val)))
+    }
+
+    /// Link that prop to another prop
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if the type is invalid
+    pub fn link_value(&mut self, val: GenericProp) -> Result<()> {
+        match val.0.downcast::<UnsafeCell<T>>() {
+            Ok(v) => {
+                self.0 = v;
+                Ok(())
+            }
+            _ => Err("invalid type".into()),
+        }
+    }
+}
+
+impl<T> std::ops::Deref for Prop<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*self.0.get() }
+    }
+}
+
+impl<T> std::ops::DerefMut for Prop<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { &mut *self.0.get() }
+    }
 }
 
 impl<T: DeserializeOwned + Serialize + Ownable + 'static> GenericPropInterface for Prop<T> {
@@ -316,8 +316,8 @@ impl<T: DeserializeOwned + Serialize + Ownable + 'static> GenericPropInterface f
         )
     }
 
-    fn dump_owned(&self) -> Result<GenericOwnedProp> {
-        Ok(GenericOwnedProp(Box::new(self.to_ownable())))
+    fn as_owned(&self) -> GenericOwnedProp {
+        GenericOwnedProp(Box::new(self.to_ownable()))
     }
 
     fn as_generic(&self) -> GenericProp {
@@ -365,7 +365,7 @@ mod tests {
     fn test_multi_thread() {
         let prop = Prop::new(1);
 
-        let generic = prop.dump_owned().unwrap();
+        let generic = prop.as_owned();
 
         std::thread::spawn(|| {
             let mut thread_prop = Prop::new(2);

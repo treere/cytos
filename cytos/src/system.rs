@@ -910,7 +910,7 @@ impl Dispatcher {
                     .map(|(node, param)| {
                         self.graph
                             .get_node(node)
-                            .and_then(|n| n.get_prop(param).unwrap().dump_owned())
+                            .map(|n| n.get_prop(param).unwrap().as_owned())
                     })
                     .collect();
 
