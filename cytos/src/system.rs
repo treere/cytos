@@ -896,7 +896,11 @@ impl Dispatcher {
             ParamCommand::Dump(vec) => {
                 let dump: Result<Vec<_>> = vec
                     .into_iter()
-                    .map(|(node, param)| self.graph.get_node(node).and_then(|n| n.dump(param)))
+                    .map(|(node, param)| {
+                        self.graph
+                            .get_node(node)
+                            .and_then(|n| n.get_prop(param).unwrap().dump())
+                    })
                     .collect();
                 message.send_value(dump);
             }

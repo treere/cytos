@@ -18,10 +18,6 @@ impl Stepper for Add {
 }
 
 impl Transformer for Add {
-    fn dump(&self, name: cytos::ParamId) -> cytos::Result<cytos::Value> {
-        todo!()
-    }
-
     fn load_owned(
         &mut self,
         name: cytos::ParamId,

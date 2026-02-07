@@ -260,7 +260,7 @@ impl<T: 'static + Serialize> Prop<T> {
     /// # Errors
     ///
     /// Will return `Err` if cannot load self into a `Value`
-    pub fn dump(&self) -> Result<Value> {
+    pub fn inner_dump(&self) -> Result<Value> {
         Value::load(&**self)
     }
 }
@@ -302,9 +302,20 @@ pub trait GenericPropInterface {
     ///
     /// Returns an error if the value cannot be assigned.
     fn assign(&mut self, val: Value) -> Result<()>;
+    ///
+    /// Dumps the current value of a parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The parameter ID to dump.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the value cannot be dumped.
+    fn dump(&self) -> Result<Value>;
 }
 
-impl<T: DeserializeOwned + 'static> GenericPropInterface for Prop<T> {
+impl<T: DeserializeOwned + Serialize + 'static> GenericPropInterface for Prop<T> {
     fn link(&mut self, val: GenericProp) -> Result<()> {
         self.link_value(val)
     }
@@ -315,6 +326,10 @@ impl<T: DeserializeOwned + 'static> GenericPropInterface for Prop<T> {
 
     fn assign(&mut self, val: Value) -> Result<()> {
         self.assign_inner(val)
+    }
+
+    fn dump(&self) -> Result<Value> {
+        self.inner_dump()
     }
 }
 
@@ -346,7 +361,7 @@ mod tests {
     #[test]
     fn test_dump_load_prop() {
         let prop = Prop::new(1);
-        let dump = prop.dump().expect("cannot dump");
+        let dump = prop.inner_dump().expect("cannot dump");
 
         let mut prop = Prop::new(2);
         prop.load(dump).expect("cannot load");

@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use crate::props::GenericProp;
 use crate::{
     GenericOwnedProp, MetadataProvider, NodeMetadata, ParamId, Prop, Result, Stepper, Transformer,
-    Value,
 };
 
 /// An empty transformer implementation for testing purposes.
@@ -20,10 +19,6 @@ impl Stepper for Empty {
 }
 
 impl Transformer for Empty {
-    fn dump(&self, _name: ParamId) -> Result<Value> {
-        Err("dump".into())
-    }
-
     fn load_owned(&mut self, _name: ParamId, _val: GenericOwnedProp) -> Result<()> {
         Err("load_owned".into())
     }
@@ -88,14 +83,6 @@ impl Stepper for Constant {
 }
 
 impl Transformer for Constant {
-    fn dump(&self, name: ParamId) -> Result<Value> {
-        match name {
-            ParamId(0) => self.input.dump(),
-            ParamId(1) => self.output.dump(),
-            _ => Err("".into()),
-        }
-    }
-
     fn assign_owned(&mut self, name: ParamId, val: GenericOwnedProp) -> Result<()> {
         match name {
             ParamId(0) => self.input.assign_owned_generic(val),

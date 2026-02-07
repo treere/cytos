@@ -344,7 +344,9 @@ mod tests {
         let input: i32 = graph
             .get_node(node_id)
             .expect("missing node")
-            .dump(ParamId(0))
+            .get_prop(ParamId(0))
+            .expect("missing prop")
+            .dump()
             .expect("dump")
             .dump()
             .expect("value");
@@ -352,8 +354,10 @@ mod tests {
         let output: i32 = graph
             .get_node(node_id)
             .expect("missing node")
-            .dump(ParamId(1))
-            .expect("dump")
+            .get_prop(ParamId(1))
+            .expect("missing prop")
+            .dump()
+            .expect("value")
             .dump()
             .expect("value");
 
