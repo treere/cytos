@@ -171,11 +171,6 @@ impl<T: 'static> Prop<T> {
             _ => Err("invalid type".into()),
         }
     }
-
-    /// Convert this prop to be a generic prop
-    pub fn as_generic(&self) -> GenericProp {
-        GenericProp(self.0.clone())
-    }
 }
 
 impl<T> std::ops::Deref for Prop<T> {
@@ -265,6 +260,17 @@ pub trait GenericPropInterface {
     ///
     /// Returns an error if the property cannot be dumped.
     fn dump_owned(&self) -> Result<GenericOwnedProp>;
+    ///
+    /// Gets an output property by parameter name.
+    ///
+    /// # Arguments
+    ///
+    /// * `val` - The parameter ID of the output.
+    ///
+    /// # Returns
+    ///
+    /// The output property if it exists, `None` otherwise.
+    fn as_generic(&self) -> GenericProp;
 }
 
 impl<T: DeserializeOwned + Serialize + Ownable + 'static> GenericPropInterface for Prop<T> {
@@ -312,6 +318,10 @@ impl<T: DeserializeOwned + Serialize + Ownable + 'static> GenericPropInterface f
 
     fn dump_owned(&self) -> Result<GenericOwnedProp> {
         Ok(GenericOwnedProp(Box::new(self.to_ownable())))
+    }
+
+    fn as_generic(&self) -> GenericProp {
+        GenericProp(self.0.clone())
     }
 }
 

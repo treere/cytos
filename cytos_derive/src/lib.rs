@@ -131,10 +131,7 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
     let get_prop = create_get_prop(fields);
     let get_prop_mut = create_get_prop_mut(fields);
 
-    let input = create_input(fields);
     let input_names = create_input_names(fields);
-
-    let output = create_output(fields);
     let output_names = create_output_names(fields);
 
     // Collect metadata information
@@ -190,10 +187,7 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
             #get_prop
             #get_prop_mut
 
-            #input
             #input_names
-
-            #output
             #output_names
         }
     }
@@ -282,38 +276,6 @@ fn create_get_prop_mut(fields: &Fields) -> proc_macro2::TokenStream {
     }
 }
 
-/// Creates the implementation for the `input` method.
-///
-/// Generates a match statement that returns `as_generic` on the appropriate input field
-/// based on the parameter name, or `None` if not found.
-///
-/// # Arguments
-///
-/// * `fields` - The fields of the struct to process.
-///
-/// # Returns
-///
-/// A `TokenStream` containing the generated `input` method implementation.
-fn create_input(fields: &Fields) -> proc_macro2::TokenStream {
-    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
-        .map(|field| {
-            let i = &field.ident;
-            let f = ident_to_lit(i);
-            quote! {#f => Some(self.#i.as_generic()),}
-        })
-        .collect::<Vec<_>>();
-
-    quote! {
-        fn input(&self, val: cytos::ParamId)
-                 -> Option<cytos::props::GenericProp> {
-            match val {
-                #(#inputs)*
-                _ => None,
-            }
-        }
-    }
-}
-
 /// Creates the implementation for the `input_names` method.
 ///
 /// Generates a vector containing the parameter IDs for all input fields.
@@ -338,38 +300,6 @@ fn create_input_names(fields: &Fields) -> proc_macro2::TokenStream {
             vec![
                 #(#input_names),*
             ]
-        }
-    }
-}
-
-/// Creates the implementation for the `output` method.
-///
-/// Generates a match statement that returns `as_generic` on the appropriate output field
-/// based on the parameter name, or `None` if not found.
-///
-/// # Arguments
-///
-/// * `fields` - The fields of the struct to process.
-///
-/// # Returns
-///
-/// A `TokenStream` containing the generated `output` method implementation.
-fn create_output(fields: &Fields) -> proc_macro2::TokenStream {
-    let outputs = filter_fields_by_type(fields, OUTPUT_PROP_TYPE)
-        .map(|field| {
-            let i = &field.ident;
-            let f = ident_to_lit(i);
-            quote! {#f => Some(self.#i.as_generic()),}
-        })
-        .collect::<Vec<_>>();
-
-    quote! {
-        fn output(&self, val: cytos::ParamId)
-                  -> Option<cytos::props::GenericProp> {
-            match val {
-                #(#outputs)*
-                _ => None,
-            }
         }
     }
 }

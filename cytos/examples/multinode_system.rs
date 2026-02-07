@@ -18,14 +18,6 @@ impl Stepper for Add {
 }
 
 impl Transformer for Add {
-    fn output(&self, val: cytos::ParamId) -> Option<cytos::props::GenericProp> {
-        todo!()
-    }
-
-    fn input(&self, val: cytos::ParamId) -> Option<cytos::props::GenericProp> {
-        todo!()
-    }
-
     fn input_names(&self) -> Vec<cytos::ParamId> {
         todo!()
     }

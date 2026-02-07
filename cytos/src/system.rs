@@ -803,7 +803,7 @@ impl Dispatcher {
             StructureCommand::ListLinks => message.send_value(Ok(self.graph.collect_links())),
             StructureCommand::AddLink((src, dst)) => {
                 let s = self.graph.get_node(src.0).unwrap();
-                let s = (*s).output(src.1).unwrap();
+                let s = (*s).get_prop(src.1).unwrap().as_generic();
                 self.graph
                     .get_node_mut(dst.0)
                     .unwrap()

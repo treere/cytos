@@ -137,12 +137,12 @@ impl Graph {
                     .transformer()
                     .output_names()
                     .into_iter()
-                    .map(|q| (p.transformer().output(q).unwrap(), (*n, q)));
+                    .map(|q| (p.transformer().get_prop(q).unwrap().as_generic(), (*n, q)));
                 let input = p
                     .transformer()
                     .input_names()
                     .into_iter()
-                    .map(|q| (p.transformer().input(q).unwrap(), (*n, q)));
+                    .map(|q| (p.transformer().get_prop(q).unwrap().as_generic(), (*n, q)));
 
                 output.chain(input)
             })
@@ -187,8 +187,9 @@ impl Graph {
     ) -> Result<()> {
         let output = self
             .get_node(src_node_id)?
-            .output(src_param_id)
-            .ok_or("cannot find src param")?;
+            .get_prop(src_param_id)
+            .ok_or("cannot find src param")?
+            .as_generic();
 
         self.get_node_mut(dst_node_id)?
             .get_prop_mut(dst_param_id)

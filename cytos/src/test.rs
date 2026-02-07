@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use crate::props::GenericProp;
 use crate::{MetadataProvider, NodeMetadata, ParamId, Prop, Result, Stepper, Transformer};
 
 /// An empty transformer implementation for testing purposes.
@@ -25,14 +24,6 @@ impl Transformer for Empty {
         &mut self,
         _val: ParamId,
     ) -> Option<&mut dyn crate::props::GenericPropInterface> {
-        None
-    }
-
-    fn output(&self, _val: ParamId) -> Option<GenericProp> {
-        None
-    }
-
-    fn input(&self, _val: ParamId) -> Option<GenericProp> {
         None
     }
 
@@ -69,20 +60,6 @@ impl Stepper for Constant {
 }
 
 impl Transformer for Constant {
-    fn output(&self, name: ParamId) -> Option<GenericProp> {
-        match name {
-            ParamId(1) => Some(self.output.as_generic()),
-            _ => None,
-        }
-    }
-
-    fn input(&self, name: ParamId) -> Option<GenericProp> {
-        match name {
-            ParamId(0) => Some(self.input.as_generic()),
-            _ => None,
-        }
-    }
-
     fn input_names(&self) -> Vec<ParamId> {
         vec![ParamId(0)]
     }

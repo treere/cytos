@@ -5,7 +5,7 @@
 
 use crate::props::GenericPropInterface;
 
-use super::{ParamId, Result, props::GenericProp};
+use super::{ParamId, Result};
 
 /// A trait for objects that can perform computation steps.
 ///
@@ -73,28 +73,6 @@ pub trait Transformer: Stepper {
     ///
     /// A mutable reference to the property as a `GenericPropInterface` if it exists, `None` otherwise.
     fn get_prop_mut(&mut self, val: ParamId) -> Option<&mut dyn GenericPropInterface>;
-
-    /// Gets an output property by parameter name.
-    ///
-    /// # Arguments
-    ///
-    /// * `val` - The parameter ID of the output.
-    ///
-    /// # Returns
-    ///
-    /// The output property if it exists, `None` otherwise.
-    fn output(&self, val: ParamId) -> Option<GenericProp>;
-
-    /// Gets an input property by parameter name.
-    ///
-    /// # Arguments
-    ///
-    /// * `val` - The parameter ID of the input.
-    ///
-    /// # Returns
-    ///
-    /// The input property if it exists, `None` otherwise.
-    fn input(&self, val: ParamId) -> Option<GenericProp>;
 
     /// Gets the names of all input parameters.
     ///
