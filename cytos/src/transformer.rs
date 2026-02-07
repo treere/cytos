@@ -55,18 +55,6 @@ pub trait Stepper {
 /// Transformers can link to other transformers, load configuration values,
 /// and provide access to their input and output parameters.
 pub trait Transformer: Stepper {
-    /// Loads a configuration value for a parameter.
-    ///
-    /// # Arguments
-    ///
-    /// * `name` - The parameter ID to load the value for.
-    /// * `val` - The value to load.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the value cannot be loaded.
-    fn load(&mut self, name: ParamId, val: Value) -> Result<()>;
-
     /// Assigns a runtime value to a parameter.
     ///
     /// # Arguments

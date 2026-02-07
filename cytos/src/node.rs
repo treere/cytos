@@ -87,7 +87,9 @@ impl NodeRepr {
         let mut transformer = loader.load(self.typ.as_str())?;
 
         for (prop, value) in self.props {
-            transformer.load(prop, value)?;
+            if let Some(prop) = transformer.get_prop_mut(prop) {
+                prop.load(value)?;
+            }
         }
 
         Ok(Node::new(transformer, self.typ))

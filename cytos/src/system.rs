@@ -777,7 +777,11 @@ impl Dispatcher {
             ParamCommand::Load(vec) => {
                 let p: Result<Vec<_>> = vec
                     .into_iter()
-                    .map(|(n, p, v)| self.graph.get_node_mut(n).and_then(|n| n.load(p, v)))
+                    .map(|(n, p, v)| {
+                        self.graph
+                            .get_node_mut(n)
+                            .and_then(|n| n.get_prop_mut(p).unwrap().load(v))
+                    })
                     .collect();
                 message.send_value(p);
             }

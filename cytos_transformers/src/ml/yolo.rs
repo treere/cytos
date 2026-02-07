@@ -54,10 +54,8 @@ struct Yolo {
 
     #[cytos(output)]
     buffer: Prop<Buffer>,
-
     #[cytos(output)]
-    results: Prop<Vec<(BoundingBox, &'static str, f32)>>,
-
+    results: Prop<Vec<(BoundingBox, String, f32)>>,
     model: Option<Session>,
 }
 
@@ -125,7 +123,8 @@ impl Stepper for Yolo {
         self.results.clear();
 
         while !boxes.is_empty() {
-            self.results.push(boxes[0]);
+            let (bb, label, score) = boxes[0];
+            self.results.push((bb, label.to_owned(), score));
             boxes = boxes
                 .iter()
                 .filter(|box1| {
@@ -205,7 +204,7 @@ struct YoloDecoder {
     threshold: Prop<f32>,
 
     #[cytos(output)]
-    results: Prop<Vec<(BoundingBox, &'static str, f32)>>,
+    results: Prop<Vec<(BoundingBox, String, f32)>>,
 }
 
 impl Stepper for YoloDecoder {
@@ -249,7 +248,8 @@ impl Stepper for YoloDecoder {
         self.results.clear();
 
         while !boxes.is_empty() {
-            self.results.push(boxes[0]);
+            let (bb, label, score) = boxes[0];
+            self.results.push((bb, label.to_owned(), score));
             boxes = boxes
                 .iter()
                 .filter(|box1| {

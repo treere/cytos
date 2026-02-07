@@ -235,7 +235,7 @@ impl<T: 'static + DeserializeOwned> Prop<T> {
     /// # Errors
     ///
     /// Will return `Err` if cannot dump the `val`
-    pub fn load(&mut self, val: Value) -> Result<()> {
+    pub fn load_inner(&mut self, val: Value) -> Result<()> {
         let value = val.dump()?;
         self.0 = Rc::new(UnsafeCell::new(value));
         Ok(())
@@ -280,11 +280,26 @@ pub trait GenericPropInterface {
     ///
     /// Will return `Err` if the type is invalid or the link cannot be established.
     fn link(&mut self, val: GenericProp) -> Result<()>;
+
+    /// Loads a configuration value for a parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `val` - The value to load.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the value cannot be loaded.
+    fn load(&mut self, val: Value) -> Result<()>;
 }
 
-impl<T: 'static> GenericPropInterface for Prop<T> {
+impl<T: DeserializeOwned + 'static> GenericPropInterface for Prop<T> {
     fn link(&mut self, val: GenericProp) -> Result<()> {
         self.link_value(val)
+    }
+
+    fn load(&mut self, val: Value) -> Result<()> {
+        self.load_inner(val)
     }
 }
 

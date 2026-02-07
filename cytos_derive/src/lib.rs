@@ -128,7 +128,6 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
         unreachable!()
     };
 
-    let load = create_load(fields);
     let assign = create_assign(fields);
     let dump = create_dump(fields);
 
@@ -195,7 +194,6 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
         #metadata_impl
 
         impl  #generics cytos::Transformer for #ident #generics  #gwhere  {
-            #load
             #assign
             #dump
 
@@ -245,49 +243,6 @@ fn create_assign(fields: &Fields) -> proc_macro2::TokenStream {
     {
         quote!(
             fn assign(
-                &mut self,
-                name: cytos::ParamId,
-                value: cytos::Value,
-            ) -> cytos::Result<()> {
-                match name {
-                    #(#inputs)*
-                    _ => Err("parameter not found".into()),
-                }
-
-            }
-        )
-    }
-}
-
-/// Creates the implementation for the `load` method.
-///
-/// Generates a match statement that calls `load` on the appropriate input field
-/// based on the parameter name.
-///
-/// # Arguments
-///
-/// * `fields` - The fields of the struct to process.
-///
-/// # Returns
-///
-/// A `TokenStream` containing the generated `load` method implementation.
-///
-/// # Errors
-///
-/// The generated method returns an error if the parameter name does not correspond
-/// to any input field.
-fn create_load(fields: &Fields) -> proc_macro2::TokenStream {
-    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
-        .map(|field| {
-            let i = &field.ident;
-            let f = ident_to_lit(i);
-            quote! {#f => self.#i.load(value),}
-        })
-        .collect::<Vec<_>>();
-
-    {
-        quote!(
-            fn load(
                 &mut self,
                 name: cytos::ParamId,
                 value: cytos::Value,
