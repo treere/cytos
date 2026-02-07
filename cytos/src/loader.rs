@@ -1,6 +1,6 @@
 //! Module to handle dynamic library loading
 
-use crate::{MetadataProvider, NodeMetadata, Result, Transformer};
+use crate::{MetadataProvider, NodeMetadata, PropInspector, Result};
 
 use libloading::{Library, Symbol};
 
@@ -8,16 +8,16 @@ use std::{collections::HashMap, sync::Arc};
 
 #[derive(Clone)]
 /// A wrapper around a function that returns a transformer.
-struct FactoryContainer(Arc<dyn Fn() -> Box<dyn Transformer> + Send + Sync>);
+struct FactoryContainer(Arc<dyn Fn() -> Box<dyn PropInspector> + Send + Sync>);
 
 impl FactoryContainer {
     /// Create a `FactoryContaier` from a generic factory
-    fn new<K: Transformer + 'static>(factory: impl (Fn() -> K) + 'static + Send + Sync) -> Self {
+    fn new<K: PropInspector + 'static>(factory: impl (Fn() -> K) + 'static + Send + Sync) -> Self {
         Self(Arc::new(move || Box::new(factory())))
     }
 
     /// Get the transformer
-    fn get(&self) -> Box<dyn Transformer> {
+    fn get(&self) -> Box<dyn PropInspector> {
         (self.0)()
     }
 }
@@ -33,7 +33,7 @@ pub struct DynamicLoadingRegistryWrapper<'a> {
 
 impl DynamicLoadingRegistryWrapper<'_> {
     /// Add a dynamic factory by name removing the previous one.
-    pub fn add<K: Transformer + MetadataProvider + 'static>(
+    pub fn add<K: PropInspector + MetadataProvider + 'static>(
         &mut self,
         name: &str,
         factory: impl (Fn() -> K) + 'static + Send + Sync,
@@ -70,7 +70,7 @@ pub struct Registry {
 
 impl Registry {
     /// Add a factory by name removing the previous one.
-    pub fn add<K: Transformer + MetadataProvider + 'static>(
+    pub fn add<K: PropInspector + MetadataProvider + 'static>(
         &mut self,
         name: &str,
         factory: impl (Fn() -> K) + 'static + Send + Sync,
@@ -92,7 +92,7 @@ impl Registry {
     /// # Errors
     ///
     /// Will return `Err` if the factory is missing
-    pub fn load(&self, name: &str) -> Result<Box<dyn Transformer>> {
+    pub fn load(&self, name: &str) -> Result<Box<dyn PropInspector>> {
         let factory = self
             .factories
             .get(name)

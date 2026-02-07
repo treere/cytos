@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{MetadataProvider, NodeMetadata, ParamId, Prop, Result, Stepper, Transformer};
+use crate::{MetadataProvider, NodeMetadata, ParamId, Prop, PropInspector, Result, Stepper};
 
 /// An empty transformer implementation for testing purposes.
 ///
@@ -15,7 +15,7 @@ impl Stepper for Empty {
     }
 }
 
-impl Transformer for Empty {
+impl PropInspector for Empty {
     fn get_prop(&self, _val: ParamId) -> Option<&dyn crate::props::GenericPropInterface> {
         None
     }
@@ -59,7 +59,7 @@ impl Stepper for Constant {
     }
 }
 
-impl Transformer for Constant {
+impl PropInspector for Constant {
     fn input_names(&self) -> Vec<ParamId> {
         vec![ParamId(0)]
     }

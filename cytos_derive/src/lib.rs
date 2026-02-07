@@ -1,7 +1,7 @@
 //! Cytos Derive
 //!
 //! This crate provides the `CytosNode` derive macro, which automatically implements the
-//! `Transformer` trait for structs in the cytos graph processing system. The macro
+//! `PropInspector` trait for structs in the cytos graph processing system. The macro
 //! generates implementations for linking, loading, assigning, and dumping parameters
 //! based on field attributes.
 //!
@@ -103,7 +103,7 @@ fn get_field_infos(fields: &Fields, direction: &'static str) -> Vec<FieldInfo> {
         .collect()
 }
 
-/// Derives the `CytosNode` trait for a struct, implementing the `Transformer` interface.
+/// Derives the `CytosNode` trait for a struct, implementing the `PropInspector` interface.
 ///
 /// This macro generates implementations for parameter linking, loading, assignment, and
 /// dumping based on the struct's fields annotated with `#[cytos(input)]` or
@@ -183,7 +183,7 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
     quote! {
         #metadata_impl
 
-        impl  #generics cytos::Transformer for #ident #generics  #gwhere  {
+        impl  #generics cytos::PropInspector for #ident #generics  #gwhere  {
             #get_prop
             #get_prop_mut
 

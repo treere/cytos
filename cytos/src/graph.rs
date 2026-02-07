@@ -1,5 +1,5 @@
 use crate::{
-    NodeMetadata, Transformer,
+    NodeMetadata, PropInspector,
     loader::Registry,
     props::GenericProp,
     repr::{GraphLink, GraphRepr, OnError},
@@ -204,7 +204,7 @@ impl Graph {
     /// # Errors
     ///
     /// Will return `Err` if a node is missing
-    pub fn get_node(&self, node_id: NodeId) -> Result<&dyn Transformer> {
+    pub fn get_node(&self, node_id: NodeId) -> Result<&dyn PropInspector> {
         self.nodes
             .get(&node_id)
             .map(Node::transformer)
@@ -216,7 +216,7 @@ impl Graph {
     /// # Errors
     ///
     /// Will return `Err` if a node is missing
-    pub fn get_node_mut(&mut self, node_id: NodeId) -> Result<&mut dyn Transformer> {
+    pub fn get_node_mut(&mut self, node_id: NodeId) -> Result<&mut dyn PropInspector> {
         self.nodes
             .get_mut(&node_id)
             .map(Node::transformer_mut)

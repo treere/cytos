@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use cytos::{
-    NodeMetadata, Stepper, Transformer,
+    NodeMetadata, PropInspector, Stepper,
     loader::Registry,
     repr::{GraphRepr, InternalNodeRepr, NodeRepr, OnError},
 };
@@ -17,7 +17,7 @@ impl Stepper for Add {
     }
 }
 
-impl Transformer for Add {
+impl PropInspector for Add {
     fn input_names(&self) -> Vec<cytos::ParamId> {
         todo!()
     }

@@ -8,7 +8,7 @@ use tracing::trace;
 use serde::Serialize;
 
 use crate::NodeMetadata;
-use crate::Transformer;
+use crate::PropInspector;
 use crate::loader::Registry;
 use crate::queue::BlockReceiver;
 
@@ -750,10 +750,10 @@ impl Dispatcher {
         match node_command {
             NodeCommand::ListNodes => message.send_value(Ok(self.graph.list_nodes())),
             NodeCommand::ListInputs(node) => {
-                message.send_value(self.graph.get_node(*node).map(Transformer::input_names));
+                message.send_value(self.graph.get_node(*node).map(PropInspector::input_names));
             }
             NodeCommand::ListOutputs(node) => {
-                message.send_value(self.graph.get_node(*node).map(Transformer::output_names));
+                message.send_value(self.graph.get_node(*node).map(PropInspector::output_names));
             }
             NodeCommand::RemoveNode(node) => message.send_value(self.graph.remove(*node)),
             NodeCommand::DescribeNode(node) => {

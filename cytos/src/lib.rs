@@ -36,7 +36,7 @@ pub mod value;
 use std::error::Error;
 
 pub use self::props::{GenericOwnedProp, Prop};
-pub use self::transformer::{Stepper, Transformer};
+pub use self::transformer::{PropInspector, Stepper};
 pub use ids::{GraphId, NodeId, ParamId, id_number_to_string, id_string_to_number};
 pub use metadata::{MetadataProvider, NodeMetadata, ParamDirection, ParamInfo};
 pub use system::System;

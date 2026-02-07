@@ -1,4 +1,4 @@
-use super::{NodeMetadata, Result, Transformer};
+use super::{NodeMetadata, PropInspector, Result};
 use crate::{Stepper, loader::Registry, repr::NodeRepr};
 
 /// A node in the processing graph.
@@ -6,7 +6,7 @@ use crate::{Stepper, loader::Registry, repr::NodeRepr};
 /// A node wraps a transformer and provides access to its stepper interface.
 /// It uses unsafe pointers for performance when calling step methods.
 pub struct Node {
-    internal: Box<dyn Transformer>,
+    internal: Box<dyn PropInspector>,
     stepper: *mut dyn Stepper,
     factory_name: String,
 }
@@ -18,7 +18,7 @@ impl Node {
     ///
     /// * `internal` - The transformer to wrap in this node.
     /// * `factory_name` - The name of the factory used to create this node.
-    pub fn new(mut internal: Box<dyn Transformer + 'static>, factory_name: String) -> Self {
+    pub fn new(mut internal: Box<dyn PropInspector + 'static>, factory_name: String) -> Self {
         let vtable = {
             let data: &dyn Stepper = &*internal;
 
@@ -50,7 +50,7 @@ impl Node {
     /// # Returns
     ///
     /// An immutable reference to the transformer trait object.
-    pub fn transformer(&self) -> &dyn Transformer {
+    pub fn transformer(&self) -> &dyn PropInspector {
         &*self.internal
     }
 
@@ -59,7 +59,7 @@ impl Node {
     /// # Returns
     ///
     /// A mutable reference to the transformer trait object.
-    pub fn transformer_mut(&mut self) -> &mut dyn Transformer {
+    pub fn transformer_mut(&mut self) -> &mut dyn PropInspector {
         &mut *self.internal
     }
 
