@@ -18,14 +18,6 @@ impl Stepper for Add {
 }
 
 impl Transformer for Add {
-    fn load_owned(
-        &mut self,
-        name: cytos::ParamId,
-        val: cytos::GenericOwnedProp,
-    ) -> cytos::Result<()> {
-        todo!()
-    }
-
     fn assign_owned(
         &mut self,
         name: cytos::ParamId,

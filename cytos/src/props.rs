@@ -183,21 +183,6 @@ impl<T: Ownable> Prop<T> {
         GenericOwnedProp(Box::new(self.to_ownable()))
     }
 
-    /// Load a `GenericOwnedProp` into `self`
-    ///
-    /// # Errors
-    ///
-    /// Will return `Err` if the type is invalid
-    pub fn load_owned_generic(&mut self, val: GenericOwnedProp) -> Result<()> {
-        match val.0.downcast::<T::Value>() {
-            Ok(v) => {
-                self.0 = Rc::new(UnsafeCell::new(Ownable::from_owned(&*v)));
-                Ok(())
-            }
-            _ => Err("invalid type".into()),
-        }
-    }
-
     /// Assign a `GenericOwnedProp` into `self`
     ///
     /// # Errors
@@ -269,17 +254,24 @@ pub trait GenericPropInterface {
     ///
     /// Dumps the current value of a parameter.
     ///
-    /// # Arguments
-    ///
-    /// * `name` - The parameter ID to dump.
-    ///
     /// # Errors
     ///
     /// Returns an error if the value cannot be dumped.
     fn dump(&self) -> Result<Value>;
+    ///
+    /// Loads an owned property for a parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `val` - The owned property to load.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the property cannot be loaded.
+    fn load_owned(&mut self, val: GenericOwnedProp) -> Result<()>;
 }
 
-impl<T: DeserializeOwned + Serialize + 'static> GenericPropInterface for Prop<T> {
+impl<T: DeserializeOwned + Serialize + Ownable + 'static> GenericPropInterface for Prop<T> {
     fn link(&mut self, val: GenericProp) -> Result<()> {
         self.link_value(val)
     }
@@ -299,6 +291,16 @@ impl<T: DeserializeOwned + Serialize + 'static> GenericPropInterface for Prop<T>
 
     fn dump(&self) -> Result<Value> {
         Value::load(&**self)
+    }
+
+    fn load_owned(&mut self, val: GenericOwnedProp) -> Result<()> {
+        match val.0.downcast::<T::Value>() {
+            Ok(v) => {
+                self.0 = Rc::new(UnsafeCell::new(Ownable::from_owned(&*v)));
+                Ok(())
+            }
+            _ => Err("invalid type".into()),
+        }
     }
 }
 
@@ -346,9 +348,7 @@ mod tests {
 
         std::thread::spawn(|| {
             let mut thread_prop = Prop::new(2);
-            thread_prop
-                .load_owned_generic(generic)
-                .expect("cannot link");
+            thread_prop.load_owned(generic).expect("cannot link");
 
             assert_eq!(1, *thread_prop);
         })

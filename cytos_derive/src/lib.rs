@@ -128,7 +128,6 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
         unreachable!()
     };
 
-    let load_owned = create_load_owned(fields);
     let assign_owned = create_assign_owned(fields);
     let dump_owned = create_dump_owned(fields);
 
@@ -191,7 +190,6 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
         #metadata_impl
 
         impl  #generics cytos::Transformer for #ident #generics  #gwhere  {
-            #load_owned
             #assign_owned
             #dump_owned
 
@@ -206,49 +204,6 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
         }
     }
     .into()
-}
-
-/// Creates the implementation for the `load_owned` method.
-///
-/// Generates a match statement that calls `load_owned_generic` on the appropriate input field
-/// based on the parameter name.
-///
-/// # Arguments
-///
-/// * `fields` - The fields of the struct to process.
-///
-/// # Returns
-///
-/// A `TokenStream` containing the generated `load_owned` method implementation.
-///
-/// # Errors
-///
-/// The generated method returns an error if the parameter name does not correspond
-/// to any input field.
-fn create_load_owned(fields: &Fields) -> proc_macro2::TokenStream {
-    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
-        .map(|field| {
-            let i = &field.ident;
-            let f = ident_to_lit(i);
-            quote! {#f => self.#i.load_owned_generic(value),}
-        })
-        .collect::<Vec<_>>();
-
-    {
-        quote!(
-            fn load_owned(
-                &mut self,
-                name: cytos::ParamId,
-                value: cytos::GenericOwnedProp,
-            ) -> cytos::Result<()> {
-                match name {
-                    #(#inputs)*
-                    _ => Err("parameter not found".into()),
-                }
-
-            }
-        )
-    }
 }
 
 /// Creates the implementation for the `assign_owned` method.
