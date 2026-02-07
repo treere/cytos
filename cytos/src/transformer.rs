@@ -55,18 +55,6 @@ pub trait Stepper {
 /// Transformers can link to other transformers, load configuration values,
 /// and provide access to their input and output parameters.
 pub trait Transformer: Stepper {
-    /// Assigns an owned property to a parameter.
-    ///
-    /// # Arguments
-    ///
-    /// * `name` - The parameter ID to assign the property to.
-    /// * `val` - The owned property to assign.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the property cannot be assigned.
-    fn assign_owned(&mut self, name: ParamId, val: GenericOwnedProp) -> Result<()>;
-
     /// Dumps the current owned property of a parameter.
     ///
     /// # Arguments

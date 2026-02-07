@@ -936,7 +936,7 @@ impl Dispatcher {
             for ((node_id, param_id), response) in link.iter_response()? {
                 self.graph
                     .get_node_mut(*node_id)
-                    .and_then(|n| n.assign_owned(*param_id, response))?;
+                    .and_then(|n| n.get_prop_mut(*param_id).unwrap().assign_owned(response))?;
             }
         }
         trace!("requesting values end");

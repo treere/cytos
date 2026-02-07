@@ -19,10 +19,6 @@ impl Stepper for Empty {
 }
 
 impl Transformer for Empty {
-    fn assign_owned(&mut self, _name: ParamId, _val: GenericOwnedProp) -> Result<()> {
-        Err("load_owned".into())
-    }
-
     fn dump_owned(&self, _name: ParamId) -> Result<GenericOwnedProp> {
         Err("no data".into())
     }
@@ -79,13 +75,6 @@ impl Stepper for Constant {
 }
 
 impl Transformer for Constant {
-    fn assign_owned(&mut self, name: ParamId, val: GenericOwnedProp) -> Result<()> {
-        match name {
-            ParamId(0) => self.input.assign_owned_generic(val),
-            _ => Err("".into()),
-        }
-    }
-
     fn dump_owned(&self, name: ParamId) -> Result<GenericOwnedProp> {
         match name {
             ParamId(0) => Ok(self.input.into_owned_generic()),

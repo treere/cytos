@@ -182,22 +182,6 @@ impl<T: Ownable> Prop<T> {
     pub fn into_owned_generic(&self) -> GenericOwnedProp {
         GenericOwnedProp(Box::new(self.to_ownable()))
     }
-
-    /// Assign a `GenericOwnedProp` into `self`
-    ///
-    /// # Errors
-    ///
-    /// Will return `Err` if cannot load self into a `Value`
-    pub fn assign_owned_generic(&mut self, val: GenericOwnedProp) -> Result<()> {
-        val.0.downcast::<T::Value>().map_or_else(
-            |_| Err("invalid type".into()),
-            |v| {
-                **self = Ownable::from_owned(&*v);
-
-                Ok(())
-            },
-        )
-    }
 }
 
 impl<T> std::ops::Deref for Prop<T> {
@@ -269,6 +253,17 @@ pub trait GenericPropInterface {
     ///
     /// Returns an error if the property cannot be loaded.
     fn load_owned(&mut self, val: GenericOwnedProp) -> Result<()>;
+    ///
+    /// Assigns an owned property to a parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `val` - The owned property to assign.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the property cannot be assigned.
+    fn assign_owned(&mut self, val: GenericOwnedProp) -> Result<()>;
 }
 
 impl<T: DeserializeOwned + Serialize + Ownable + 'static> GenericPropInterface for Prop<T> {
@@ -301,6 +296,17 @@ impl<T: DeserializeOwned + Serialize + Ownable + 'static> GenericPropInterface f
             }
             _ => Err("invalid type".into()),
         }
+    }
+
+    fn assign_owned(&mut self, val: GenericOwnedProp) -> Result<()> {
+        val.0.downcast::<T::Value>().map_or_else(
+            |_| Err("invalid type".into()),
+            |v| {
+                **self = Ownable::from_owned(&*v);
+
+                Ok(())
+            },
+        )
     }
 }
 
