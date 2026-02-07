@@ -128,7 +128,6 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
         unreachable!()
     };
 
-    let assign = create_assign(fields);
     let dump = create_dump(fields);
 
     let load_owned = create_load_owned(fields);
@@ -194,7 +193,6 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
         #metadata_impl
 
         impl  #generics cytos::Transformer for #ident #generics  #gwhere  {
-            #assign
             #dump
 
             #load_owned
@@ -212,49 +210,6 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
         }
     }
     .into()
-}
-
-/// Creates the implementation for the `assign` method.
-///
-/// Generates a match statement that calls `assign` on the appropriate input field
-/// based on the parameter name.
-///
-/// # Arguments
-///
-/// * `fields` - The fields of the struct to process.
-///
-/// # Returns
-///
-/// A `TokenStream` containing the generated `assign` method implementation.
-///
-/// # Errors
-///
-/// The generated method returns an error if the parameter name does not correspond
-/// to any input field.
-fn create_assign(fields: &Fields) -> proc_macro2::TokenStream {
-    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
-        .map(|field| {
-            let i = &field.ident;
-            let f = ident_to_lit(i);
-            quote! {#f => self.#i.assign(value),}
-        })
-        .collect::<Vec<_>>();
-
-    {
-        quote!(
-            fn assign(
-                &mut self,
-                name: cytos::ParamId,
-                value: cytos::Value,
-            ) -> cytos::Result<()> {
-                match name {
-                    #(#inputs)*
-                    _ => Err("parameter not found".into()),
-                }
-
-            }
-        )
-    }
 }
 
 /// Creates the implementation for the `dump` method.

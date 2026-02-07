@@ -246,7 +246,7 @@ impl<T: 'static + DeserializeOwned> Prop<T> {
     /// # Errors
     ///
     /// Will return `Err` if cannot dump the `val`
-    pub fn assign(&mut self, val: Value) -> Result<()> {
+    pub fn assign_inner(&mut self, val: Value) -> Result<()> {
         let value = val.dump::<T>()?;
         **self = value;
 
@@ -291,6 +291,17 @@ pub trait GenericPropInterface {
     ///
     /// Returns an error if the value cannot be loaded.
     fn load(&mut self, val: Value) -> Result<()>;
+
+    /// Assigns a runtime value to a parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `val` - The value to assign.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the value cannot be assigned.
+    fn assign(&mut self, val: Value) -> Result<()>;
 }
 
 impl<T: DeserializeOwned + 'static> GenericPropInterface for Prop<T> {
@@ -300,6 +311,10 @@ impl<T: DeserializeOwned + 'static> GenericPropInterface for Prop<T> {
 
     fn load(&mut self, val: Value) -> Result<()> {
         self.load_inner(val)
+    }
+
+    fn assign(&mut self, val: Value) -> Result<()> {
+        self.assign_inner(val)
     }
 }
 

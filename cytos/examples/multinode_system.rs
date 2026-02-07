@@ -18,10 +18,6 @@ impl Stepper for Add {
 }
 
 impl Transformer for Add {
-    fn assign(&mut self, name: cytos::ParamId, val: cytos::Value) -> cytos::Result<()> {
-        todo!()
-    }
-
     fn dump(&self, name: cytos::ParamId) -> cytos::Result<cytos::Value> {
         todo!()
     }

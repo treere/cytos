@@ -62,10 +62,6 @@ impl Transformer for Empty {
     fn output_names(&self) -> Vec<ParamId> {
         vec![]
     }
-
-    fn assign(&mut self, _: ParamId, _: Value) -> Result<()> {
-        Err("no data".into())
-    }
 }
 
 impl MetadataProvider for Empty {
@@ -92,13 +88,6 @@ impl Stepper for Constant {
 }
 
 impl Transformer for Constant {
-    fn assign(&mut self, name: ParamId, val: Value) -> Result<()> {
-        match name {
-            ParamId(0) => self.input.assign(val),
-            _ => Err("".into()),
-        }
-    }
-
     fn dump(&self, name: ParamId) -> Result<Value> {
         match name {
             ParamId(0) => self.input.dump(),
