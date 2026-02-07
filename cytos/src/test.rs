@@ -20,32 +20,31 @@ impl Stepper for Empty {
 }
 
 impl Transformer for Empty {
-    fn link(&mut self, _name: ParamId, _val: GenericProp) -> Result<()> {
-        Err("no link".into())
-    }
-
-    fn assign(&mut self, _name: ParamId, _val: Value) -> Result<()> {
-        Err("load".into())
-    }
-
-    fn load(&mut self, _name: ParamId, _val: Value) -> Result<()> {
-        Err("load".into())
-    }
-
     fn dump(&self, _name: ParamId) -> Result<Value> {
         Err("dump".into())
-    }
-
-    fn assign_owned(&mut self, _name: ParamId, _val: GenericOwnedProp) -> Result<()> {
-        Err("load_owned".into())
     }
 
     fn load_owned(&mut self, _name: ParamId, _val: GenericOwnedProp) -> Result<()> {
         Err("load_owned".into())
     }
 
+    fn assign_owned(&mut self, _name: ParamId, _val: GenericOwnedProp) -> Result<()> {
+        Err("load_owned".into())
+    }
+
     fn dump_owned(&self, _name: ParamId) -> Result<GenericOwnedProp> {
         Err("no data".into())
+    }
+
+    fn get_prop(&self, _val: ParamId) -> Option<&dyn crate::props::GenericPropInterface> {
+        None
+    }
+
+    fn get_prop_mut(
+        &mut self,
+        _val: ParamId,
+    ) -> Option<&mut dyn crate::props::GenericPropInterface> {
+        None
     }
 
     fn output(&self, _val: ParamId) -> Option<GenericProp> {
@@ -62,6 +61,10 @@ impl Transformer for Empty {
 
     fn output_names(&self) -> Vec<ParamId> {
         vec![]
+    }
+
+    fn assign(&mut self, _: ParamId, _: Value) -> Result<()> {
+        Err("no data".into())
     }
 }
 
@@ -89,23 +92,9 @@ impl Stepper for Constant {
 }
 
 impl Transformer for Constant {
-    fn link(&mut self, name: ParamId, val: GenericProp) -> Result<()> {
-        match name {
-            ParamId(0) => self.input.link_value(val),
-            _ => Err("".into()),
-        }
-    }
-
     fn assign(&mut self, name: ParamId, val: Value) -> Result<()> {
         match name {
             ParamId(0) => self.input.assign(val),
-            _ => Err("".into()),
-        }
-    }
-
-    fn load(&mut self, name: ParamId, val: Value) -> Result<()> {
-        match name {
-            ParamId(0) => self.input.load(val),
             _ => Err("".into()),
         }
     }
@@ -160,5 +149,24 @@ impl Transformer for Constant {
 
     fn output_names(&self) -> Vec<ParamId> {
         vec![ParamId(1)]
+    }
+
+    fn get_prop(&self, val: ParamId) -> Option<&dyn crate::props::GenericPropInterface> {
+        match val {
+            ParamId(0) => Some(&self.output),
+            ParamId(1) => Some(&self.input),
+            _ => None,
+        }
+    }
+
+    fn get_prop_mut(
+        &mut self,
+        val: ParamId,
+    ) -> Option<&mut dyn crate::props::GenericPropInterface> {
+        match val {
+            ParamId(0) => Some(&mut self.output),
+            ParamId(1) => Some(&mut self.input),
+            _ => None,
+        }
     }
 }

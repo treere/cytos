@@ -333,7 +333,7 @@ mod tests {
         assert!(
             graph
                 .get_node_mut(node_id)
-                .and_then(|n| n.load(ParamId(0), one))
+                .and_then(|n| n.get_prop_mut(ParamId(0)).unwrap().load(one))
                 .is_ok()
         );
 
