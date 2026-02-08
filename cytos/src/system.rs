@@ -394,7 +394,7 @@ impl GraphView<'_> {
     /// List the inputs of a node
     ///
     /// # Errors
-    /// If the receiver cannot proress the request
+    /// If the receiver cannot process the request
     pub fn list_inputs(&self, node_id: NodeId) -> Result<Value> {
         self.command(Command::Node(NodeCommand::ListInputs(node_id)))
     }
@@ -402,7 +402,7 @@ impl GraphView<'_> {
     /// List the outputs of a node
     ///
     /// # Errors
-    /// If the receiver cannot proress the request
+    /// If the receiver cannot process the request
     pub fn list_outputs(&self, node_id: NodeId) -> Result<Value> {
         self.command(Command::Node(NodeCommand::ListOutputs(node_id)))
     }
@@ -426,7 +426,7 @@ impl GraphView<'_> {
     /// Remove a node
     ///
     /// # Errors
-    /// If the receiver cannot proress the request
+    /// If the receiver cannot process the request
     pub fn remove_node(&self, node_id: NodeId) -> Result<Value> {
         self.command(Command::Node(NodeCommand::RemoveNode(node_id)))
     }
@@ -434,7 +434,7 @@ impl GraphView<'_> {
     /// Dump a node param
     ///
     /// # Errors
-    /// If the receiver cannot proress the request
+    /// If the receiver cannot process the request
     pub fn dump(&self, data: Vec<(NodeId, ParamId)>) -> Result<Value> {
         self.command(Command::Param(ParamCommand::Dump(data)))
     }
@@ -442,7 +442,7 @@ impl GraphView<'_> {
     /// Assign a node param
     ///
     /// # Errors
-    /// If the receiver cannot proress the request
+    /// If the receiver cannot process the request
     pub fn assign(&self, data: Vec<(NodeId, ParamId, Value)>) -> Result<Value> {
         self.command(Command::Param(ParamCommand::Assign(data)))
     }
@@ -450,7 +450,7 @@ impl GraphView<'_> {
     /// Load a value into a node
     ///
     /// # Errors
-    /// If the receiver cannot proress the request
+    /// If the receiver cannot process the request
     pub fn load(&self, data: Vec<(NodeId, ParamId, Value)>) -> Result<Value> {
         self.command(Command::Param(ParamCommand::Load(data)))
     }
@@ -458,7 +458,7 @@ impl GraphView<'_> {
     /// List the links
     ///
     /// # Errors
-    /// If the receiver cannot proress the request
+    /// If the receiver cannot process the request
     pub fn list_links(&self) -> Result<Value> {
         self.command(Command::Structure(Box::new(StructureCommand::ListLinks)))
     }
@@ -466,7 +466,7 @@ impl GraphView<'_> {
     /// Add a link
     ///
     /// # Errors
-    /// If the receiver cannot proress the request
+    /// If the receiver cannot process the request
     pub fn add_link(&self, src: (NodeId, ParamId), dst: (NodeId, ParamId)) -> Result<Value> {
         self.command(Command::Structure(Box::new(StructureCommand::AddLink((
             src, dst,
@@ -476,7 +476,7 @@ impl GraphView<'_> {
     /// List receivers in the graph
     ///
     /// # Errors
-    /// If the receiver cannot proress the request
+    /// If the receiver cannot process the request
     pub fn list_receivers(&self) -> Result<Value> {
         self.command(Command::Structure(Box::new(
             StructureCommand::ListReceiver(self.senders.clone()),
@@ -486,7 +486,7 @@ impl GraphView<'_> {
     /// Add a receiver
     ///
     /// # Errors
-    /// If the receiver cannot proress the request
+    /// If the receiver cannot process the request
     pub fn add_receiver(
         &self,
         src: (GraphId, NodeId, ParamId),
@@ -501,7 +501,7 @@ impl GraphView<'_> {
     /// Remove a receiver
     ///
     /// # Errors
-    /// If the receiver cannot proress the request
+    /// If the receiver cannot process the request
     pub fn remove_receiver(
         &self,
         src: (GraphId, NodeId, ParamId),

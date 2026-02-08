@@ -4,8 +4,9 @@ use crate::{MetadataProvider, NodeMetadata, ParamId, Prop, PropInspector, Result
 
 /// An empty transformer implementation for testing purposes.
 ///
-/// This struct implements both `Stepper` and `Transformer` traits but always returns errors
-/// for operations, making it useful for testing error handling in the system.
+/// This struct implements both `Stepper` and `PropInspector` traits but always returns errors
+/// for the `step` operation, making it useful for testing error handling in the system.
+/// It has no inputs or outputs.
 #[derive(Default)]
 pub struct Empty {}
 
@@ -46,9 +47,20 @@ impl MetadataProvider for Empty {
     }
 }
 
+/// A simple transformer that copies its input to its output.
+///
+/// This node is used for testing basic graph operations and property linking.
+/// It takes an `i32` input value and copies it to the output during each step.
+///
+/// # Properties
+///
+/// - `input` (ParamId 0): The input value to copy
+/// - `output` (ParamId 1): The output value that receives the copy
 #[derive(Default)]
 pub struct Constant {
+    /// The input property that holds the value to copy.
     input: Prop<i32>,
+    /// The output property that receives the copied value.
     output: Prop<i32>,
 }
 
