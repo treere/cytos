@@ -391,22 +391,6 @@ impl GraphView<'_> {
         self.command(Command::Node(NodeCommand::ListNodes))
     }
 
-    /// List the inputs of a node
-    ///
-    /// # Errors
-    /// If the receiver cannot process the request
-    pub fn list_inputs(&self, node_id: NodeId) -> Result<Value> {
-        self.command(Command::Node(NodeCommand::ListInputs(node_id)))
-    }
-
-    /// List the outputs of a node
-    ///
-    /// # Errors
-    /// If the receiver cannot process the request
-    pub fn list_outputs(&self, node_id: NodeId) -> Result<Value> {
-        self.command(Command::Node(NodeCommand::ListOutputs(node_id)))
-    }
-
     /// Describe a node instance
     ///
     /// # Errors
@@ -530,10 +514,6 @@ enum StateCommand {
 enum NodeCommand {
     /// List the nodes of the graph inside the runner
     ListNodes,
-    /// List the inputs of a node
-    ListInputs(NodeId),
-    /// List the outputs of a node
-    ListOutputs(NodeId),
     /// Remove a node
     RemoveNode(NodeId),
     /// Describe a node instance
@@ -748,20 +728,6 @@ impl Dispatcher {
     fn dispatch_node_command(&mut self, node_command: &NodeCommand, message: Response) {
         match node_command {
             NodeCommand::ListNodes => message.send_value(Ok(self.graph.list_nodes())),
-            NodeCommand::ListInputs(node) => {
-                message.send_value(
-                    self.graph
-                        .get_node(*node)
-                        .map(|n| n.metadata().input_ids.clone()),
-                );
-            }
-            NodeCommand::ListOutputs(node) => {
-                message.send_value(
-                    self.graph
-                        .get_node(*node)
-                        .map(|n| n.metadata().output_ids.clone()),
-                );
-            }
             NodeCommand::RemoveNode(node) => message.send_value(self.graph.remove(*node)),
             NodeCommand::DescribeNode(node) => {
                 message.send_value(self.graph.get_node_metadata(*node, &self.registry).cloned());

@@ -3,7 +3,7 @@ use easy_repl::{Command, CommandStatus, Repl, command};
 
 use cytos::loader::Registry;
 use cytos::repr::SystemRepr;
-use cytos::{NodeId, ParamId, System, Value, id_number_to_string, id_string_to_number};
+use cytos::{NodeId, System, Value, id_number_to_string, id_string_to_number};
 
 use std::collections::HashSet;
 
@@ -149,42 +149,6 @@ fn node_list(status: Rc<Mutex<Status>>, graph_id: String) -> Result<CommandStatu
         .unwrap()
         .list_nodes()
         .and_then(|x| x.dump::<Vec<NodeId>>())
-        .map_err(|x| anyhow!(x.to_string()))?;
-
-    println!("{result:?}");
-    Ok(CommandStatus::Done)
-}
-
-fn node_inputs(
-    status: Rc<Mutex<Status>>,
-    graph_id: String,
-    node_id: String,
-) -> Result<CommandStatus, anyhow::Error> {
-    let status = status.lock().or(Err(anyhow!("cannot lock")))?;
-    let result = status
-        .system
-        .graph(graph_id.into())
-        .unwrap()
-        .list_inputs(node_id.into())
-        .and_then(|val| val.dump::<Vec<ParamId>>())
-        .map_err(|x| anyhow!(x.to_string()))?;
-
-    println!("{result:?}");
-    Ok(CommandStatus::Done)
-}
-
-fn node_outputs(
-    status: Rc<Mutex<Status>>,
-    graph_id: String,
-    node_id: String,
-) -> Result<CommandStatus, anyhow::Error> {
-    let status = status.lock().or(Err(anyhow!("cannot lock")))?;
-    let result = status
-        .system
-        .graph(graph_id.into())
-        .unwrap()
-        .list_outputs(node_id.into())
-        .and_then(|val| val.dump::<Vec<NodeId>>())
         .map_err(|x| anyhow!(x.to_string()))?;
 
     println!("{result:?}");
@@ -450,20 +414,6 @@ fn node_list_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     }
 }
 
-fn node_inputs_command(status: Rc<Mutex<Status>>) -> Command<'static> {
-    command! {
-        "List inputs of a graph node",
-        (graph: String, node: String) => |graph:String, node: String| node_inputs(status.clone(), graph, node)
-    }
-}
-
-fn node_outputs_command(status: Rc<Mutex<Status>>) -> Command<'static> {
-    command! {
-        "List outputs of a graph node",
-        (graph: String, node: String) => |graph:String, node:String| node_outputs(status.clone(), graph, node)
-    }
-}
-
 fn node_remove_command(status: Rc<Mutex<Status>>) -> Command<'static> {
     command! {
         "Remove a node from a graph",
@@ -572,8 +522,6 @@ fn main() -> Result<(), &'static str> {
         .add("library_remove", library_remove_command(status.clone()))
         .add("library_inspect", library_inspect_command())
         .add("node_list", node_list_command(status.clone()))
-        .add("node_inputs", node_inputs_command(status.clone()))
-        .add("node_outputs", node_outputs_command(status.clone()))
         .add("node_remove", node_remove_command(status.clone()))
         .add("node_dump", node_dump_command(status.clone()))
         .add("node_load", node_load_command(status.clone()))

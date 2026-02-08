@@ -66,14 +66,6 @@ async fn main() {
         .route("/graphs/{graph_id}/receivers", post(receivers_create))
         .route("/graphs/{graph_id}/receivers", delete(receivers_delete))
         .route(
-            "/graphs/{graph_id}/nodes/{node_id}/inputs",
-            get(node_inputs),
-        )
-        .route(
-            "/graphs/{graph_id}/nodes/{node_id}/outputs",
-            get(node_outputs),
-        )
-        .route(
             "/graphs/{graph_id}/nodes/{node_id}/describe",
             get(node_describe),
         )
@@ -188,23 +180,6 @@ async fn receivers_delete(
     )?;
     Ok(Json(json!(result)))
 }
-async fn node_inputs(
-    Path((graph_id, node_id)): Path<(String, String)>,
-    State(system): State<WebSystem>,
-) -> Result<Json<Value>, WebError> {
-    let result = system.graph(graph_id.into())?.list_inputs(node_id.into())?;
-    Ok(Json(json!(result)))
-}
-async fn node_outputs(
-    Path((graph_id, node_id)): Path<(String, String)>,
-    State(system): State<WebSystem>,
-) -> Result<Json<Value>, WebError> {
-    let result = system
-        .graph(graph_id.into())?
-        .list_outputs(node_id.into())?;
-    Ok(Json(json!(result)))
-}
-
 async fn node_describe(
     Path((graph_id, node_id)): Path<(String, String)>,
     State(system): State<WebSystem>,
