@@ -18,23 +18,21 @@ impl Stepper for Add {
 }
 
 impl PropInspector for Add {
-    fn input_names(&self) -> Vec<cytos::ParamId> {
-        todo!()
-    }
-
-    fn output_names(&self) -> Vec<cytos::ParamId> {
-        todo!()
-    }
-
-    fn get_prop(&self, val: cytos::ParamId) -> Option<&dyn cytos::props::GenericPropInterface> {
+    fn get_prop(&self, _val: cytos::ParamId) -> Option<&dyn cytos::props::GenericPropInterface> {
         todo!()
     }
 
     fn get_prop_mut(
         &mut self,
-        val: cytos::ParamId,
+        _val: cytos::ParamId,
     ) -> Option<&mut dyn cytos::props::GenericPropInterface> {
         todo!()
+    }
+
+    fn metadata(&self) -> &NodeMetadata {
+        use std::sync::OnceLock;
+        static METADATA: OnceLock<NodeMetadata> = OnceLock::new();
+        METADATA.get_or_init(|| <Self as MetadataProvider>::metadata())
     }
 }
 
@@ -43,6 +41,8 @@ impl MetadataProvider for Add {
         NodeMetadata {
             name: "Add".to_string(),
             description: "Example add node".to_string(),
+            input_ids: vec![],
+            output_ids: vec![],
             params: std::collections::HashMap::new(),
         }
     }

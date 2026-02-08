@@ -131,9 +131,6 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
     let get_prop = create_get_prop(fields);
     let get_prop_mut = create_get_prop_mut(fields);
 
-    let input_names = create_input_names(fields);
-    let output_names = create_output_names(fields);
-
     // Collect metadata information
     let input_infos = get_field_infos(fields, INPUT_PROP_TYPE);
     let output_infos = get_field_infos(fields, OUTPUT_PROP_TYPE);
@@ -141,6 +138,10 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
 
     let struct_docs = extract_docs(&attrs);
     let struct_name = ident.to_string();
+
+    // Collect input and output IDs
+    let input_ids: Vec<_> = input_infos.iter().map(|fi| &fi.param_id).collect();
+    let output_ids: Vec<_> = output_infos.iter().map(|fi| &fi.param_id).collect();
 
     let param_entries = all_infos.iter().map(|fi| {
         let param_id = &fi.param_id;
@@ -172,6 +173,8 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
                 cytos::NodeMetadata {
                     name: #struct_name.to_string(),
                     description: #struct_docs.to_string(),
+                    input_ids: vec![#(#input_ids),*],
+                    output_ids: vec![#(#output_ids),*],
                     params: std::collections::HashMap::from([
                         #(#param_entries),*
                     ]),
@@ -180,15 +183,20 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
         }
     };
 
+    let metadata_key = quote::format_ident!("__CYTOS_METADATA_{}", struct_name.to_uppercase());
+
     quote! {
         #metadata_impl
+
+        static #metadata_key: std::sync::OnceLock<cytos::NodeMetadata> = std::sync::OnceLock::new();
 
         impl  #generics cytos::PropInspector for #ident #generics  #gwhere  {
             #get_prop
             #get_prop_mut
 
-            #input_names
-            #output_names
+            fn metadata(&self) -> &cytos::NodeMetadata {
+                #metadata_key.get_or_init(|| <Self as cytos::MetadataProvider>::metadata())
+            }
         }
     }
     .into()
@@ -272,62 +280,6 @@ fn create_get_prop_mut(fields: &Fields) -> proc_macro2::TokenStream {
                 #(#outputs)*
                 _ => None,
             }
-        }
-    }
-}
-
-/// Creates the implementation for the `input_names` method.
-///
-/// Generates a vector containing the parameter IDs for all input fields.
-///
-/// # Arguments
-///
-/// * `fields` - The fields of the struct to process.
-///
-/// # Returns
-///
-/// A `TokenStream` containing the generated `input_names` method implementation.
-fn create_input_names(fields: &Fields) -> proc_macro2::TokenStream {
-    let input_names = filter_fields_by_type(fields, INPUT_PROP_TYPE)
-        .map(|field| {
-            let f = ident_to_lit(&field.ident);
-            quote!(#f)
-        })
-        .collect::<Vec<_>>();
-
-    quote! {
-        fn input_names(&self) -> Vec<cytos::ParamId> {
-            vec![
-                #(#input_names),*
-            ]
-        }
-    }
-}
-
-/// Creates the implementation for the `output_names` method.
-///
-/// Generates a vector containing the parameter IDs for all output fields.
-///
-/// # Arguments
-///
-/// * `fields` - The fields of the struct to process.
-///
-/// # Returns
-///
-/// A `TokenStream` containing the generated `output_names` method implementation.
-fn create_output_names(fields: &Fields) -> proc_macro2::TokenStream {
-    let output_names = filter_fields_by_type(fields, OUTPUT_PROP_TYPE)
-        .map(|field| {
-            let f = ident_to_lit(&field.ident);
-            quote!(#f)
-        })
-        .collect::<Vec<_>>();
-
-    quote! {
-        fn output_names(&self) -> Vec<cytos::ParamId> {
-            vec![
-                #(#output_names),*
-            ]
         }
     }
 }

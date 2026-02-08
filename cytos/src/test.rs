@@ -27,12 +27,10 @@ impl PropInspector for Empty {
         None
     }
 
-    fn input_names(&self) -> Vec<ParamId> {
-        vec![]
-    }
-
-    fn output_names(&self) -> Vec<ParamId> {
-        vec![]
+    fn metadata(&self) -> &NodeMetadata {
+        use std::sync::OnceLock;
+        static METADATA: OnceLock<NodeMetadata> = OnceLock::new();
+        METADATA.get_or_init(|| <Self as MetadataProvider>::metadata())
     }
 }
 
@@ -41,6 +39,8 @@ impl MetadataProvider for Empty {
         NodeMetadata {
             name: "Empty".to_string(),
             description: "Test empty node".to_string(),
+            input_ids: vec![],
+            output_ids: vec![],
             params: HashMap::new(),
         }
     }
@@ -60,14 +60,6 @@ impl Stepper for Constant {
 }
 
 impl PropInspector for Constant {
-    fn input_names(&self) -> Vec<ParamId> {
-        vec![ParamId(0)]
-    }
-
-    fn output_names(&self) -> Vec<ParamId> {
-        vec![ParamId(1)]
-    }
-
     fn get_prop(&self, val: ParamId) -> Option<&dyn crate::props::GenericPropInterface> {
         match val {
             ParamId(0) => Some(&self.input),
@@ -84,6 +76,44 @@ impl PropInspector for Constant {
             ParamId(0) => Some(&mut self.input),
             ParamId(1) => Some(&mut self.output),
             _ => None,
+        }
+    }
+
+    fn metadata(&self) -> &NodeMetadata {
+        use std::sync::OnceLock;
+        static METADATA: OnceLock<NodeMetadata> = OnceLock::new();
+        METADATA.get_or_init(|| <Self as MetadataProvider>::metadata())
+    }
+}
+
+impl MetadataProvider for Constant {
+    fn metadata() -> NodeMetadata {
+        use crate::{ParamDirection, ParamInfo};
+        NodeMetadata {
+            name: "Constant".to_string(),
+            description: "Test constant node".to_string(),
+            input_ids: vec![ParamId(0)],
+            output_ids: vec![ParamId(1)],
+            params: HashMap::from([
+                (
+                    ParamId(0),
+                    ParamInfo {
+                        name: "input".to_string(),
+                        description: "Input value".to_string(),
+                        direction: ParamDirection::Input,
+                        type_name: "Prop<i32>".to_string(),
+                    },
+                ),
+                (
+                    ParamId(1),
+                    ParamInfo {
+                        name: "output".to_string(),
+                        description: "Output value".to_string(),
+                        direction: ParamDirection::Output,
+                        type_name: "Prop<i32>".to_string(),
+                    },
+                ),
+            ]),
         }
     }
 }

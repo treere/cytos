@@ -8,6 +8,8 @@ use crate::ParamId;
 pub struct NodeMetadata {
     pub name: String,
     pub description: String,
+    pub input_ids: Vec<ParamId>,
+    pub output_ids: Vec<ParamId>,
     pub params: HashMap<ParamId, ParamInfo>,
 }
 

@@ -74,17 +74,10 @@ pub trait PropInspector: Stepper {
     /// A mutable reference to the property as a `GenericPropInterface` if it exists, `None` otherwise.
     fn get_prop_mut(&mut self, val: ParamId) -> Option<&mut dyn GenericPropInterface>;
 
-    /// Gets the names of all input parameters.
+    /// Returns a reference to the metadata for this node instance.
     ///
     /// # Returns
     ///
-    /// A vector of parameter IDs for all inputs.
-    fn input_names(&self) -> Vec<ParamId>;
-
-    /// Gets the names of all output parameters.
-    ///
-    /// # Returns
-    ///
-    /// A vector of parameter IDs for all outputs.
-    fn output_names(&self) -> Vec<ParamId>;
+    /// A reference to the node's metadata.
+    fn metadata(&self) -> &super::NodeMetadata;
 }

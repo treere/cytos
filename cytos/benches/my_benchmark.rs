@@ -20,60 +20,24 @@ fn create_graph(nodes_count: u64) -> Graph {
     }
 
     impl PropInspector for Add {
-        fn link(
+        fn get_prop(
+            &self,
+            _val: cytos::ParamId,
+        ) -> Option<&dyn cytos::props::GenericPropInterface> {
+            todo!()
+        }
+
+        fn get_prop_mut(
             &mut self,
-            name: cytos::ParamId,
-            val: cytos::props::GenericProp,
-        ) -> cytos::Result<()> {
+            _val: cytos::ParamId,
+        ) -> Option<&mut dyn cytos::props::GenericPropInterface> {
             todo!()
         }
 
-        fn load(&mut self, name: cytos::ParamId, val: cytos::Value) -> cytos::Result<()> {
-            todo!()
-        }
-
-        fn assign(&mut self, name: cytos::ParamId, val: cytos::Value) -> cytos::Result<()> {
-            todo!()
-        }
-
-        fn dump(&self, name: cytos::ParamId) -> cytos::Result<cytos::Value> {
-            todo!()
-        }
-
-        fn load_owned(
-            &mut self,
-            name: cytos::ParamId,
-            val: cytos::GenericOwnedProp,
-        ) -> cytos::Result<()> {
-            todo!()
-        }
-
-        fn assign_owned(
-            &mut self,
-            name: cytos::ParamId,
-            val: cytos::GenericOwnedProp,
-        ) -> cytos::Result<()> {
-            todo!()
-        }
-
-        fn dump_owned(&self, name: cytos::ParamId) -> cytos::Result<cytos::GenericOwnedProp> {
-            todo!()
-        }
-
-        fn output(&self, val: cytos::ParamId) -> Option<cytos::props::GenericProp> {
-            todo!()
-        }
-
-        fn input(&self, val: cytos::ParamId) -> Option<cytos::props::GenericProp> {
-            todo!()
-        }
-
-        fn input_names(&self) -> Vec<cytos::ParamId> {
-            todo!()
-        }
-
-        fn output_names(&self) -> Vec<cytos::ParamId> {
-            todo!()
+        fn metadata(&self) -> &NodeMetadata {
+            use std::sync::OnceLock;
+            static METADATA: OnceLock<NodeMetadata> = OnceLock::new();
+            METADATA.get_or_init(|| <Self as MetadataProvider>::metadata())
         }
     }
 
@@ -82,6 +46,8 @@ fn create_graph(nodes_count: u64) -> Graph {
             NodeMetadata {
                 name: "Add".to_string(),
                 description: "Benchmark add node".to_string(),
+                input_ids: vec![],
+                output_ids: vec![],
                 params: HashMap::new(),
             }
         }

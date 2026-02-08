@@ -38,7 +38,7 @@ impl DynamicLoadingRegistryWrapper<'_> {
         name: &str,
         factory: impl (Fn() -> K) + 'static + Send + Sync,
     ) -> &mut Self {
-        let metadata = Some(K::metadata());
+        let metadata = Some(<K as MetadataProvider>::metadata());
         self.registry.add_by_type(
             name,
             FactoryType::Dynamic(((FactoryContainer::new(factory), metadata), self.lib.clone())),
@@ -75,7 +75,7 @@ impl Registry {
         name: &str,
         factory: impl (Fn() -> K) + 'static + Send + Sync,
     ) -> &mut Self {
-        let metadata = Some(K::metadata());
+        let metadata = Some(<K as MetadataProvider>::metadata());
         self.add_by_type(
             name,
             FactoryType::Plain((FactoryContainer::new(factory), metadata)),

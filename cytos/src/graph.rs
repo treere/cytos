@@ -135,13 +135,17 @@ impl Graph {
             .flat_map(|(n, p)| {
                 let output = p
                     .transformer()
-                    .output_names()
-                    .into_iter()
+                    .metadata()
+                    .output_ids
+                    .iter()
+                    .copied()
                     .map(|q| (p.transformer().get_prop(q).unwrap().as_generic(), (*n, q)));
                 let input = p
                     .transformer()
-                    .input_names()
-                    .into_iter()
+                    .metadata()
+                    .input_ids
+                    .iter()
+                    .copied()
                     .map(|q| (p.transformer().get_prop(q).unwrap().as_generic(), (*n, q)));
 
                 output.chain(input)
@@ -289,7 +293,8 @@ mod tests {
             graph
                 .get_node(node_id)
                 .expect("missing node")
-                .input_names()
+                .metadata()
+                .input_ids
                 .len()
         );
         assert_eq!(
@@ -297,7 +302,8 @@ mod tests {
             graph
                 .get_node(node_id)
                 .expect("missing node")
-                .output_names()
+                .metadata()
+                .output_ids
                 .len()
         );
     }
@@ -320,14 +326,19 @@ mod tests {
         assert_eq!(vec![node_id], graph.list_nodes());
         assert_eq!(
             vec![ParamId(0)],
-            graph.get_node(node_id).expect("missing node").input_names()
+            graph
+                .get_node(node_id)
+                .expect("missing node")
+                .metadata()
+                .input_ids
         );
         assert_eq!(
             vec![ParamId(1)],
             graph
                 .get_node(node_id)
                 .expect("missing node")
-                .output_names()
+                .metadata()
+                .output_ids
         );
 
         let one = Value::load(&1).expect("cannot load");
