@@ -1,3 +1,13 @@
+//! YOLO (You Only Look Once) object detection nodes for Cytos.
+//!
+//! This module provides YOLOv8-based object detection capabilities:
+//! - `Yolo`: Complete detection pipeline (resize, run, decode)
+//! - `YoloRunner`: Raw model inference only
+//! - `YoloDecoder`: Post-processing of model outputs
+//!
+//! The model is embedded as a constant and supports 80 COCO classes.
+//! Detection includes bounding boxes, class labels, and confidence scores.
+
 use cytos::{Prop, Stepper, loader::DynamicLoadingRegistryWrapper};
 use cytos_derive::CytosNode;
 use image::{GenericImageView, imageops::FilterType};

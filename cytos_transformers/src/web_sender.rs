@@ -1,19 +1,42 @@
+//! HTTP web sender transformer nodes for Cytos.
+//!
+//! This module provides nodes for sending data via HTTP POST requests.
+//! Supports various data types including integers, floats, booleans, characters,
+//! and strings. Data is serialized as JSON and sent to a configurable URL.
+//!
+//! Optional custom headers can be specified for authentication or content type
+//! specification.
+
 use cytos::{Prop, Result, Stepper, loader::DynamicLoadingRegistryWrapper, props::Ownable};
 use cytos_derive::CytosNode;
 use serde::{Serialize, de::DeserializeOwned};
 use std::fmt::Display;
 
+/// Node that sends data via HTTP POST request.
+///
+/// On each step, serializes the input value as JSON and sends it via HTTP POST
+/// to the specified URL. Supports optional custom headers for authentication
+/// or content type specification.
+///
+/// # Network Requirements
+///
+/// This node performs blocking HTTP requests. Ensure the target URL is
+/// reachable and consider using a `RateLimiter` node upstream to control
+/// request frequency.
 #[derive(CytosNode, Default)]
 struct WebSender<T>
 where
     T: Ownable + Display + Default + DeserializeOwned + Serialize + 'static,
 {
+    /// The URL to send the POST request to
     #[cytos(input)]
     url: Prop<String>,
 
+    /// Optional custom header as (key, value) tuple
     #[cytos(input)]
     header: Prop<Option<(String, String)>>,
 
+    /// The data to send (serialized as JSON)
     #[cytos(input)]
     input: Prop<T>,
 }

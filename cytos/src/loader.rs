@@ -1,4 +1,32 @@
-//! Module to handle dynamic library loading
+//! Registry and dynamic library loading module.
+//!
+//! This module provides the [`Registry`] for managing transformer factories and
+//! [`DynamicLoadingRegistryWrapper`] for loading transformers from dynamic libraries.
+//!
+//! # Registry
+//!
+//! The [`Registry`] is the central component for managing available transformer types.
+//! Factories can be registered by name and later retrieved to create node instances.
+//! The registry also stores metadata for each transformer type, enabling introspection.
+//!
+//! # Dynamic Loading
+//!
+//! Transformers can be loaded from dynamic libraries (.so/.dll files) at runtime
+//! using [`DynamicLoadingRegistryWrapper`]. Libraries must export a `load_registry`
+//! function with the signature `extern "C" fn load_registry(&mut DynamicLoadingRegistryWrapper)`.
+//!
+//! # Example
+//!
+//! ```rust,ignore
+//! use cytos::loader::Registry;
+//!
+//! // Create a registry and add a factory
+//! let mut registry = Registry::default();
+//! registry.add("MyNode", || MyNode::default());
+//!
+//! // Load a node from the factory
+//! let node = registry.load("MyNode")?;
+//! ```
 
 use crate::{MetadataProvider, NodeMetadata, PropInspector, Result};
 

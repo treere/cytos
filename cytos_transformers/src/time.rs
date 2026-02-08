@@ -1,3 +1,13 @@
+//! Time management transformer nodes for Cytos.
+//!
+//! This module provides nodes for time-related operations:
+//! - Timer: Measures elapsed time and calculates FPS (frames per second)
+//! - Sleep: Pauses execution for a specified duration
+//! - `RateLimiter`: Controls execution frequency by limiting steps per second
+//!
+//! These nodes are useful for profiling, pacing pipelines, and controlling
+//! processing rates in real-time applications.
+
 use cytos::loader::DynamicLoadingRegistryWrapper;
 use cytos::{Prop, Stepper};
 use cytos_derive::CytosNode;
@@ -5,14 +15,22 @@ use cytos_derive::CytosNode;
 use std::time::{Duration, Instant};
 use std::{thread, time};
 
+/// Node that measures elapsed time and calculates frames per second (FPS).
+///
+/// This node tracks time intervals and computes the processing rate.
+/// It outputs the elapsed duration and calculated FPS every N steps,
+/// where N is configurable via the `every` input.
 #[derive(CytosNode)]
 struct Timer {
+    /// The elapsed time since last reset
     #[cytos(output)]
     output: Prop<Duration>,
 
+    /// The calculated frames per second
     #[cytos(output)]
     fps: Prop<f64>,
 
+    /// How often (in steps) to update the output values
     #[cytos(input)]
     every: Prop<u64>,
 
@@ -48,8 +66,13 @@ impl Stepper for Timer {
     }
 }
 
+/// Node that pauses execution for a specified duration.
+///
+/// On each step, sleeps for the number of milliseconds specified by the
+/// `millis` input. Useful for pacing pipelines or adding delays.
 #[derive(CytosNode, Default)]
 struct Sleep {
+    /// The number of milliseconds to sleep on each step
     #[cytos(input)]
     millis: Prop<u64>,
 }
@@ -63,8 +86,17 @@ impl Stepper for Sleep {
     }
 }
 
+/// Node that limits execution frequency to a target rate.
+///
+/// Ensures that steps occur no more frequently than the specified frequency
+/// in hertz (steps per second). If a step would occur too soon after the
+/// previous one, the node sleeps until the target time has elapsed.
+///
+/// This is useful for controlling processing rates in real-time applications
+/// or when interfacing with hardware that has specific timing requirements.
 #[derive(CytosNode)]
 struct RateLimiter {
+    /// The target frequency in hertz (steps per second)
     #[cytos(input)]
     hz: Prop<f64>,
 

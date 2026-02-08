@@ -1,3 +1,17 @@
+//! Image processing transformer nodes for Cytos.
+//!
+//! This module provides various image manipulation operations including:
+//! - Blurring (standard and fast blur)
+//! - Brightness adjustment
+//! - Unsharp masking
+//! - 3x3 kernel filtering
+//! - Mean calculation
+//! - Resizing (standard and exact)
+//! - Cropping
+//!
+//! These nodes operate on the [`Image`] type from the `imageio` module
+//! and use the `image` crate for underlying operations.
+
 use crate::imageio::Image;
 use cytos::{Prop, Result, Stepper, loader::DynamicLoadingRegistryWrapper, props::Ownable};
 use cytos_derive::CytosNode;

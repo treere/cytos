@@ -1,3 +1,25 @@
+//! Representation module for serializable graph and system definitions.
+//!
+//! This module provides serializable types for describing graphs and systems
+//! in JSON format. These representations can be loaded from files or strings
+//! and converted into executable [`Graph`] or [`System`] instances.
+//!
+//! # Serialization
+//!
+//! All types in this module implement [`serde::Deserialize`], allowing them to
+//! be loaded from JSON files. The main entry point is [`GraphRepr`] for individual
+//! graphs and [`SystemRepr`] for systems containing multiple graphs.
+//!
+//! # Key Types
+//!
+//! - [`GraphRepr`]: A serializable graph definition with nodes and links
+//! - [`SystemRepr`]: A serializable system definition with multiple graphs
+//! - [`SystemLink`]: Links between nodes in different graphs
+//! - [`LinkKind`]: Behavior for inter-graph links (`Wait` or `Continue`)
+//!
+//! [`Graph`]: crate::graph::Graph
+//! [`System`]: crate::system::System
+
 use std::collections::HashMap;
 
 use crate::{GraphId, NodeId, ParamId, Value};

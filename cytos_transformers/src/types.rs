@@ -1,3 +1,12 @@
+//! Type definitions shared across transformer modules.
+//!
+//! This module provides the [`Frame`] type, which represents raw image data
+//! from various sources. It supports both camera frames (via rscam) and
+//! raw byte vectors, with serialization support for use in Cytos dataflows.
+//!
+//! The `Frame` type implements the [`Ownable`] trait, enabling it to be
+//! transferred between threads in multi-graph systems.
+
 use cytos::props::Ownable;
 use serde::{Deserialize, Serialize, ser::SerializeSeq};
 
@@ -60,6 +69,14 @@ impl<'de> serde::Deserialize<'de> for FrameKind {
     }
 }
 
+/// A frame of image data from various sources.
+///
+/// This type represents raw image data that can come from either a camera
+/// (via rscam) or a file/memory buffer. It provides a unified interface
+/// for accessing the underlying bytes regardless of the source.
+///
+/// The type implements `Ownable` to enable transfer between threads in
+/// multi-graph systems, and supports serialization for use in Cytos dataflows.
 #[derive(Serialize, Deserialize)]
 pub struct Frame {
     frame: FrameKind,
