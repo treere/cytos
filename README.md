@@ -49,10 +49,6 @@ Cytos uses a dataflow model where:
 
 Graphs can run concurrently for scalable processing.
 
-## Contributing
-
-Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
-
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
