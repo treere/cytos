@@ -138,7 +138,7 @@ impl Graph {
                     .metadata()
                     .params
                     .iter()
-                    .filter(|prop| prop.direction == ParamDirection::Output)
+                    .filter(|prop| prop.directions.contains(&ParamDirection::Output))
                     .map(|prop| {
                         (
                             p.transformer().get_prop(prop.id).unwrap().as_generic(),
@@ -150,7 +150,7 @@ impl Graph {
                     .metadata()
                     .params
                     .iter()
-                    .filter(|prop| prop.direction == ParamDirection::Input)
+                    .filter(|prop| prop.directions.contains(&ParamDirection::Input))
                     .map(|prop| {
                         (
                             p.transformer().get_prop(prop.id).unwrap().as_generic(),
@@ -333,7 +333,7 @@ mod tests {
                 .metadata()
                 .params
                 .iter()
-                .filter(|p| p.direction == ParamDirection::Input)
+                .filter(|p| p.directions.contains(&ParamDirection::Input))
                 .map(|p| p.id)
                 .collect::<Vec<_>>()
         );
@@ -345,7 +345,7 @@ mod tests {
                 .metadata()
                 .params
                 .iter()
-                .filter(|p| p.direction == ParamDirection::Output)
+                .filter(|p| p.directions.contains(&ParamDirection::Output))
                 .map(|p| p.id)
                 .collect::<Vec<_>>()
         );

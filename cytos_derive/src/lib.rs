@@ -39,7 +39,7 @@ struct FieldInfo {
     param_id: proc_macro2::TokenStream,
     docs: String,
     type_name: String,
-    direction: &'static str,
+    directions: Vec<&'static str>,
 }
 
 /// Extracts documentation comments from attributes
@@ -70,18 +70,18 @@ fn get_field_infos(fields: &Fields) -> Vec<FieldInfo> {
     fields
         .iter()
         .filter_map(|field| {
-            let mut direction: Option<&'static str> = None;
+            let mut directions: Vec<&'static str> = Vec::new();
             for attr in &field.attrs {
                 if attr.path().is_ident("cytos") {
                     let _ = attr.parse_nested_meta(|meta| {
                         if meta.path.is_ident("input") {
-                            if direction.is_none() {
-                                direction = Some(INPUT_PROP_TYPE);
+                            if !directions.contains(&INPUT_PROP_TYPE) {
+                                directions.push(INPUT_PROP_TYPE);
                             }
                             Ok(())
                         } else if meta.path.is_ident("output") {
-                            if direction.is_none() {
-                                direction = Some(OUTPUT_PROP_TYPE);
+                            if !directions.contains(&OUTPUT_PROP_TYPE) {
+                                directions.push(OUTPUT_PROP_TYPE);
                             }
                             Ok(())
                         } else {
@@ -90,7 +90,7 @@ fn get_field_infos(fields: &Fields) -> Vec<FieldInfo> {
                     });
                 }
             }
-            if let Some(direction) = direction {
+            if !directions.is_empty() {
                 let ident = field.ident.clone().unwrap();
                 let param_id = ident_to_lit(&Some(ident.clone()));
                 let docs = extract_docs(&field.attrs);
@@ -100,7 +100,7 @@ fn get_field_infos(fields: &Fields) -> Vec<FieldInfo> {
                     param_id,
                     docs,
                     type_name,
-                    direction,
+                    directions,
                 })
             } else {
                 None
@@ -152,18 +152,22 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
         } else {
             fi.docs.clone()
         };
-        let direction = match fi.direction {
-            INPUT_PROP_TYPE => quote!(cytos::ParamDirection::Input),
-            OUTPUT_PROP_TYPE => quote!(cytos::ParamDirection::Output),
-            _ => unreachable!(),
-        };
+        let directions: Vec<_> = fi
+            .directions
+            .iter()
+            .map(|dir| match *dir {
+                INPUT_PROP_TYPE => quote!(cytos::ParamDirection::Input),
+                OUTPUT_PROP_TYPE => quote!(cytos::ParamDirection::Output),
+                _ => unreachable!(),
+            })
+            .collect();
         let type_name = &fi.type_name;
         quote! {
             cytos::ParamInfo {
                 id: #param_id,
                 name: #name.to_string(),
                 description: #description.to_string(),
-                direction: #direction,
+                directions: vec![#(#directions),*],
                 type_name: #type_name.to_string(),
             }
         }
@@ -286,7 +290,7 @@ fn create_get_prop_mut(fields: &Fields) -> proc_macro2::TokenStream {
 /// # Returns
 ///
 /// An iterator yielding references to fields matching the type.
-fn filter_fields_by_type<'a>(fields: &'a Fields) -> impl Iterator<Item = &'a Field> {
+fn filter_fields_by_type(fields: &Fields) -> impl Iterator<Item = &Field> {
     fields.iter().filter(|field| {
         field.attrs.iter().any(|attr| {
             if attr.path().is_ident("cytos") {

@@ -35,8 +35,8 @@ pub struct ParamInfo {
     pub name: String,
     /// A description of the parameter's purpose.
     pub description: String,
-    /// Whether this is an input or output parameter.
-    pub direction: ParamDirection,
+    /// The directions of this parameter (input/output).
+    pub directions: Vec<ParamDirection>,
     /// The Rust type name of the parameter (e.g., "`Prop<i32>`").
     pub type_name: String,
 }
