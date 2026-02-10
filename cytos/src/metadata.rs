@@ -5,7 +5,6 @@
 //! of graph nodes.
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 use crate::ParamId;
 
@@ -20,12 +19,8 @@ pub struct NodeMetadata {
     pub name: String,
     /// A description of what the node does.
     pub description: String,
-    /// The IDs of input parameters for this node type.
-    pub input_ids: Vec<ParamId>,
-    /// The IDs of output parameters for this node type.
-    pub output_ids: Vec<ParamId>,
     /// A map of parameter IDs to their detailed information.
-    pub params: HashMap<ParamId, ParamInfo>,
+    pub params: Vec<ParamInfo>,
 }
 
 /// Information about a single parameter.
@@ -34,6 +29,8 @@ pub struct NodeMetadata {
 /// and its type name.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ParamInfo {
+    /// Param identifier
+    pub id: ParamId,
     /// The human-readable name of the parameter.
     pub name: String,
     /// A description of the parameter's purpose.
@@ -48,7 +45,7 @@ pub struct ParamInfo {
 ///
 /// Parameters can be either inputs (data flowing into the node)
 /// or outputs (data flowing out of the node).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ParamDirection {
     /// An input parameter that receives data from upstream nodes or external sources.
     Input,

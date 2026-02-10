@@ -41,9 +41,7 @@ impl cytos::MetadataProvider for Add {
         NodeMetadata {
             name: "Add".to_string(),
             description: "Example add node".to_string(),
-            input_ids: vec![],
-            output_ids: vec![],
-            params: HashMap::new(),
+            params: vec![],
         }
     }
 }

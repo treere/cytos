@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::{MetadataProvider, NodeMetadata, ParamId, Prop, PropInspector, Result, Stepper};
 
 /// An empty transformer implementation for testing purposes.
@@ -40,9 +38,7 @@ impl MetadataProvider for Empty {
         NodeMetadata {
             name: "Empty".to_string(),
             description: "Test empty node".to_string(),
-            input_ids: vec![],
-            output_ids: vec![],
-            params: HashMap::new(),
+            params: vec![],
         }
     }
 }
@@ -104,28 +100,22 @@ impl MetadataProvider for Constant {
         NodeMetadata {
             name: "Constant".to_string(),
             description: "Test constant node".to_string(),
-            input_ids: vec![ParamId(0)],
-            output_ids: vec![ParamId(1)],
-            params: HashMap::from([
-                (
-                    ParamId(0),
-                    ParamInfo {
-                        name: "input".to_string(),
-                        description: "Input value".to_string(),
-                        direction: ParamDirection::Input,
-                        type_name: "Prop<i32>".to_string(),
-                    },
-                ),
-                (
-                    ParamId(1),
-                    ParamInfo {
-                        name: "output".to_string(),
-                        description: "Output value".to_string(),
-                        direction: ParamDirection::Output,
-                        type_name: "Prop<i32>".to_string(),
-                    },
-                ),
-            ]),
+            params: vec![
+                ParamInfo {
+                    id: ParamId(0),
+                    name: "input".to_string(),
+                    description: "Input value".to_string(),
+                    direction: ParamDirection::Input,
+                    type_name: "Prop<i32>".to_string(),
+                },
+                ParamInfo {
+                    id: ParamId(1),
+                    name: "output".to_string(),
+                    description: "Output value".to_string(),
+                    direction: ParamDirection::Output,
+                    type_name: "Prop<i32>".to_string(),
+                },
+            ],
         }
     }
 }

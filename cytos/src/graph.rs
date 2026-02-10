@@ -1,5 +1,5 @@
 use crate::{
-    NodeMetadata, PropInspector,
+    NodeMetadata, ParamDirection, PropInspector,
     loader::Registry,
     props::GenericProp,
     repr::{GraphLink, GraphRepr, OnError},
@@ -136,17 +136,27 @@ impl Graph {
                 let output = p
                     .transformer()
                     .metadata()
-                    .output_ids
+                    .params
                     .iter()
-                    .copied()
-                    .map(|q| (p.transformer().get_prop(q).unwrap().as_generic(), (*n, q)));
+                    .filter(|prop| prop.direction == ParamDirection::Output)
+                    .map(|prop| {
+                        (
+                            p.transformer().get_prop(prop.id).unwrap().as_generic(),
+                            (*n, prop.id),
+                        )
+                    });
                 let input = p
                     .transformer()
                     .metadata()
-                    .input_ids
+                    .params
                     .iter()
-                    .copied()
-                    .map(|q| (p.transformer().get_prop(q).unwrap().as_generic(), (*n, q)));
+                    .filter(|prop| prop.direction == ParamDirection::Input)
+                    .map(|prop| {
+                        (
+                            p.transformer().get_prop(prop.id).unwrap().as_generic(),
+                            (*n, prop.id),
+                        )
+                    });
 
                 output.chain(input)
             })
@@ -294,16 +304,7 @@ mod tests {
                 .get_node(node_id)
                 .expect("missing node")
                 .metadata()
-                .input_ids
-                .len()
-        );
-        assert_eq!(
-            0,
-            graph
-                .get_node(node_id)
-                .expect("missing node")
-                .metadata()
-                .output_ids
+                .params
                 .len()
         );
     }
@@ -330,7 +331,11 @@ mod tests {
                 .get_node(node_id)
                 .expect("missing node")
                 .metadata()
-                .input_ids
+                .params
+                .iter()
+                .filter(|p| p.direction == ParamDirection::Input)
+                .map(|p| p.id)
+                .collect::<Vec<_>>()
         );
         assert_eq!(
             vec![ParamId(1)],
@@ -338,7 +343,11 @@ mod tests {
                 .get_node(node_id)
                 .expect("missing node")
                 .metadata()
-                .output_ids
+                .params
+                .iter()
+                .filter(|p| p.direction == ParamDirection::Output)
+                .map(|p| p.id)
+                .collect::<Vec<_>>()
         );
 
         let one = Value::load(&1).expect("cannot load");

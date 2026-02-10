@@ -41,9 +41,7 @@ impl MetadataProvider for Add {
         NodeMetadata {
             name: "Add".to_string(),
             description: "Example add node".to_string(),
-            input_ids: vec![],
-            output_ids: vec![],
-            params: std::collections::HashMap::new(),
+            params: vec![],
         }
     }
 }

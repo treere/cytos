@@ -140,8 +140,6 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
     let struct_name = ident.to_string();
 
     // Collect input and output IDs
-    let input_ids: Vec<_> = input_infos.iter().map(|fi| &fi.param_id).collect();
-    let output_ids: Vec<_> = output_infos.iter().map(|fi| &fi.param_id).collect();
 
     let param_entries = all_infos.iter().map(|fi| {
         let param_id = &fi.param_id;
@@ -158,12 +156,13 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
         };
         let type_name = &fi.type_name;
         quote! {
-            (#param_id, cytos::ParamInfo {
+            cytos::ParamInfo {
+                id: #param_id,
                 name: #name.to_string(),
                 description: #description.to_string(),
                 direction: #direction,
                 type_name: #type_name.to_string(),
-            })
+            }
         }
     });
 
@@ -173,11 +172,9 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
                 cytos::NodeMetadata {
                     name: #struct_name.to_string(),
                     description: #struct_docs.to_string(),
-                    input_ids: vec![#(#input_ids),*],
-                    output_ids: vec![#(#output_ids),*],
-                    params: std::collections::HashMap::from([
+                    params: vec![
                         #(#param_entries),*
-                    ]),
+                    ],
                 }
             }
         }
