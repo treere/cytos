@@ -347,7 +347,7 @@ pub trait GenericPropInterface {
 /// requiring mutable references, allowing multiple nodes to share and modify
 /// the same data.
 ///
-/// Props implement [`Deref`] and [`DerefMut`], allowing direct access to the
+/// Props implement [`std::ops::Deref`] and [`std::ops::DerefMut`], allowing direct access to the
 /// underlying value using the `*` operator.
 ///
 /// # Thread Safety

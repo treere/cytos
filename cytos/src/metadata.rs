@@ -40,7 +40,7 @@ pub struct ParamInfo {
     pub description: String,
     /// Whether this is an input or output parameter.
     pub direction: ParamDirection,
-    /// The Rust type name of the parameter (e.g., "Prop<i32>").
+    /// The Rust type name of the parameter (e.g., "`Prop<i32>`").
     pub type_name: String,
 }
 
