@@ -66,25 +66,31 @@ fn extract_docs(attrs: &[Attribute]) -> String {
 }
 
 /// Gets field information for metadata generation
-fn get_field_infos(fields: &Fields, direction: &'static str) -> Vec<FieldInfo> {
+fn get_field_infos(fields: &Fields) -> Vec<FieldInfo> {
     fields
         .iter()
         .filter_map(|field| {
-            let has_attr = field.attrs.iter().any(|attr| {
+            let mut direction: Option<&'static str> = None;
+            for attr in &field.attrs {
                 if attr.path().is_ident("cytos") {
-                    attr.parse_nested_meta(|meta| {
-                        if meta.path.is_ident(direction) {
+                    let _ = attr.parse_nested_meta(|meta| {
+                        if meta.path.is_ident("input") {
+                            if direction.is_none() {
+                                direction = Some(INPUT_PROP_TYPE);
+                            }
+                            Ok(())
+                        } else if meta.path.is_ident("output") {
+                            if direction.is_none() {
+                                direction = Some(OUTPUT_PROP_TYPE);
+                            }
                             Ok(())
                         } else {
                             Err(meta.error("expected input or output"))
                         }
-                    })
-                    .is_ok()
-                } else {
-                    false
+                    });
                 }
-            });
-            if has_attr {
+            }
+            if let Some(direction) = direction {
                 let ident = field.ident.clone().unwrap();
                 let param_id = ident_to_lit(&Some(ident.clone()));
                 let docs = extract_docs(&field.attrs);
@@ -132,16 +138,13 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
     let get_prop_mut = create_get_prop_mut(fields);
 
     // Collect metadata information
-    let input_infos = get_field_infos(fields, INPUT_PROP_TYPE);
-    let output_infos = get_field_infos(fields, OUTPUT_PROP_TYPE);
-    let all_infos = input_infos.iter().chain(&output_infos).collect::<Vec<_>>();
+    let field_infos = get_field_infos(fields);
 
     let struct_docs = extract_docs(&attrs);
     let struct_name = ident.to_string();
 
     // Collect input and output IDs
-
-    let param_entries = all_infos.iter().map(|fi| {
+    let param_entries = field_infos.iter().map(|fi| {
         let param_id = &fi.param_id;
         let name = fi.ident.to_string();
         let description = if fi.docs.is_empty() {
@@ -212,7 +215,7 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
 ///
 /// A `TokenStream` containing the generated `get_prop` method implementation.
 fn create_get_prop(fields: &Fields) -> proc_macro2::TokenStream {
-    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
+    let inputs = filter_fields_by_type(fields)
         .map(|field| {
             let i = &field.ident;
             let f = ident_to_lit(i);
@@ -220,7 +223,7 @@ fn create_get_prop(fields: &Fields) -> proc_macro2::TokenStream {
         })
         .collect::<Vec<_>>();
 
-    let outputs = filter_fields_by_type(fields, OUTPUT_PROP_TYPE)
+    let outputs = filter_fields_by_type(fields)
         .map(|field| {
             let i = &field.ident;
             let f = ident_to_lit(i);
@@ -253,15 +256,7 @@ fn create_get_prop(fields: &Fields) -> proc_macro2::TokenStream {
 ///
 /// A `TokenStream` containing the generated `get_prop_mut` method implementation.
 fn create_get_prop_mut(fields: &Fields) -> proc_macro2::TokenStream {
-    let inputs = filter_fields_by_type(fields, INPUT_PROP_TYPE)
-        .map(|field| {
-            let i = &field.ident;
-            let f = ident_to_lit(i);
-            quote! {#f => Some(&mut self.#i),}
-        })
-        .collect::<Vec<_>>();
-
-    let outputs = filter_fields_by_type(fields, OUTPUT_PROP_TYPE)
+    let fields = filter_fields_by_type(fields)
         .map(|field| {
             let i = &field.ident;
             let f = ident_to_lit(i);
@@ -273,8 +268,7 @@ fn create_get_prop_mut(fields: &Fields) -> proc_macro2::TokenStream {
         fn get_prop_mut(&mut self, val: cytos::ParamId)
                  -> Option<&mut dyn cytos::props::GenericPropInterface> {
             match val {
-                #(#inputs)*
-                #(#outputs)*
+                #(#fields)*
                 _ => None,
             }
         }
@@ -288,20 +282,16 @@ fn create_get_prop_mut(fields: &Fields) -> proc_macro2::TokenStream {
 /// # Arguments
 ///
 /// * `fields` - The fields to filter.
-/// * `types` - The type to match, either "input" or "output".
 ///
 /// # Returns
 ///
 /// An iterator yielding references to fields matching the type.
-fn filter_fields_by_type<'a>(
-    fields: &'a Fields,
-    types: &'a str,
-) -> impl Iterator<Item = &'a Field> {
+fn filter_fields_by_type<'a>(fields: &'a Fields) -> impl Iterator<Item = &'a Field> {
     fields.iter().filter(|field| {
         field.attrs.iter().any(|attr| {
             if attr.path().is_ident("cytos") {
                 attr.parse_nested_meta(|meta| {
-                    if meta.path.is_ident(types) {
+                    if meta.path.is_ident("input") || meta.path.is_ident("output") {
                         Ok(())
                     } else {
                         Err(meta.error("expected input or output"))
