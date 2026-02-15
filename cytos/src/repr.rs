@@ -79,7 +79,7 @@ pub enum OnError {
     /// Skip this processing
     Skip,
 
-    /// Continue processing the fraph
+    /// Continue processing the graph
     Continue,
 
     /// Forward the error

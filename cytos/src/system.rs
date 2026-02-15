@@ -74,7 +74,7 @@ fn create_requests(
                 .map(|sender| LinkToExternal::new_link(kind, sender, sources, destinations))
         })
         .collect::<Option<Vec<_>>>()
-        .ok_or_else(|| "missin sender".into())
+        .ok_or_else(|| "missing sender".into())
 }
 
 impl SystemRepr {
