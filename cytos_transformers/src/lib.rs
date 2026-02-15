@@ -25,6 +25,7 @@
 extern crate cytos_derive;
 
 mod cmp;
+mod dn;
 mod imageio;
 mod imageops;
 mod logic;
@@ -59,6 +60,8 @@ use cytos::loader::DynamicLoadingRegistryWrapper;
 /// but the implementation itself is safe.
 #[unsafe(no_mangle)]
 pub extern "C" fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
+    cmp::load_registry(registry);
+    dn::load_registry(registry);
     imageio::load_registry(registry);
     imageops::load_registry(registry);
     logic::load_registry(registry);
