@@ -17,3 +17,4 @@ rustface = "0.1.7"
 reqwest = { version = "0.12.9", features = ["blocking","json"] }
 ort = {version = "=2.0.0-rc.10", features = ["fetch-models" ]}
 ndarray = {version = "0.16.1", features = ["serde"]}
+rand = "0.8"

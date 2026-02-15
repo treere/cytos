@@ -300,6 +300,44 @@ impl Stepper for Sgd {
     }
 }
 
+/// Generates random vectors from a normal (Gaussian) distribution
+#[derive(CytosNode, Default)]
+pub struct NormalDistribution {
+    /// Mean of the distribution
+    #[cytos(input)]
+    mean: Prop<f32>,
+    /// Standard deviation of the distribution
+    #[cytos(input)]
+    std: Prop<f32>,
+    /// Size of the output vector
+    #[cytos(input)]
+    size: Prop<usize>,
+    /// Output vector (random sample)
+    #[cytos(output)]
+    output: Prop<Vec<f32>>,
+}
+
+impl Stepper for NormalDistribution {
+    fn step(&mut self) -> Result<()> {
+        let mean = *self.mean;
+        let std = *self.std;
+        let size = *self.size;
+
+        let mut rng = rand::thread_rng();
+        let mut output = Vec::with_capacity(size);
+
+        for _ in 0..size {
+            let u1: f32 = rand::Rng::r#gen(&mut rng);
+            let u2: f32 = rand::Rng::r#gen(&mut rng);
+            let z = (-2.0 * u1.ln()).sqrt() * (2.0 * std::f32::consts::PI * u2).cos();
+            output.push(std.mul_add(z, mean));
+        }
+
+        *self.output = output;
+        Ok(())
+    }
+}
+
 pub fn load_registry(registry: &mut cytos::loader::DynamicLoadingRegistryWrapper) {
     registry.add("Linear", Linear::default);
     registry.add("Sigmoid", Sigmoid::default);
