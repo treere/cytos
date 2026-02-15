@@ -919,3 +919,271 @@ impl Dispatcher {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::loader::Registry;
+    use crate::repr::{GraphRepr, InternalNodeRepr, NodeRepr, OnError};
+    use crate::test::{Constant, Empty};
+    use std::collections::HashMap;
+
+    fn create_test_registry() -> Registry {
+        let mut registry = Registry::default();
+        registry.add("Empty", Empty::default);
+        registry.add("Constant", Constant::default);
+        registry
+    }
+
+    fn create_single_node_graph_repr(node_type: &str, node_name: NodeId) -> GraphRepr {
+        GraphRepr {
+            links: vec![],
+            nodes: vec![InternalNodeRepr {
+                name: node_name,
+                node: NodeRepr {
+                    typ: node_type.to_string(),
+                    props: HashMap::new(),
+                },
+                on_error: OnError::Continue,
+            }],
+        }
+    }
+
+    fn create_constant_graph_repr(node_name: NodeId, input_value: i32) -> GraphRepr {
+        let mut props = HashMap::new();
+        props.insert(ParamId(0), Value::load(&input_value).unwrap());
+
+        GraphRepr {
+            links: vec![],
+            nodes: vec![InternalNodeRepr {
+                name: node_name,
+                node: NodeRepr {
+                    typ: "Constant".to_string(),
+                    props,
+                },
+                on_error: OnError::Continue,
+            }],
+        }
+    }
+
+    #[test]
+    fn test_system_creation_single_graph() {
+        let registry = create_test_registry();
+        let graph_repr = create_single_node_graph_repr("Empty", NodeId(0));
+
+        let mut system_repr = SystemRepr {
+            graphs: HashMap::new(),
+            requests: vec![],
+        };
+        system_repr.graphs.insert(GraphId(0), graph_repr);
+
+        let system = system_repr.to_system(&registry);
+        assert!(system.is_ok());
+
+        let system = system.unwrap();
+        let graphs: Vec<_> = system.graphs().collect();
+        assert_eq!(graphs.len(), 1);
+        assert_eq!(graphs[0], &GraphId(0));
+    }
+
+    #[test]
+    fn test_system_creation_multiple_graphs() {
+        let registry = create_test_registry();
+        let graph1_repr = create_single_node_graph_repr("Empty", NodeId(0));
+        let graph2_repr = create_single_node_graph_repr("Constant", NodeId(1));
+
+        let mut system_repr = SystemRepr {
+            graphs: HashMap::new(),
+            requests: vec![],
+        };
+        system_repr.graphs.insert(GraphId(0), graph1_repr);
+        system_repr.graphs.insert(GraphId(1), graph2_repr);
+
+        let system = system_repr.to_system(&registry);
+        assert!(system.is_ok());
+
+        let system = system.unwrap();
+        let graphs: Vec<_> = system.graphs().collect();
+        assert_eq!(graphs.len(), 2);
+    }
+
+    #[test]
+    fn test_system_empty_graphs() {
+        let registry = create_test_registry();
+        let system_repr = SystemRepr {
+            graphs: HashMap::new(),
+            requests: vec![],
+        };
+
+        let system = system_repr.to_system(&registry);
+        assert!(system.is_ok());
+
+        let system = system.unwrap();
+        assert_eq!(system.graphs().count(), 0);
+    }
+
+    #[test]
+    fn test_system_graph_view_creation() {
+        let registry = create_test_registry();
+        let graph_repr = create_single_node_graph_repr("Empty", NodeId(0));
+
+        let mut system_repr = SystemRepr {
+            graphs: HashMap::new(),
+            requests: vec![],
+        };
+        system_repr.graphs.insert(GraphId(0), graph_repr);
+
+        let system = system_repr.to_system(&registry).unwrap();
+
+        // Should be able to get a graph view for existing graph
+        let view = system.graph(GraphId(0));
+        assert!(view.is_ok());
+
+        // Should fail for non-existent graph
+        let view = system.graph(GraphId(999));
+        assert!(view.is_err());
+    }
+
+    #[test]
+    fn test_system_factory_metadata() {
+        let registry = create_test_registry();
+        let graph_repr = create_single_node_graph_repr("Empty", NodeId(0));
+
+        let mut system_repr = SystemRepr {
+            graphs: HashMap::new(),
+            requests: vec![],
+        };
+        system_repr.graphs.insert(GraphId(0), graph_repr);
+
+        let system = system_repr.to_system(&registry).unwrap();
+
+        // Should be able to get metadata for registered factories
+        let metadata = system.get_factory_metadata("Empty");
+        assert!(metadata.is_some());
+        assert_eq!(metadata.unwrap().name, "Empty");
+
+        // Should return None for unknown factories
+        let metadata = system.get_factory_metadata("Unknown");
+        assert!(metadata.is_none());
+    }
+
+    #[test]
+    fn test_system_registry_access() {
+        let registry = create_test_registry();
+        let graph_repr = create_single_node_graph_repr("Empty", NodeId(0));
+
+        let mut system_repr = SystemRepr {
+            graphs: HashMap::new(),
+            requests: vec![],
+        };
+        system_repr.graphs.insert(GraphId(0), graph_repr);
+
+        let system = system_repr.to_system(&registry).unwrap();
+
+        // Should be able to access the registry
+        let registry_ref = system.registry();
+        assert!(registry_ref.get_metadata("Empty").is_some());
+    }
+
+    #[test]
+    fn test_system_drop_cleanup() {
+        let registry = create_test_registry();
+        let graph_repr = create_single_node_graph_repr("Empty", NodeId(0));
+
+        let mut system_repr = SystemRepr {
+            graphs: HashMap::new(),
+            requests: vec![],
+        };
+        system_repr.graphs.insert(GraphId(0), graph_repr);
+
+        {
+            let system = system_repr.to_system(&registry).unwrap();
+            // System should be able to run briefly
+            let view = system.graph(GraphId(0)).unwrap();
+            let _ = view.status();
+            // System will be dropped here
+        }
+        // If we get here without panicking, cleanup worked
+    }
+
+    #[test]
+    fn test_response_creation() {
+        let (response, receiver) = Response::new();
+
+        // Test sending a value
+        response.send_value(Ok(42i32));
+
+        let result = receiver.recv().unwrap();
+        match result {
+            Ok(Internal::Value(v)) => {
+                let value: i32 = v.dump().unwrap();
+                assert_eq!(value, 42);
+            }
+            _ => panic!("Expected Value"),
+        }
+    }
+
+    #[test]
+    fn test_response_error() {
+        let (response, receiver) = Response::new();
+
+        // Test sending an error
+        let err: crate::Result<i32> = Err("test error".into());
+        response.send_value(err);
+
+        let result = receiver.recv().unwrap();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_create_requests_empty() {
+        let senders: IndexMap<GraphId, BlockSender<InternalCommand>> = IndexMap::new();
+        let requests: Vec<&SystemLink> = vec![];
+
+        let result = create_requests(&senders, requests);
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_system_repr_from_json_valid() {
+        let json = r#"{
+            "graphs": {
+                "0": {
+                    "nodes": [
+                        {
+                            "name": "0",
+                            "type": "TestNode"
+                        }
+                    ],
+                    "links": []
+                }
+            },
+            "requests": []
+        }"#;
+
+        let result = SystemRepr::from_json(json);
+        assert!(result.is_ok());
+
+        let system_repr = result.unwrap();
+        assert_eq!(system_repr.graphs.len(), 1);
+        assert!(system_repr.graphs.contains_key(&GraphId(0)));
+    }
+
+    #[test]
+    fn test_system_repr_from_json_invalid() {
+        let json = r#"{ invalid json }"#;
+        let result = SystemRepr::from_json(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_system_repr_from_json_empty() {
+        let json = r#"{"graphs": {}, "requests": []}"#;
+        let result = SystemRepr::from_json(json);
+        assert!(result.is_ok());
+
+        let system_repr = result.unwrap();
+        assert!(system_repr.graphs.is_empty());
+    }
+}

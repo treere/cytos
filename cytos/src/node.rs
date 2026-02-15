@@ -95,3 +95,211 @@ impl NodeRepr {
         Ok(Node::new(transformer, self.typ))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ParamId;
+    use crate::test::{Constant, Empty};
+
+    #[test]
+    fn test_node_creation() {
+        let transformer: Box<dyn PropInspector> = Box::new(Empty::default());
+        let node = Node::new(transformer, "Empty".to_string());
+
+        // Should be able to get transformer reference
+        let _transformer_ref = node.transformer();
+    }
+
+    #[test]
+    fn test_node_stepper() {
+        let transformer: Box<dyn PropInspector> = Box::new(Empty::default());
+        let mut node = Node::new(transformer, "Empty".to_string());
+
+        // Should be able to get stepper and call step
+        let stepper = node.stepper();
+        assert!(stepper.step().is_ok());
+    }
+
+    #[test]
+    fn test_node_transformer_mut() {
+        let transformer: Box<dyn PropInspector> = Box::new(Empty::default());
+        let mut node = Node::new(transformer, "Empty".to_string());
+
+        // Should be able to get mutable transformer reference
+        let _transformer_mut = node.transformer_mut();
+    }
+
+    #[test]
+    fn test_node_metadata_from_registry() {
+        let mut registry = Registry::default();
+        registry.add("Empty", Empty::default);
+
+        let transformer: Box<dyn PropInspector> = Box::new(Empty::default());
+        let node = Node::new(transformer, "Empty".to_string());
+
+        // Should be able to get metadata from registry
+        let metadata = node.metadata(&registry);
+        assert!(metadata.is_some());
+        assert_eq!(metadata.unwrap().name, "Empty");
+    }
+
+    #[test]
+    fn test_node_metadata_not_found() {
+        let registry = Registry::default();
+
+        let transformer: Box<dyn PropInspector> = Box::new(Empty::default());
+        let node = Node::new(transformer, "NonExistent".to_string());
+
+        // Should return None for unknown factory name
+        let metadata = node.metadata(&registry);
+        assert!(metadata.is_none());
+    }
+
+    #[test]
+    fn test_node_with_constant() {
+        let transformer: Box<dyn PropInspector> = Box::new(Constant::default());
+        let node = Node::new(transformer, "Constant".to_string());
+
+        // Test that we can access the transformer's properties
+        let transformer = node.transformer();
+        let metadata = transformer.metadata();
+        assert_eq!(metadata.name, "Constant");
+        assert_eq!(metadata.params.len(), 2);
+    }
+
+    #[test]
+    fn test_node_stepper_lifecycle() {
+        let transformer: Box<dyn PropInspector> = Box::new(Constant::default());
+        let mut node = Node::new(transformer, "Constant".to_string());
+
+        // Test full lifecycle
+        let stepper = node.stepper();
+        assert!(stepper.initialize().is_ok());
+        assert!(stepper.step().is_ok());
+        assert!(stepper.terminate().is_ok());
+    }
+
+    #[test]
+    fn test_node_repr_into_node() {
+        let mut registry = Registry::default();
+        registry.add("Empty", Empty::default);
+
+        let node_repr = NodeRepr {
+            typ: "Empty".to_string(),
+            props: std::collections::HashMap::new(),
+        };
+
+        let result = node_repr.into_node(&registry);
+        assert!(result.is_ok());
+
+        let node = result.unwrap();
+        let metadata = node.metadata(&registry);
+        assert!(metadata.is_some());
+    }
+
+    #[test]
+    fn test_node_repr_into_node_with_props() {
+        let mut registry = Registry::default();
+        registry.add("Constant", Constant::default);
+
+        let mut props = std::collections::HashMap::new();
+        props.insert(ParamId(0), crate::Value::load(&42i32).unwrap());
+
+        let node_repr = NodeRepr {
+            typ: "Constant".to_string(),
+            props,
+        };
+
+        let result = node_repr.into_node(&registry);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_node_repr_into_node_not_found() {
+        let registry = Registry::default();
+
+        let node_repr = NodeRepr {
+            typ: "NonExistent".to_string(),
+            props: std::collections::HashMap::new(),
+        };
+
+        let result = node_repr.into_node(&registry);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_node_multiple_steps() {
+        let transformer: Box<dyn PropInspector> = Box::new(Empty::default());
+        let mut node = Node::new(transformer, "Empty".to_string());
+
+        // Multiple steps should all succeed
+        for _ in 0..10 {
+            assert!(node.stepper().step().is_ok());
+        }
+    }
+
+    #[test]
+    fn test_node_factory_name() {
+        let transformer: Box<dyn PropInspector> = Box::new(Empty::default());
+        let node = Node::new(transformer, "TestFactory".to_string());
+
+        // The factory name should be used for metadata lookup
+        let mut registry = Registry::default();
+        registry.add("TestFactory", Empty::default);
+
+        let metadata = node.metadata(&registry);
+        assert!(metadata.is_some());
+    }
+
+    #[test]
+    fn test_node_prop_access() {
+        let transformer: Box<dyn PropInspector> = Box::new(Constant::default());
+        let node = Node::new(transformer, "Constant".to_string());
+
+        // Should be able to access properties through transformer
+        let transformer = node.transformer();
+        let prop = transformer.get_prop(ParamId(0));
+        assert!(prop.is_some());
+    }
+
+    #[test]
+    fn test_node_prop_mut_access() {
+        let transformer: Box<dyn PropInspector> = Box::new(Constant::default());
+        let mut node = Node::new(transformer, "Constant".to_string());
+
+        // Should be able to access mutable properties through transformer
+        let transformer = node.transformer_mut();
+        let prop = transformer.get_prop_mut(ParamId(0));
+        assert!(prop.is_some());
+    }
+
+    #[test]
+    fn test_node_prop_not_found() {
+        let transformer: Box<dyn PropInspector> = Box::new(Empty::default());
+        let node = Node::new(transformer, "Empty".to_string());
+
+        // Should return None for non-existent property
+        let transformer = node.transformer();
+        let prop = transformer.get_prop(ParamId(999));
+        assert!(prop.is_none());
+    }
+
+    #[test]
+    fn test_node_repr_empty_props() {
+        let mut registry = Registry::default();
+        registry.add("Empty", Empty::default);
+
+        let node_repr = NodeRepr {
+            typ: "Empty".to_string(),
+            props: std::collections::HashMap::new(),
+        };
+
+        let result = node_repr.into_node(&registry);
+        assert!(result.is_ok());
+
+        let mut node = result.unwrap();
+        // Verify the node works correctly
+        assert!(node.stepper().step().is_ok());
+    }
+}
