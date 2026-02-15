@@ -10,7 +10,7 @@ pub struct Empty {}
 
 impl Stepper for Empty {
     fn step(&mut self) -> Result<()> {
-        todo!()
+        Ok(())
     }
 }
 
