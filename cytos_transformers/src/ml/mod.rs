@@ -1,4 +1,6 @@
-pub use cytos::{Prop, Stepper, loader::DynamicLoadingRegistryWrapper, props::Ownable};
+pub use cytos::{
+    ChangeCheckProp, Prop, Stepper, loader::DynamicLoadingRegistryWrapper, props::Ownable,
+};
 use cytos_derive::CytosNode;
 use image::GenericImageView;
 use rustface::{Detector, ImageData};
@@ -34,7 +36,7 @@ struct FaceDetection {
     image: Prop<Image>,
 
     #[cytos(input)]
-    model: Prop<String>,
+    model: ChangeCheckProp<String>,
 
     #[cytos(output)]
     facesinfo: Prop<Vec<Rectangle>>,
@@ -42,8 +44,30 @@ struct FaceDetection {
     detector: Option<Box<dyn Detector>>,
 }
 
+impl FaceDetection {
+    fn load_detector(&mut self) {
+        let detector = rustface::create_detector(&self.model)
+            .map(|mut detector| {
+                detector.set_min_face_size(20);
+                detector.set_score_thresh(2.0);
+                detector.set_pyramid_scale_factor(0.8);
+                detector.set_slide_window_step(4, 4);
+                detector
+            })
+            .ok();
+
+        self.detector = detector;
+        self.model.clear_changed();
+    }
+}
+
 impl Stepper for FaceDetection {
     fn step(&mut self) -> cytos::Result<()> {
+        // Reload detector if model path changed
+        if self.model.is_changed() {
+            self.load_detector();
+        }
+
         if let Some(detector) = &mut self.detector {
             let width = self.image.image.width();
             let height = self.image.image.height();
@@ -67,18 +91,7 @@ impl Stepper for FaceDetection {
     }
 
     fn initialize(&mut self) -> cytos::Result<()> {
-        let detector = rustface::create_detector(&self.model)
-            .map(|mut detector| {
-                detector.set_min_face_size(20);
-                detector.set_score_thresh(2.0);
-                detector.set_pyramid_scale_factor(0.8);
-                detector.set_slide_window_step(4, 4);
-                detector
-            })
-            .ok();
-
-        self.detector = detector;
-
+        self.load_detector();
         Ok(())
     }
 }

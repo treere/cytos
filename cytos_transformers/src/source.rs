@@ -9,7 +9,7 @@
 
 use std::io::Read;
 
-use cytos::{Prop, Result, Stepper, loader::DynamicLoadingRegistryWrapper};
+use cytos::{ChangeCheckProp, Prop, Result, Stepper, loader::DynamicLoadingRegistryWrapper};
 use cytos_derive::CytosNode;
 use rscam::Camera;
 
@@ -56,6 +56,9 @@ impl Stepper for File {
 /// specified parameters. On each step, captures a frame and outputs it.
 /// Supports MJPEG format with configurable resolution and frame interval.
 ///
+/// Configuration changes (device path, resolution, interval) are detected and
+/// trigger camera re-initialization automatically.
+///
 /// # Platform Support
 ///
 /// This node is only available on Linux systems with `Video4Linux2` (V4L2) support.
@@ -63,13 +66,13 @@ impl Stepper for File {
 struct Rscam {
     /// The camera device path (e.g., "/dev/video0")
     #[cytos(input)]
-    filename: Prop<String>,
+    filename: ChangeCheckProp<String>,
     /// The capture interval as (numerator, denominator) seconds
     #[cytos(input)]
-    interval: Prop<(u32, u32)>,
+    interval: ChangeCheckProp<(u32, u32)>,
     /// The capture resolution as (width, height) in pixels
     #[cytos(input)]
-    resolution: Prop<(u32, u32)>,
+    resolution: ChangeCheckProp<(u32, u32)>,
 
     /// The captured frame
     #[cytos(output)]
@@ -81,29 +84,22 @@ struct Rscam {
 impl Default for Rscam {
     fn default() -> Self {
         Self {
-            filename: Prop::new("/dev/video0".to_owned()),
-            interval: Prop::new((1, 30)),
-            resolution: Prop::new((1280, 720)),
+            filename: ChangeCheckProp::new("/dev/video0".to_owned()),
+            interval: ChangeCheckProp::new((1, 30)),
+            resolution: ChangeCheckProp::new((1280, 720)),
             frame: Prop::new(Frame::default()),
             camera: None,
         }
     }
 }
 
-impl Stepper for Rscam {
-    fn step(&mut self) -> Result<()> {
-        if let Some(camera) = self.camera.as_ref() {
-            let frame = camera.capture().or(Err("cannot capture"))?;
-
-            *self.frame = frame.into();
-
-            Ok(())
-        } else {
-            unreachable!()
+impl Rscam {
+    fn init_camera(&mut self) -> Result<()> {
+        // Drop existing camera first
+        if let Some(camera) = self.camera.take() {
+            drop(camera);
         }
-    }
 
-    fn initialize(&mut self) -> Result<()> {
         let mut camera =
             rscam::new(&self.filename).map_err(|x| format!("cannot open camera: {x}"))?;
 
@@ -118,7 +114,37 @@ impl Stepper for Rscam {
             .map_err(|x| format!("cannot start camera: {x}"))?;
 
         self.camera = Some(camera);
+
+        // Clear changed flags after successful initialization
+        self.filename.clear_changed();
+        self.interval.clear_changed();
+        self.resolution.clear_changed();
+
         Ok(())
+    }
+}
+
+impl Stepper for Rscam {
+    fn step(&mut self) -> Result<()> {
+        // Reinitialize camera if configuration changed
+        if self.filename.is_changed() || self.interval.is_changed() || self.resolution.is_changed()
+        {
+            self.init_camera()?;
+        }
+
+        if let Some(camera) = self.camera.as_ref() {
+            let frame = camera.capture().or(Err("cannot capture"))?;
+
+            *self.frame = frame.into();
+
+            Ok(())
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn initialize(&mut self) -> Result<()> {
+        self.init_camera()
     }
 
     fn terminate(&mut self) -> Result<()> {
