@@ -949,23 +949,6 @@ mod tests {
         }
     }
 
-    fn create_constant_graph_repr(node_name: NodeId, input_value: i32) -> GraphRepr {
-        let mut props = HashMap::new();
-        props.insert(ParamId(0), Value::load(&input_value).unwrap());
-
-        GraphRepr {
-            links: vec![],
-            nodes: vec![InternalNodeRepr {
-                name: node_name,
-                node: NodeRepr {
-                    typ: "Constant".to_string(),
-                    props,
-                },
-                on_error: OnError::Continue,
-            }],
-        }
-    }
-
     #[test]
     fn test_system_creation_single_graph() {
         let registry = create_test_registry();
