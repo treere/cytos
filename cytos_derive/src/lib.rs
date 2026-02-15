@@ -131,7 +131,10 @@ pub fn derive_answer_fn(input: TokenStream) -> TokenStream {
     let gwhere = generics.where_clause.clone();
 
     let Data::Struct(DataStruct { ref fields, .. }) = data else {
-        unreachable!()
+        return quote! {
+            compile_error!("CytosNode can only be derived for structs");
+        }
+        .into();
     };
 
     let get_prop = create_get_prop(fields);
