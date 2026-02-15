@@ -338,6 +338,29 @@ impl Stepper for NormalDistribution {
     }
 }
 
+/// Outputs a vector filled with a constant value
+#[derive(CytosNode, Default)]
+pub struct ConstantVec {
+    /// Value to fill the vector with
+    #[cytos(input)]
+    value: Prop<f32>,
+    /// Size of the output vector
+    #[cytos(input)]
+    size: Prop<usize>,
+    /// Output vector filled with the constant value
+    #[cytos(output)]
+    output: Prop<Vec<f32>>,
+}
+
+impl Stepper for ConstantVec {
+    fn step(&mut self) -> Result<()> {
+        let value = *self.value;
+        let size = *self.size;
+        *self.output = vec![value; size];
+        Ok(())
+    }
+}
+
 pub fn load_registry(registry: &mut cytos::loader::DynamicLoadingRegistryWrapper) {
     registry.add("Linear", Linear::default);
     registry.add("Sigmoid", Sigmoid::default);
@@ -345,6 +368,8 @@ pub fn load_registry(registry: &mut cytos::loader::DynamicLoadingRegistryWrapper
     registry.add("LinearBackward", LinearBackward::default);
     registry.add("Mse", Mse::default);
     registry.add("Sgd", Sgd::default);
+    registry.add("NormalDistribution", NormalDistribution::default);
+    registry.add("ConstantVec", ConstantVec::default);
 }
 
 #[cfg(test)]
