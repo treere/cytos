@@ -48,7 +48,11 @@
 //! ```
 
 use serde::{Serialize, de::DeserializeOwned};
-use std::{any::Any, cell::UnsafeCell, rc::Rc};
+use std::{
+    any::Any,
+    cell::{Cell, UnsafeCell},
+    rc::Rc,
+};
 
 use super::{Result, Value};
 
@@ -524,6 +528,200 @@ impl GenericProp {
     }
 }
 
+/// A property that tracks whether its value has changed since the last check.
+///
+/// `ChangeCheckProp<T>` is similar to `Prop<T>` but adds the ability to track
+/// value changes. When multiple props are linked, they share the same value and
+/// a shared change counter, but each prop maintains its own local view of when
+/// it last checked for changes.
+///
+/// # Change Tracking
+///
+/// - `load()` and `assign()` increment a shared change counter
+/// - `is_changed()` returns true if the counter has advanced since the last check
+/// - `clear_changed()` updates the local view to the current counter value
+/// - Each linked prop tracks changes independently
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use cytos::ChangeCheckProp;
+///
+/// let mut prop1 = ChangeCheckProp::new(42);
+/// let mut prop2 = ChangeCheckProp::new(0);
+///
+/// // Link the props
+/// prop2.link(prop1.as_generic()).expect("type mismatch");
+///
+/// // prop2 now sees prop1's value and initial change state
+/// assert!(prop2.is_changed());
+/// prop2.clear_changed();
+/// assert!(!prop2.is_changed());
+///
+/// // When prop1 changes, prop2 sees the change
+/// prop1.assign(Value::load(&100).unwrap()).unwrap();
+/// assert!(prop2.is_changed()); // prop2 sees the change
+/// prop2.clear_changed();       // But prop2 resets its own view
+/// ```
+pub struct ChangeCheckProp<T> {
+    data: Rc<(UnsafeCell<T>, Cell<u64>)>,
+    last_seen: u64,
+}
+
+impl<T: Default + 'static> Default for ChangeCheckProp<T> {
+    fn default() -> Self {
+        Self {
+            data: Rc::new((UnsafeCell::new(T::default()), Cell::new(1))),
+            last_seen: 0,
+        }
+    }
+}
+
+impl<T: 'static> ChangeCheckProp<T> {
+    /// Creates a new property with the given value.
+    ///
+    /// The property starts with `is_changed() == true` to indicate it has
+    /// an initial value that hasn't been checked yet.
+    ///
+    /// # Arguments
+    ///
+    /// * `val` - The initial value for the property.
+    pub fn new(val: T) -> Self {
+        Self {
+            data: Rc::new((UnsafeCell::new(val), Cell::new(1))),
+            last_seen: 0,
+        }
+    }
+
+    /// Returns true if the value has changed since the last time
+    /// `clear_changed()` was called on this property.
+    ///
+    /// When props are linked, changes made through any linked prop will
+    /// cause this method to return true for all linked props.
+    pub fn is_changed(&self) -> bool {
+        self.data.1.get() != self.last_seen
+    }
+
+    /// Clears the changed flag for this property.
+    ///
+    /// After calling this, `is_changed()` will return false until the
+    /// value changes again. Other linked props are not affected.
+    pub fn clear_changed(&mut self) {
+        self.last_seen = self.data.1.get();
+    }
+
+    /// Manually marks this property as changed.
+    ///
+    /// This increments the shared change counter, causing all linked
+    /// props to see the change on their next `is_changed()` check.
+    pub fn mark_changed(&self) {
+        self.data.1.set(self.data.1.get().wrapping_add(1));
+    }
+
+    /// Links this property to another generic property.
+    ///
+    /// After linking, both properties share the same underlying value and
+    /// change counter, but each maintains its own `last_seen` view.
+    ///
+    /// # Type Safety
+    ///
+    /// This method performs a runtime type check to ensure the generic
+    /// property contains a value of type `T`. If the types don't match,
+    /// an error is returned.
+    ///
+    /// # Arguments
+    ///
+    /// * `val` - The generic property to link to.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if the generic property's inner type doesn't match `T`.
+    pub fn link_value(&mut self, val: GenericProp) -> Result<()> {
+        match val.0.downcast::<(UnsafeCell<T>, Cell<u64>)>() {
+            Ok(v) => {
+                self.data = v;
+                Ok(())
+            }
+            _ => Err("invalid type".into()),
+        }
+    }
+}
+
+impl<T> std::ops::Deref for ChangeCheckProp<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*self.data.0.get() }
+    }
+}
+
+impl<T> std::ops::DerefMut for ChangeCheckProp<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        // Mark as changed when value is accessed mutably
+        self.data.1.set(self.data.1.get().wrapping_add(1));
+        unsafe { &mut *self.data.0.get() }
+    }
+}
+
+impl<T: DeserializeOwned + Serialize + Ownable + Default + 'static> GenericPropInterface
+    for ChangeCheckProp<T>
+{
+    fn link(&mut self, val: GenericProp) -> Result<()> {
+        self.link_value(val)
+    }
+
+    fn load(&mut self, val: Value) -> Result<()> {
+        let value = val.dump()?;
+        self.data = Rc::new((UnsafeCell::new(value), Cell::new(1)));
+        self.last_seen = 0;
+        Ok(())
+    }
+
+    fn assign(&mut self, val: Value) -> Result<()> {
+        let value = val.dump::<T>()?;
+        **self = value;
+        Ok(())
+    }
+
+    fn dump(&self) -> Result<Value> {
+        Value::load(&**self)
+    }
+
+    fn load_owned(&mut self, val: GenericOwnedProp) -> Result<()> {
+        match val.0.downcast::<(T::Value, u64)>() {
+            Ok(v) => {
+                let (value, counter) = &*v;
+                self.data = Rc::new((
+                    UnsafeCell::new(Ownable::from_owned(value)),
+                    Cell::new(*counter),
+                ));
+                self.last_seen = 0;
+                Ok(())
+            }
+            _ => Err("invalid type".into()),
+        }
+    }
+
+    fn assign_owned(&mut self, val: GenericOwnedProp) -> Result<()> {
+        val.0.downcast::<(T::Value, u64)>().map_or_else(
+            |_| Err("invalid type".into()),
+            |v| {
+                let (value, _) = &*v;
+                **self = Ownable::from_owned(value);
+                Ok(())
+            },
+        )
+    }
+
+    fn as_owned(&self) -> GenericOwnedProp {
+        GenericOwnedProp(Box::new((self.to_ownable(), self.data.1.get())))
+    }
+
+    fn as_generic(&self) -> GenericProp {
+        GenericProp(self.data.clone())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -564,5 +762,127 @@ mod tests {
         })
         .join()
         .expect("cannot join");
+    }
+
+    #[test]
+    fn test_change_check_prop_initial_state() {
+        let prop = ChangeCheckProp::new(42);
+        // New prop should start with is_changed() == true
+        assert!(prop.is_changed());
+        assert_eq!(*prop, 42);
+    }
+
+    #[test]
+    fn test_change_check_prop_clear_changed() {
+        let mut prop = ChangeCheckProp::new(42);
+        assert!(prop.is_changed());
+        prop.clear_changed();
+        assert!(!prop.is_changed());
+    }
+
+    #[test]
+    fn test_change_check_prop_assign() {
+        let mut prop1 = ChangeCheckProp::new(42);
+        let mut prop2 = ChangeCheckProp::new(0);
+
+        // Link the props
+        prop2.link(prop1.as_generic()).expect("cannot link");
+
+        // prop2 should see prop1's initial value as changed
+        assert!(prop2.is_changed());
+        prop2.clear_changed();
+        assert!(!prop2.is_changed());
+        assert_eq!(*prop2, 42);
+
+        // When prop1 changes via assign, prop2 sees the change
+        prop1.assign(Value::load(&100).unwrap()).unwrap();
+        assert!(prop1.is_changed());
+        assert!(prop2.is_changed());
+        assert_eq!(*prop1, 100);
+        assert_eq!(*prop2, 100);
+
+        // prop2 can clear its own view independently
+        prop2.clear_changed();
+        assert!(!prop2.is_changed());
+        // prop1 still sees it as changed
+        assert!(prop1.is_changed());
+    }
+
+    #[test]
+    fn test_change_check_prop_deref_mut() {
+        let mut prop = ChangeCheckProp::new(42);
+        prop.clear_changed();
+        assert!(!prop.is_changed());
+
+        // Modifying via DerefMut should mark as changed
+        *prop = 100;
+        assert!(prop.is_changed());
+        assert_eq!(*prop, 100);
+    }
+
+    #[test]
+    fn test_change_check_prop_load() {
+        let mut prop = ChangeCheckProp::new(42);
+        prop.clear_changed();
+        assert!(!prop.is_changed());
+
+        // Load should mark as changed
+        prop.load(Value::load(&200).unwrap()).unwrap();
+        assert!(prop.is_changed());
+        assert_eq!(*prop, 200);
+    }
+
+    #[test]
+    fn test_change_check_prop_mark_changed() {
+        let mut prop = ChangeCheckProp::new(42);
+        prop.clear_changed();
+        assert!(!prop.is_changed());
+
+        // Manually mark as changed
+        prop.mark_changed();
+        assert!(prop.is_changed());
+    }
+
+    #[test]
+    fn test_change_check_prop_linked_independent_views() {
+        let mut prop1 = ChangeCheckProp::new(10);
+        let mut prop2 = ChangeCheckProp::new(20);
+        let mut prop3 = ChangeCheckProp::new(30);
+
+        // Link all three
+        prop2.link(prop1.as_generic()).unwrap();
+        prop3.link(prop1.as_generic()).unwrap();
+
+        // All see the change
+        assert!(prop1.is_changed());
+        assert!(prop2.is_changed());
+        assert!(prop3.is_changed());
+
+        // Each clears independently
+        prop1.clear_changed();
+        assert!(!prop1.is_changed());
+        assert!(prop2.is_changed());
+        assert!(prop3.is_changed());
+
+        prop2.clear_changed();
+        assert!(!prop1.is_changed());
+        assert!(!prop2.is_changed());
+        assert!(prop3.is_changed());
+
+        prop3.clear_changed();
+        assert!(!prop1.is_changed());
+        assert!(!prop2.is_changed());
+        assert!(!prop3.is_changed());
+
+        // Change via prop1
+        prop1.assign(Value::load(&99).unwrap()).unwrap();
+
+        // All see the change again
+        assert!(prop1.is_changed());
+        assert!(prop2.is_changed());
+        assert!(prop3.is_changed());
+        assert_eq!(*prop1, 99);
+        assert_eq!(*prop2, 99);
+        assert_eq!(*prop3, 99);
     }
 }
