@@ -19,7 +19,10 @@ use ort::{
 };
 use serde::{Deserialize, Serialize};
 
+#[cfg(not(test))]
 const YOLO: &[u8] = include_bytes!("../../models/yolov8m.onnx");
+#[cfg(test)]
+const YOLO: &[u8] = &[1, 2, 3];
 
 use crate::imageio::Image;
 
