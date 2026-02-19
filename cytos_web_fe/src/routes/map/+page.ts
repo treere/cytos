@@ -96,41 +96,24 @@ export const load: PageLoad = async ({ fetch }) => {
 			return links;
 		});
 
-		const inputs: Node[] = (
-			await Promise.all(
+		const parameters: Node[] = (
+		await Promise.all(
 				processors.map(async (n) => {
 					const [graph, node] = n.id.split('/');
-					const data = await fetch(`/api/graphs/${graph}/nodes/${node}/inputs`);
-					const json = (await data.json()) as string[];
-					return json.map((param) => ({
-						id: `${graph}/${node}/${param}`,
+					const data = await fetch(`/api/graphs/${graph}/nodes/${node}/describe`);
+					const json = await data.json();
+					return json.params.map((param) => ({
+						id: `${graph}/${node}/${param.id}`,
 						color: '#0000ff',
-						label: param,
-						type: NodeType.InputParam,
-						link: `/graphs/${graph}/nodes/${node}/params/${param}`
+						label: param.description,
+						type: param.directions.includes('Input') ? NodeType.InputParam: NodeType.OutputParam,
+						link: `/graphs/${graph}/nodes/${node}/params/${param.id}`
 					}));
 				})
 			)
 		).flatMap((x) => x);
 
-		const outputs: Node[] = (
-			await Promise.all(
-				processors.map(async (n) => {
-					const [graph, node] = n.id.split('/');
-					const data = await fetch(`/api/graphs/${graph}/nodes/${node}/outputs`);
-					const json = (await data.json()) as string[];
-					return json.map((param) => ({
-						id: `${graph}/${node}/${param}`,
-						color: '#0000ff',
-						label: param,
-						type: NodeType.OutputParam,
-						link: `/graphs/${graph}/nodes/${node}/params/${param}`
-					}));
-				})
-			)
-		).flatMap((x) => x);
-
-		const n = graphs.concat(inputs, outputs, processors);
+		const n = graphs.concat(parameters, processors);
 		n.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
 		const composition: Link[] = n
