@@ -97,7 +97,7 @@ export const load: PageLoad = async ({ fetch }) => {
 		});
 
 		const parameters: Node[] = (
-		await Promise.all(
+			await Promise.all(
 				processors.map(async (n) => {
 					const [graph, node] = n.id.split('/');
 					const data = await fetch(`/api/graphs/${graph}/nodes/${node}/describe`);
@@ -106,7 +106,7 @@ export const load: PageLoad = async ({ fetch }) => {
 						id: `${graph}/${node}/${param.id}`,
 						color: '#0000ff',
 						label: param.description,
-						type: param.directions.includes('Input') ? NodeType.InputParam: NodeType.OutputParam,
+						type: param.directions.includes('Input') ? NodeType.InputParam : NodeType.OutputParam,
 						link: `/graphs/${graph}/nodes/${node}/params/${param.id}`
 					}));
 				})
