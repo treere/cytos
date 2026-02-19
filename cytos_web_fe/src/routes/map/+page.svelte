@@ -1,7 +1,18 @@
 <script lang="ts">
-	import { VisSingleContainer, VisGraph } from '@unovis/svelte';
+	import '@xyflow/svelte/dist/style.css';
+	import {
+		SvelteFlow,
+		Background,
+		Controls,
+		MiniMap,
+		type Node as FlowNode,
+		type Edge as FlowEdge
+	} from '@xyflow/svelte';
 	import type { Link, Node } from './+page';
 	import { createReceiver, deleteReceiver, linkNodes } from '$lib/api';
+	import CustomNode from './CustomNode.svelte';
+
+	const nodeTypes = { custom: CustomNode };
 
 	interface Props {
 		data: {
@@ -24,6 +35,50 @@
 
 	let source = $state('');
 	let target = $state('');
+
+	async function getFlowData() {
+		const graph = await data.graph;
+		const nodeMap = new Map<string, { x: number; y: number }>();
+		const levels: Map<string, number> = new Map();
+
+		graph.nodes.forEach((n) => {
+			const depth = n.id.split('/').length - 1;
+			levels.set(n.id, depth);
+		});
+
+		const levelCounts: Map<number, number> = new Map();
+
+		graph.nodes.forEach((n) => {
+			const level = levels.get(n.id) ?? 0;
+			const count = levelCounts.get(level) ?? 0;
+			levelCounts.set(level, count + 1);
+			nodeMap.set(n.id, { x: level * 200, y: count * 80 });
+		});
+
+		const nodeIds = new Set(graph.nodes.map((n) => n.id));
+
+		const flowNodes: FlowNode[] = graph.nodes.map((n) => {
+			const pos = nodeMap.get(n.id) ?? { x: 0, y: 0 };
+			return {
+				id: n.id,
+				position: pos,
+				data: { label: n.label, color: n.color, type: n.type },
+				type: 'custom'
+			};
+		});
+
+		const flowEdges: FlowEdge[] = graph.links
+			.filter((l) => nodeIds.has(l.source) && nodeIds.has(l.target))
+			.map((l, i) => ({
+				id: `e${i}`,
+				source: l.source,
+				target: l.target,
+				animated: l.active,
+				style: `stroke: ${l.color}`
+			}));
+
+		return { nodes: flowNodes, edges: flowEdges };
+	}
 </script>
 
 <div class="animate-fade-in">
@@ -52,6 +107,7 @@
 			</div>
 		</div>
 	{:then graph}
+		{@const flowData = getFlowData()}
 		<div class="grid gap-6 lg:grid-cols-3">
 			<div class="card lg:col-span-1">
 				<h2 class="mb-4 text-lg font-semibold text-surface-900 dark:text-white">Nodes</h2>
@@ -72,14 +128,15 @@
 
 			<div class="card lg:col-span-2">
 				<div class="h-96">
-					<VisSingleContainer data={graph}>
-						<VisGraph
-							nodeLabel={data.nodeLabel}
-							nodeFill={data.nodeFill}
-							linkStroke={data.linkStroke}
-							linkFlow={data.linkFlow}
-						/>
-					</VisSingleContainer>
+					{#await flowData}
+						<div class="skeleton h-full w-full rounded-lg"></div>
+					{:then flow}
+						<SvelteFlow nodes={flow.nodes} edges={flow.edges} {nodeTypes} fitView>
+							<Background />
+							<Controls />
+							<MiniMap />
+						</SvelteFlow>
+					{/await}
 				</div>
 			</div>
 		</div>
