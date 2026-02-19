@@ -38,45 +38,140 @@
 
 	async function getFlowData() {
 		const graph = await data.graph;
-		const nodeMap = new Map<string, { x: number; y: number }>();
-		const levels: Map<string, number> = new Map();
 
-		graph.nodes.forEach((n) => {
-			const depth = n.id.split('/').length - 1;
-			levels.set(n.id, depth);
+		const graphs = graph.nodes.filter((n) => String(n.type) === 'Graph');
+		const processors = graph.nodes.filter((n) => String(n.type) === 'Node');
+		const params = graph.nodes.filter(
+			(n) => String(n.type).includes('Input') || String(n.type).includes('Output')
+		);
+
+		const flowNodes: FlowNode[] = [];
+		const flowEdges: FlowEdge[] = [];
+		const addedEdges = new Set<string>();
+
+		const graphWidth = 500;
+		const graphHeight = 450;
+		const nodeWidth = 400;
+		const nodeHeight = 280;
+
+		graphs.forEach((g, gi) => {
+			const gx = gi * (graphWidth + 100);
+			const gy = 50;
+
+			flowNodes.push({
+				id: g.id,
+				type: 'group',
+				position: { x: gx, y: gy },
+				data: { label: g.label },
+				style: `width: ${graphWidth}px; height: ${graphHeight}px; background: #fef2f2; border: 2px solid #f87171; border-radius: 12px;`,
+				selected: false,
+				resizable: true,
+				draggable: true
+			});
+
+			flowNodes.push({
+				id: g.id + '-label',
+				type: 'input',
+				position: { x: gx + 10, y: gy + 10 },
+				data: { label: `📁 ${g.label}` },
+				style:
+					'background: transparent; border: none; font-size: 18px; font-weight: bold; color: #991b1b;',
+				parentId: g.id,
+				extent: 'parent',
+				draggable: false,
+				selectable: false
+			});
+
+			const graphProcessors = processors.filter((p) => p.id.startsWith(g.id + '/'));
+
+			graphProcessors.forEach((p, pi) => {
+				flowNodes.push({
+					id: p.id,
+					type: 'group',
+					parentId: g.id,
+					position: { x: 30, y: 50 + pi * (nodeHeight + 30) },
+					extent: 'parent',
+					data: { label: p.label },
+					style: `width: ${nodeWidth}px; height: ${nodeHeight}px; background: #f0fdf4; border: 2px solid #22c55e; border-radius: 8px;`,
+					selected: false,
+					resizable: true,
+					draggable: true
+				});
+
+				flowNodes.push({
+					id: p.id + '-label',
+					type: 'input',
+					parentId: p.id,
+					position: { x: 10, y: 10 },
+					data: { label: `🔧 ${p.label}` },
+					style:
+						'background: transparent; border: none; font-size: 14px; font-weight: bold; color: #166534;',
+					extent: 'parent',
+					draggable: false,
+					selectable: false
+				});
+
+				const nodeParams = params.filter((param) => {
+					const parts = param.id.split('/');
+					return parts.slice(0, 2).join('/') === p.id;
+				});
+
+				nodeParams.forEach((param, parami) => {
+					const isInput = String(param.type).includes('Input');
+					flowNodes.push({
+						id: param.id,
+						type: 'custom',
+						parentId: p.id,
+						position: { x: isInput ? 20 : nodeWidth - 120, y: 30 + parami * 40 },
+						extent: 'parent',
+						data: { label: param.label, color: param.color, type: param.type },
+						selected: false
+					});
+
+					const isOutput = String(param.type).includes('Output');
+					flowEdges.push({
+						id: `ep-${p.id}-${param.id}`,
+						source: isOutput ? p.id : param.id,
+						target: isOutput ? param.id : p.id,
+						sourceHandle: isOutput ? 'out' : null,
+						targetHandle: isInput ? 'in' : null,
+						animated: true,
+						style: 'stroke: #ef4444; stroke-width: 2;',
+						type: 'straight',
+						zIndex: 999
+					});
+				});
+			});
+
+			flowEdges.push({
+				id: `eg-${g.id}`,
+				source: g.id,
+				target: g.id,
+				animated: false,
+				hidden: true
+			});
 		});
 
-		const levelCounts: Map<number, number> = new Map();
-
-		graph.nodes.forEach((n) => {
-			const level = levels.get(n.id) ?? 0;
-			const count = levelCounts.get(level) ?? 0;
-			levelCounts.set(level, count + 1);
-			nodeMap.set(n.id, { x: level * 200, y: count * 80 });
+		graph.links.forEach((l) => {
+			const isParamLink = l.source.split('/').length > 2 && l.target.split('/').length > 2;
+			if (isParamLink) {
+				const key = `lp-${l.source}-${l.target}`;
+				if (!addedEdges.has(key)) {
+					addedEdges.add(key);
+					flowEdges.push({
+						id: key,
+						source: l.source,
+						target: l.target,
+						animated: l.active,
+						style: `stroke: ${l.color}; stroke-width: 2;`,
+						type: 'straight',
+						zIndex: 999
+					});
+				}
+			}
 		});
 
-		const nodeIds = new Set(graph.nodes.map((n) => n.id));
-
-		const flowNodes: FlowNode[] = graph.nodes.map((n) => {
-			const pos = nodeMap.get(n.id) ?? { x: 0, y: 0 };
-			return {
-				id: n.id,
-				position: pos,
-				data: { label: n.label, color: n.color, type: n.type },
-				type: 'custom'
-			};
-		});
-
-		const flowEdges: FlowEdge[] = graph.links
-			.filter((l) => nodeIds.has(l.source) && nodeIds.has(l.target))
-			.map((l, i) => ({
-				id: `e${i}`,
-				source: l.source,
-				target: l.target,
-				animated: l.active,
-				style: `stroke: ${l.color}`
-			}));
-
+		console.log('Nodes:', flowNodes.length, 'Edges:', flowEdges.length);
 		return { nodes: flowNodes, edges: flowEdges };
 	}
 </script>
@@ -127,7 +222,7 @@
 			</div>
 
 			<div class="card lg:col-span-2">
-				<div class="h-96">
+				<div class="h-[500px]">
 					{#await flowData}
 						<div class="skeleton h-full w-full rounded-lg"></div>
 					{:then flow}
