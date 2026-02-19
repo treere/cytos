@@ -273,7 +273,7 @@ mod tests {
 
     #[test]
     fn test_on_error_default() {
-        let default: OnError = Default::default();
+        let default = OnError::default();
         assert!(matches!(default, OnError::Fail));
     }
 
@@ -333,7 +333,7 @@ mod tests {
 
     #[test]
     fn test_system_repr_from_json_invalid() {
-        let json = r#"{ invalid json }"#;
+        let json = r"{ invalid json }";
         let result = SystemRepr::from_json(json);
         assert!(result.is_err());
     }
@@ -393,7 +393,7 @@ mod tests {
             nodes: vec![],
         };
 
-        let debug_str = format!("{:?}", graph_repr);
+        let debug_str = format!("{graph_repr:?}");
         assert!(debug_str.contains("GraphRepr"));
     }
 
@@ -404,7 +404,7 @@ mod tests {
             props: HashMap::new(),
         };
 
-        let debug_str = format!("{:?}", node_repr);
+        let debug_str = format!("{node_repr:?}");
         assert!(debug_str.contains("Test"));
     }
 

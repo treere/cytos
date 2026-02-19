@@ -29,7 +29,7 @@ impl PropInspector for Empty {
     fn metadata(&self) -> &NodeMetadata {
         use std::sync::OnceLock;
         static METADATA: OnceLock<NodeMetadata> = OnceLock::new();
-        METADATA.get_or_init(|| <Self as MetadataProvider>::metadata())
+        METADATA.get_or_init(<Self as MetadataProvider>::metadata)
     }
 }
 
@@ -50,8 +50,8 @@ impl MetadataProvider for Empty {
 ///
 /// # Properties
 ///
-/// - `input` (ParamId 0): The input value to copy
-/// - `output` (ParamId 1): The output value that receives the copy
+/// - `input` (`ParamId` 0): The input value to copy
+/// - `output` (`ParamId` 1): The output value that receives the copy
 #[derive(Default)]
 pub struct Constant {
     /// The input property that holds the value to copy.
@@ -90,7 +90,7 @@ impl PropInspector for Constant {
     fn metadata(&self) -> &NodeMetadata {
         use std::sync::OnceLock;
         static METADATA: OnceLock<NodeMetadata> = OnceLock::new();
-        METADATA.get_or_init(|| <Self as MetadataProvider>::metadata())
+        METADATA.get_or_init(<Self as MetadataProvider>::metadata)
     }
 }
 

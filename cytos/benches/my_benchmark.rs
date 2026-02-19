@@ -37,7 +37,7 @@ fn create_graph(nodes_count: u64) -> Graph {
         fn metadata(&self) -> &NodeMetadata {
             use std::sync::OnceLock;
             static METADATA: OnceLock<NodeMetadata> = OnceLock::new();
-            METADATA.get_or_init(|| <Self as MetadataProvider>::metadata())
+            METADATA.get_or_init(<Self as MetadataProvider>::metadata)
         }
     }
 
@@ -46,15 +46,13 @@ fn create_graph(nodes_count: u64) -> Graph {
             NodeMetadata {
                 name: "Add".to_string(),
                 description: "Benchmark add node".to_string(),
-                input_ids: vec![],
-                output_ids: vec![],
-                params: HashMap::new(),
+                params: vec![],
             }
         }
     }
 
     let mut registry = Registry::default();
-    registry.add("add", || Add::default());
+    registry.add("add", Add::default);
 
     GraphRepr {
         links: vec![],
@@ -76,7 +74,7 @@ fn create_graph(nodes_count: u64) -> Graph {
 fn graph_size(c: &mut Criterion) {
     let mut group = c.benchmark_group("graph size");
     for size in [1, 10, 100, 1000].iter() {
-        group.throughput(Throughput::Elements(*size as u64));
+        group.throughput(Throughput::Elements(*size));
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             let mut graph = create_graph(size);
             graph.initialize();

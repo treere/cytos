@@ -408,8 +408,8 @@ mod tests {
         let output = &*sigmoid.output;
         assert_eq!(output.len(), 3);
         assert!((output[0] - 0.5).abs() < 1e-6); // sigmoid(0) = 0.5
-        assert!((output[1] - 0.731058).abs() < 1e-6); // sigmoid(1) ≈ 0.731
-        assert!((output[2] - 0.268941).abs() < 1e-6); // sigmoid(-1) ≈ 0.269
+        assert!((output[1] - 0.731_058).abs() < 1e-6); // sigmoid(1) ≈ 0.731
+        assert!((output[2] - 0.268_941).abs() < 1e-6); // sigmoid(-1) ≈ 0.269
     }
 
     #[test]

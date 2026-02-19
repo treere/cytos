@@ -986,8 +986,7 @@ mod tests {
         assert!(system.is_ok());
 
         let system = system.unwrap();
-        let graphs: Vec<_> = system.graphs().collect();
-        assert_eq!(graphs.len(), 2);
+        assert_eq!(system.graphs().count(), 2);
     }
 
     #[test]
@@ -1155,7 +1154,7 @@ mod tests {
 
     #[test]
     fn test_system_repr_from_json_invalid() {
-        let json = r#"{ invalid json }"#;
+        let json = r"{ invalid json }";
         let result = SystemRepr::from_json(json);
         assert!(result.is_err());
     }

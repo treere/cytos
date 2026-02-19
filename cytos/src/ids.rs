@@ -138,7 +138,6 @@ create_ids!(ParamId);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json;
 
     #[test]
     fn test_format_radix() {
@@ -146,7 +145,7 @@ mod tests {
         assert_eq!(format_radix(8, 2).unwrap(), "1000".to_owned());
         assert_eq!(format_radix(35, 36).unwrap(), "z".to_owned());
         assert_eq!(format_radix(36, 36).unwrap(), "10".to_owned());
-        assert_eq!(format_radix(123456, 36).unwrap(), "2n9c".to_owned());
+        assert_eq!(format_radix(123_456, 36).unwrap(), "2n9c".to_owned());
     }
 
     #[test]
@@ -157,7 +156,7 @@ mod tests {
         assert_eq!(id_number_to_string(10).unwrap(), "a".to_owned());
         assert_eq!(id_number_to_string(35).unwrap(), "z".to_owned());
         assert_eq!(id_number_to_string(36).unwrap(), "10".to_owned());
-        assert_eq!(id_number_to_string(123456).unwrap(), "2n9c".to_owned());
+        assert_eq!(id_number_to_string(123_456).unwrap(), "2n9c".to_owned());
     }
 
     #[test]
@@ -168,7 +167,7 @@ mod tests {
         assert_eq!(id_string_to_number("a").unwrap(), 10);
         assert_eq!(id_string_to_number("z").unwrap(), 35);
         assert_eq!(id_string_to_number("10").unwrap(), 36);
-        assert_eq!(id_string_to_number("2n9c").unwrap(), 123456);
+        assert_eq!(id_string_to_number("2n9c").unwrap(), 123_456);
 
         // Test invalid base36 strings
         assert!(id_string_to_number(".").is_err());
@@ -179,17 +178,17 @@ mod tests {
     #[test]
     fn test_graph_id() {
         let g = GraphId(1);
-        let v = format!("{}", g);
+        let v = format!("{g}");
         assert_eq!(v, "1".to_owned());
 
-        let g2 = GraphId(123456);
-        let v2 = format!("{}", g2);
+        let g2 = GraphId(123_456);
+        let v2 = format!("{g2}");
         assert_eq!(v2, "2n9c".to_owned());
     }
 
     #[test]
     fn test_graph_id_serde() {
-        let original_id = GraphId(123456);
+        let original_id = GraphId(123_456);
         let serialized = serde_json::to_string(&original_id).unwrap();
         // Base36 representation of 123456 is "2N9C"
         assert_eq!(serialized, r#""2n9c""#);
@@ -213,7 +212,7 @@ mod tests {
         assert!(result.is_err());
 
         // Test deserialization of incorrect JSON format
-        let incorrect_json = r#"123456"#; // Should be a string, not a number
+        let incorrect_json = r"123456"; // Should be a string, not a number
         let result: std::result::Result<GraphId, _> = serde_json::from_str(incorrect_json);
         assert!(result.is_err());
     }

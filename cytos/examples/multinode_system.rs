@@ -32,7 +32,7 @@ impl PropInspector for Add {
     fn metadata(&self) -> &NodeMetadata {
         use std::sync::OnceLock;
         static METADATA: OnceLock<NodeMetadata> = OnceLock::new();
-        METADATA.get_or_init(|| <Self as MetadataProvider>::metadata())
+        METADATA.get_or_init(<Self as MetadataProvider>::metadata)
     }
 }
 
@@ -48,7 +48,7 @@ impl MetadataProvider for Add {
 
 fn main() {
     let mut registry = Registry::default();
-    registry.add("add", || Add::default());
+    registry.add("add", Add::default);
 
     let nodes_count = 1000;
 

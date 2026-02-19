@@ -141,9 +141,8 @@ mod bounded_tests {
     fn it_works_with_threads() -> Result<()> {
         let (tx, rx) = bounded();
 
-        let tx_thread = tx.clone();
         thread::spawn(move || {
-            tx_thread.send(10).unwrap();
+            tx.send(10).unwrap();
         });
 
         let value = rx.recv()?;
@@ -339,12 +338,16 @@ mod tests {
         }
 
         let messages = receiver.recv_all().unwrap().collect::<Vec<_>>();
-        assert_eq!(messages.len() as i32, num_threads * messages_per_thread);
+        assert_eq!(
+            i32::try_from(messages.len()),
+            Ok(num_threads * messages_per_thread)
+        );
 
-        let mut sorted_messages = messages.clone();
-        sorted_messages.sort();
-        for i in 0..(num_threads * messages_per_thread) as i32 {
-            assert_eq!(sorted_messages[i as usize], i as i32);
+        let mut sorted_messages = messages;
+        sorted_messages.sort_unstable();
+        for i in 0..(num_threads * messages_per_thread) {
+            let index = usize::try_from(i).unwrap();
+            assert_eq!(sorted_messages[index], i);
         }
     }
 
@@ -375,8 +378,7 @@ mod tests {
 
         // Spawn receiver threads
         receiver_handles.push(thread::spawn(move || {
-            let messages = receiver.recv_all().unwrap().collect::<Vec<_>>();
-            assert_eq!(messages.len(), 100);
+            assert_eq!(receiver.recv_all().unwrap().count(), 100);
             let messages = receiver.recv_all();
             assert!(messages.is_none());
         }));

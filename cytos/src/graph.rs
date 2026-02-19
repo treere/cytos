@@ -293,8 +293,12 @@ mod tests {
         let node_id = NodeId(0);
 
         let graph = Graph {
-            nodes: IndexMap::from_iter(vec![(node_id, node)].into_iter()),
-            on_errors: IndexMap::from_iter(vec![(node_id, OnError::Continue)].into_iter()),
+            nodes: vec![(node_id, node)]
+                .into_iter()
+                .collect::<IndexMap<_, _>>(),
+            on_errors: vec![(node_id, OnError::Continue)]
+                .into_iter()
+                .collect::<IndexMap<_, _>>(),
         };
 
         assert_eq!(1, graph.list_nodes().len());
@@ -316,8 +320,8 @@ mod tests {
         let node_id = NodeId(0);
 
         let mut graph = Graph {
-            nodes: IndexMap::from_iter(vec![(node_id, node)].into_iter()),
-            on_errors: IndexMap::from_iter(vec![(node_id, OnError::Continue)].into_iter()),
+            nodes: vec![(node_id, node)].into_iter().collect(),
+            on_errors: vec![(node_id, OnError::Continue)].into_iter().collect(),
         };
 
         assert!(graph.initialize().is_ok());

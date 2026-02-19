@@ -220,7 +220,7 @@ mod tests {
             params: vec![],
         };
 
-        let debug_str = format!("{:?}", metadata);
+        let debug_str = format!("{metadata:?}");
         assert!(debug_str.contains("DebugNode"));
         assert!(debug_str.contains("For debugging"));
     }

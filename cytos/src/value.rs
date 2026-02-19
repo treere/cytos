@@ -77,6 +77,7 @@ mod tests {
     #[test]
     fn test_value_clone() {
         let value = Value::load(&42i32).expect("should load value");
+        #[allow(clippy::redundant_clone)]
         let cloned = value.clone();
         let result: i32 = cloned.dump().expect("should dump value");
         assert_eq!(result, 42);
@@ -85,7 +86,7 @@ mod tests {
     #[test]
     fn test_value_debug() {
         let value = Value::load(&42i32).expect("should load value");
-        let debug_str = format!("{:?}", value);
+        let debug_str = format!("{value:?}");
         assert!(debug_str.contains("42"));
     }
 
@@ -113,9 +114,9 @@ mod tests {
 
     #[test]
     fn test_value_with_float() {
-        let value = Value::load(&3.14f64).expect("should load value");
+        let value = Value::load(&std::f64::consts::PI).expect("should load value");
         let result: f64 = value.dump().expect("should dump value");
-        assert!((result - 3.14).abs() < f64::EPSILON);
+        assert!((result - std::f64::consts::PI).abs() < f64::EPSILON);
     }
 
     #[test]

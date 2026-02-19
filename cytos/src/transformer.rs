@@ -87,20 +87,11 @@ mod tests {
     use super::*;
     use crate::test::Empty;
 
+    #[derive(Default)]
     struct TestStepper {
         initialized: bool,
         stepped: bool,
         terminated: bool,
-    }
-
-    impl Default for TestStepper {
-        fn default() -> Self {
-            Self {
-                initialized: false,
-                stepped: false,
-                terminated: false,
-            }
-        }
     }
 
     impl Stepper for TestStepper {
