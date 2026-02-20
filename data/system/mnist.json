@@ -1,0 +1,294 @@
+{
+  "graphs": {
+    "inference": {
+      "nodes": [
+        {
+          "name": "DirectoryIter",
+          "type": "DirectoryIter",
+          "props": {
+            "folder": "/path/to/mnist/images"
+          }
+        },
+        {
+          "name": "FileSource",
+          "type": "FileSource",
+          "props": {
+            "filename": ""
+          }
+        },
+        {
+          "name": "Decoder",
+          "type": "ImageDecoder"
+        },
+        {
+          "name": "Resize",
+          "type": "ResizeExact",
+          "props": {
+            "width": 28,
+            "height": 28,
+            "filter": "Nearest"
+          }
+        },
+        {
+          "name": "Grayscale",
+          "type": "Grayscale"
+        },
+        {
+          "name": "ImageToVec",
+          "type": "ImageToVec"
+        },
+        {
+          "name": "Linear",
+          "type": "Linear",
+          "props": {
+            "inputsize": 784,
+            "outputsize": 10
+          }
+        },
+        {
+          "name": "Softmax",
+          "type": "Softmax"
+        },
+        {
+          "name": "LabelParser",
+          "type": "ParseLabelFromFilename"
+        },
+        {
+          "name": "OneHot",
+          "type": "OneHot",
+          "props": {
+            "classes": 10
+          }
+        },
+        {
+          "name": "RateLimiter",
+          "type": "RateLimiter",
+          "props": {
+            "hz": 1.0
+          }
+        },
+        {
+          "name": "WeightInit",
+          "type": "NormalDistribution",
+          "props": {
+            "mean": 0.0,
+            "std": 0.1,
+            "size": 7840
+          }
+        },
+        {
+          "name": "BiasInit",
+          "type": "ConstantVec",
+          "props": {
+            "value": 0.0,
+            "size": 10
+          }
+        }
+      ],
+      "links": [
+        {
+          "src": ["DirectoryIter", "filename"],
+          "dst": ["FileSource", "filename"]
+        },
+        {
+          "src": ["DirectoryIter", "frame"],
+          "dst": ["FileSource", "frame"]
+        },
+        {
+          "src": ["FileSource", "frame"],
+          "dst": ["Decoder", "frame"]
+        },
+        {
+          "src": ["Decoder", "decoded"],
+          "dst": ["Resize", "input"]
+        },
+        {
+          "src": ["Resize", "output"],
+          "dst": ["Grayscale", "input"]
+        },
+        {
+          "src": ["Grayscale", "output"],
+          "dst": ["ImageToVec", "input"]
+        },
+        {
+          "src": ["ImageToVec", "output"],
+          "dst": ["Linear", "input"]
+        },
+        {
+          "src": ["Linear", "output"],
+          "dst": ["Softmax", "input"]
+        },
+        {
+          "src": ["DirectoryIter", "filename"],
+          "dst": ["LabelParser", "filename"]
+        },
+        {
+          "src": ["LabelParser", "label"],
+          "dst": ["OneHot", "label"]
+        },
+        {
+          "src": ["WeightInit", "output"],
+          "dst": ["Linear", "weights"]
+        },
+        {
+          "src": ["BiasInit", "output"],
+          "dst": ["Linear", "bias"]
+        }
+      ]
+    },
+    "backprop": {
+      "nodes": [
+        {
+          "name": "InputHold",
+          "type": "ConstantVec",
+          "props": {
+            "value": 0.0,
+            "size": 784
+          }
+        },
+        {
+          "name": "TargetHold",
+          "type": "ConstantVec",
+          "props": {
+            "value": 0.0,
+            "size": 10
+          }
+        },
+        {
+          "name": "PredictionHold",
+          "type": "ConstantVec",
+          "props": {
+            "value": 0.0,
+            "size": 10
+          }
+        },
+        {
+          "name": "WeightHold",
+          "type": "ConstantVec",
+          "props": {
+            "value": 0.0,
+            "size": 7840
+          }
+        },
+        {
+          "name": "BiasHold",
+          "type": "ConstantVec",
+          "props": {
+            "value": 0.0,
+            "size": 10
+          }
+        },
+        {
+          "name": "LinearFwd",
+          "type": "Linear",
+          "props": {
+            "inputsize": 784,
+            "outputsize": 10
+          }
+        },
+        {
+          "name": "MseLoss",
+          "type": "Mse"
+        },
+        {
+          "name": "LinearBackward",
+          "type": "LinearBackward"
+        },
+        {
+          "name": "Sgd",
+          "type": "Sgd",
+          "props": {
+            "lr": 0.01
+          }
+        }
+      ],
+      "links": [
+        {
+          "src": ["InputHold", "output"],
+          "dst": ["LinearFwd", "input"]
+        },
+        {
+          "src": ["WeightHold", "output"],
+          "dst": ["LinearFwd", "weights"]
+        },
+        {
+          "src": ["BiasHold", "output"],
+          "dst": ["LinearFwd", "bias"]
+        },
+        {
+          "src": ["LinearFwd", "output"],
+          "dst": ["MseLoss", "pred"]
+        },
+        {
+          "src": ["TargetHold", "output"],
+          "dst": ["MseLoss", "target"]
+        },
+        {
+          "src": ["InputHold", "output"],
+          "dst": ["LinearBackward", "x"]
+        },
+        {
+          "src": ["WeightHold", "output"],
+          "dst": ["LinearBackward", "w"]
+        },
+        {
+          "src": ["MseLoss", "gpred"],
+          "dst": ["LinearBackward", "gy"]
+        },
+        {
+          "src": ["WeightHold", "output"],
+          "dst": ["Sgd", "w"]
+        },
+        {
+          "src": ["BiasHold", "output"],
+          "dst": ["Sgd", "b"]
+        },
+        {
+          "src": ["LinearBackward", "gw"],
+          "dst": ["Sgd", "gw"]
+        },
+        {
+          "src": ["LinearBackward", "gb"],
+          "dst": ["Sgd", "gb"]
+        }
+      ]
+    }
+  },
+  "requests": [
+    {
+      "src": ["inference", "ImageToVec", "output"],
+      "dst": ["backprop", "InputHold", "output"],
+      "kind": "Continue"
+    },
+    {
+      "src": ["inference", "Softmax", "output"],
+      "dst": ["backprop", "PredictionHold", "output"],
+      "kind": "Continue"
+    },
+    {
+      "src": ["inference", "OneHot", "output"],
+      "dst": ["backprop", "TargetHold", "output"],
+      "kind": "Continue"
+    },
+    {
+      "src": ["inference", "Linear", "weights"],
+      "dst": ["backprop", "WeightHold", "output"],
+      "kind": "Continue"
+    },
+    {
+      "src": ["inference", "Linear", "bias"],
+      "dst": ["backprop", "BiasHold", "output"],
+      "kind": "Continue"
+    },
+    {
+      "src": ["backprop", "Sgd", "uw"],
+      "dst": ["inference", "Linear", "weights"],
+      "kind": "Wait"
+    },
+    {
+      "src": ["backprop", "Sgd", "ub"],
+      "dst": ["inference", "Linear", "bias"],
+      "kind": "Wait"
+    }
+  ]
+}

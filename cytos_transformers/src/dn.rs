@@ -361,6 +361,104 @@ impl Stepper for ConstantVec {
     }
 }
 
+/// Softmax activation: `exp(x_i) / sum(exp(x_j))`
+/// Numerically stable version: `exp(x_i - max(x)) / sum(exp(x_j - max(x)))`
+#[derive(CytosNode, Default)]
+pub struct Softmax {
+    /// Input logits
+    #[cytos(input)]
+    input: Prop<Vec<f32>>,
+    /// Output probabilities (sums to 1)
+    #[cytos(output)]
+    output: Prop<Vec<f32>>,
+}
+
+impl Stepper for Softmax {
+    fn step(&mut self) -> Result<()> {
+        let input = &*self.input;
+        if input.is_empty() {
+            *self.output = vec![];
+            return Ok(());
+        }
+
+        let max_val = input.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+
+        let exp_vals: Vec<f32> = input.iter().map(|&x| (x - max_val).exp()).collect();
+        let sum_exp = exp_vals.iter().sum::<f32>();
+
+        let output: Vec<f32> = if sum_exp == 0.0 {
+            vec![0.0; input.len()]
+        } else {
+            exp_vals.iter().map(|&x| x / sum_exp).collect()
+        };
+
+        *self.output = output;
+        Ok(())
+    }
+}
+
+/// Parses a label from a filename like `3_1234.png` -> 3
+#[derive(CytosNode, Default)]
+pub struct ParseLabelFromFilename {
+    /// Input filename
+    #[cytos(input)]
+    filename: Prop<String>,
+    /// Extracted label (the number before the first underscore)
+    #[cytos(output)]
+    label: Prop<u8>,
+}
+
+impl Stepper for ParseLabelFromFilename {
+    fn step(&mut self) -> Result<()> {
+        let filename = &*self.filename;
+        let stem = std::path::Path::new(filename)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .ok_or("invalid filename")?;
+
+        let label = stem
+            .split('_')
+            .next()
+            .and_then(|s| s.parse::<u8>().ok())
+            .ok_or_else(|| format!("cannot parse label from {filename}"))?;
+
+        *self.label = label;
+        Ok(())
+    }
+}
+
+/// Converts a label (u8) to a one-hot encoded vector.
+/// Example: label=3, classes=10 -> [0,0,0,1,0,0,0,0,0,0]
+#[derive(CytosNode, Default)]
+pub struct OneHot {
+    /// Input label
+    #[cytos(input)]
+    label: Prop<u8>,
+    /// Number of classes (size of output vector)
+    #[cytos(input)]
+    classes: Prop<usize>,
+    /// One-hot encoded output vector
+    #[cytos(output)]
+    output: Prop<Vec<f32>>,
+}
+
+impl Stepper for OneHot {
+    fn step(&mut self) -> Result<()> {
+        let label = *self.label;
+        let classes = *self.classes;
+
+        if label as usize >= classes {
+            return Err(format!("label {label} exceeds classes {classes}").into());
+        }
+
+        let mut output = vec![0.0; classes];
+        output[label as usize] = 1.0;
+
+        *self.output = output;
+        Ok(())
+    }
+}
+
 pub fn load_registry(registry: &mut cytos::loader::DynamicLoadingRegistryWrapper) {
     registry.add("Linear", Linear::default);
     registry.add("Sigmoid", Sigmoid::default);
@@ -370,6 +468,9 @@ pub fn load_registry(registry: &mut cytos::loader::DynamicLoadingRegistryWrapper
     registry.add("Sgd", Sgd::default);
     registry.add("NormalDistribution", NormalDistribution::default);
     registry.add("ConstantVec", ConstantVec::default);
+    registry.add("Softmax", Softmax::default);
+    registry.add("ParseLabelFromFilename", ParseLabelFromFilename::default);
+    registry.add("OneHot", OneHot::default);
 }
 
 #[cfg(test)]
@@ -442,5 +543,93 @@ mod tests {
         assert_eq!(uw.len(), 4);
         assert!((uw[0] - 0.99).abs() < 1e-6);
         assert!((ub[0] - 0.49).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_softmax() {
+        let mut softmax = Softmax::default();
+
+        *softmax.input = vec![1.0, 2.0, 3.0];
+
+        softmax.step().unwrap();
+
+        let output = &*softmax.output;
+        assert_eq!(output.len(), 3);
+        let sum: f32 = output.iter().sum();
+        assert!((sum - 1.0).abs() < 1e-6);
+        assert!(output[2] > output[1]);
+        assert!(output[1] > output[0]);
+    }
+
+    #[test]
+    fn test_softmax_single() {
+        let mut softmax = Softmax::default();
+
+        *softmax.input = vec![5.0];
+
+        softmax.step().unwrap();
+
+        let output = &*softmax.output;
+        assert_eq!(output.len(), 1);
+        assert!((output[0] - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_softmax_empty() {
+        let mut softmax = Softmax::default();
+
+        *softmax.input = vec![];
+
+        softmax.step().unwrap();
+
+        let output = &*softmax.output;
+        assert!(output.is_empty());
+    }
+
+    #[test]
+    fn test_parse_label_from_filename() {
+        let mut parser = ParseLabelFromFilename::default();
+
+        *parser.filename = "3_1234.png".to_string();
+        parser.step().unwrap();
+        assert_eq!(*parser.label, 3);
+
+        *parser.filename = "7_0001.jpg".to_string();
+        parser.step().unwrap();
+        assert_eq!(*parser.label, 7);
+
+        *parser.filename = "0_test.png".to_string();
+        parser.step().unwrap();
+        assert_eq!(*parser.label, 0);
+    }
+
+    #[test]
+    fn test_one_hot() {
+        let mut onehot = OneHot::default();
+
+        *onehot.label = 3;
+        *onehot.classes = 10;
+        onehot.step().unwrap();
+
+        let output = &*onehot.output;
+        assert_eq!(output.len(), 10);
+        assert!((output[3] - 1.0).abs() < 1e-6);
+        for (i, v) in output.iter().enumerate() {
+            if i != 3 {
+                assert!((*v - 0.0).abs() < 1e-6);
+            }
+        }
+    }
+
+    #[test]
+    fn test_one_hot_zero() {
+        let mut onehot = OneHot::default();
+
+        *onehot.label = 0;
+        *onehot.classes = 10;
+        onehot.step().unwrap();
+
+        let output = &*onehot.output;
+        assert!((output[0] - 1.0).abs() < 1e-6);
     }
 }

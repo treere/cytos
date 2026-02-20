@@ -2,12 +2,14 @@
 //!
 //! This module provides nodes for reading data from various sources:
 //! - File reading (loading file contents as frames)
+//! - Directory iteration (cycling through files in a folder)
 //! - Camera capture (Linux via rscam library)
 //!
 //! These nodes are typically used at the beginning of processing pipelines
 //! to ingest data for further processing.
 
 use std::io::Read;
+use std::path::PathBuf;
 
 use cytos::{ChangeCheckProp, Prop, Result, Stepper, loader::DynamicLoadingRegistryWrapper};
 use cytos_derive::CytosNode;
@@ -47,6 +49,89 @@ impl Stepper for File {
     fn terminate(&mut self) -> Result<()> {
         *self.frame = Frame::default();
         Ok(())
+    }
+}
+
+/// Node that iterates through files in a directory, cycling through them.
+/// On each step, loads the next file in the directory and outputs its name and contents.
+#[derive(CytosNode)]
+struct DirectoryIter {
+    /// The directory path to iterate through
+    #[cytos(input)]
+    folder: Prop<String>,
+    /// The current filename
+    #[cytos(output)]
+    filename: Prop<String>,
+    /// The file contents as a frame
+    #[cytos(output)]
+    frame: Prop<Frame>,
+    files: Option<Vec<PathBuf>>,
+    index: usize,
+}
+
+impl Default for DirectoryIter {
+    fn default() -> Self {
+        Self {
+            folder: Prop::new(String::new()),
+            filename: Prop::default(),
+            frame: Prop::default(),
+            files: None,
+            index: 0,
+        }
+    }
+}
+
+impl DirectoryIter {
+    fn scan_directory(&mut self) -> Result<()> {
+        let path = PathBuf::from(&*self.folder);
+        if !path.is_dir() {
+            return Err(format!("not a directory: {}", path.display()).into());
+        }
+
+        let mut files: Vec<PathBuf> = std::fs::read_dir(path)?
+            .filter_map(|entry| entry.ok().map(|e| e.path()))
+            .filter(|p| p.is_file())
+            .collect();
+
+        files.sort();
+        self.files = Some(files);
+        self.index = 0;
+        Ok(())
+    }
+}
+
+impl Stepper for DirectoryIter {
+    fn step(&mut self) -> Result<()> {
+        let files = self.files.as_mut().ok_or("directory not initialized")?;
+
+        if files.is_empty() {
+            return Err("no files in directory".into());
+        }
+
+        let file_path = &files[self.index];
+        let filename = file_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .ok_or("invalid filename")?
+            .to_string();
+
+        let mut f = std::fs::File::open(file_path)?;
+        let mut v = Vec::new();
+        f.read_to_end(&mut v)?;
+
+        *self.filename = filename;
+        *self.frame = v.into();
+
+        self.index = (self.index + 1) % files.len();
+
+        Ok(())
+    }
+
+    fn initialize(&mut self) -> Result<()> {
+        if self.folder.as_str().is_empty() {
+            return Err("folder not set".into());
+        }
+        self.scan_directory()
     }
 }
 
@@ -158,5 +243,6 @@ impl Stepper for Rscam {
 pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
     registry
         .add("RscamSource", Rscam::default)
-        .add("FileSource", File::default);
+        .add("FileSource", File::default)
+        .add("DirectoryIter", DirectoryIter::default);
 }

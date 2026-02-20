@@ -243,6 +243,43 @@ impl Stepper for Crop {
     }
 }
 
+/// Node that converts an RGB image to grayscale (luminance).
+#[derive(CytosNode, Default)]
+struct Grayscale {
+    #[cytos(input)]
+    input: Prop<Image>,
+    #[cytos(output)]
+    output: Prop<Image>,
+}
+
+impl Stepper for Grayscale {
+    fn step(&mut self) -> Result<()> {
+        *self.output = Image {
+            image: DynamicImage::ImageLuma8(self.input.image.to_luma8()),
+        };
+        Ok(())
+    }
+}
+
+/// Node that converts an image to a flat vector of f32 values.
+/// Each pixel is normalized to [0, 1] range.
+#[derive(CytosNode, Default)]
+struct ImageToVec {
+    #[cytos(input)]
+    input: Prop<Image>,
+    #[cytos(output)]
+    output: Prop<Vec<f32>>,
+}
+
+impl Stepper for ImageToVec {
+    fn step(&mut self) -> Result<()> {
+        let gray = self.input.image.to_luma8();
+        let output: Vec<f32> = gray.pixels().map(|p| f32::from(p[0]) / 255.0).collect();
+        *self.output = output;
+        Ok(())
+    }
+}
+
 pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
     registry
         .add("Blur", Blur::default)
@@ -253,5 +290,40 @@ pub fn load_registry(registry: &mut DynamicLoadingRegistryWrapper) {
         .add("Resize", Resize::default)
         .add("ResizeExact", ResizeExact::default)
         .add("ImageMean", Mean::default)
-        .add("Crop", Crop::default);
+        .add("Crop", Crop::default)
+        .add("Grayscale", Grayscale::default)
+        .add("ImageToVec", ImageToVec::default);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_grayscale() {
+        let img = image::DynamicImage::new_rgb8(2, 2);
+        let mut grayscale = Grayscale::default();
+        *grayscale.input = Image { image: img };
+
+        grayscale.step().unwrap();
+
+        let output = &grayscale.output.image;
+        assert_eq!(output.width(), 2);
+        assert_eq!(output.height(), 2);
+    }
+
+    #[test]
+    fn test_image_to_vec() {
+        let img = image::DynamicImage::new_luma8(2, 3);
+        let mut image_to_vec = ImageToVec::default();
+        *image_to_vec.input = Image { image: img };
+
+        image_to_vec.step().unwrap();
+
+        let output = &*image_to_vec.output;
+        assert_eq!(output.len(), 6);
+        for &v in output {
+            assert!((0.0..=1.0).contains(&v));
+        }
+    }
 }
