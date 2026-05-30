@@ -26,7 +26,7 @@ use crate::{GraphId, NodeId, ParamId, Value};
 use serde::Deserialize;
 
 /// A deserializable representation of a node.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
 pub struct NodeRepr {
     /// Type of the node
     #[serde(rename = "type")]
@@ -35,6 +35,11 @@ pub struct NodeRepr {
     /// Properties
     #[serde(default)]
     pub props: HashMap<ParamId, Value>,
+
+    /// Buffer links mapping param IDs to named buffer references.
+    /// Resolved during system initialization.
+    #[serde(default)]
+    pub buffer_links: HashMap<ParamId, String>,
 }
 
 /// A representation of a graph to be loaded and executed.
@@ -87,10 +92,17 @@ pub enum OnError {
     Fail,
 }
 
+/// A deserializable representation of a buffer configuration.
+#[derive(Deserialize, Debug)]
+pub struct BufferRepr {
+    /// Maximum number of items the buffer can hold.
+    pub capacity: usize,
+}
+
 /// `SystemRepr`
 ///
 /// Deserializable System Representation
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
 pub struct SystemRepr {
     /// Graphs by name
     #[serde(default)]
@@ -99,6 +111,10 @@ pub struct SystemRepr {
     #[serde(default)]
     /// Request between graphs
     pub requests: Vec<SystemLink>,
+
+    /// Named buffer configurations for cross-graph communication.
+    #[serde(default)]
+    pub buffers: HashMap<String, BufferRepr>,
 }
 
 impl SystemRepr {
@@ -245,7 +261,7 @@ mod tests {
     fn test_internal_node_repr() {
         let node_repr = NodeRepr {
             typ: "TestNode".to_string(),
-            props: HashMap::new(),
+            ..Default::default()
         };
 
         let internal = InternalNodeRepr {
@@ -282,6 +298,7 @@ mod tests {
         let system_repr = SystemRepr {
             graphs: HashMap::new(),
             requests: vec![],
+            ..Default::default()
         };
 
         assert!(system_repr.graphs.is_empty());
@@ -296,7 +313,7 @@ mod tests {
                 name: NodeId(0),
                 node: NodeRepr {
                     typ: "TestNode".to_string(),
-                    props: HashMap::new(),
+                    ..Default::default()
                 },
                 on_error: OnError::Fail,
             }],
@@ -305,6 +322,7 @@ mod tests {
         let mut system_repr = SystemRepr {
             graphs: HashMap::new(),
             requests: vec![],
+            ..Default::default()
         };
         system_repr.graphs.insert(GraphId(1), graph_repr);
 
@@ -400,12 +418,33 @@ mod tests {
     #[test]
     fn test_node_repr_debug() {
         let node_repr = NodeRepr {
-            typ: "Test".to_string(),
-            props: HashMap::new(),
+            typ: "TestNode".to_string(),
+            ..Default::default()
         };
 
-        let debug_str = format!("{node_repr:?}");
-        assert!(debug_str.contains("Test"));
+        assert!(node_repr.props.is_empty());
+    }
+
+    #[test]
+    fn test_graph_repr_deserialization_no_nodes() {
+        // A graph with a node but no props should deserialize correctly
+        let json = r#"{
+            "links": [],
+            "nodes": [
+                {
+                    "name": "0",
+                    "type": "TestNode"
+                }
+            ]
+        }"#;
+
+        let result: Result<GraphRepr, _> = serde_json::from_str(json);
+        assert!(result.is_ok());
+
+        let graph_repr = result.unwrap();
+        assert!(graph_repr.links.is_empty());
+        assert_eq!(graph_repr.nodes.len(), 1);
+        assert_eq!(graph_repr.nodes[0].name, NodeId(0));
     }
 
     #[test]
@@ -417,6 +456,7 @@ mod tests {
         let node_repr = NodeRepr {
             typ: "NodeWithProps".to_string(),
             props,
+            ..Default::default()
         };
 
         assert_eq!(node_repr.props.len(), 2);

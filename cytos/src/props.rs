@@ -51,7 +51,9 @@ use serde::{Serialize, de::DeserializeOwned};
 use std::{
     any::Any,
     cell::{Cell, UnsafeCell},
+    collections::VecDeque,
     rc::Rc,
+    sync::{Arc, Mutex},
 };
 
 use super::{Result, Value};
@@ -231,6 +233,291 @@ impl std::fmt::Debug for GenericOwnedProp {
     }
 }
 
+/// A bounded queue of [`GenericOwnedProp`] values for cross-thread buffer communication.
+///
+/// This is the internal data structure behind [`BufferProp`] and [`BufferHandle`].
+/// It is not thread-safe by itself — wrap in `Arc<Mutex<...>>` via [`BufferHandle`].
+struct BoundedQueue {
+    queue: VecDeque<GenericOwnedProp>,
+    capacity: usize,
+}
+
+impl BoundedQueue {
+    fn new(capacity: usize) -> Self {
+        Self {
+            queue: VecDeque::with_capacity(capacity),
+            capacity,
+        }
+    }
+
+    fn try_push(&mut self, item: GenericOwnedProp) -> Result<()> {
+        if self.queue.len() >= self.capacity {
+            return Err("buffer full".into());
+        }
+        self.queue.push_back(item);
+        Ok(())
+    }
+
+    fn try_pop(&mut self) -> Option<GenericOwnedProp> {
+        self.queue.pop_front()
+    }
+
+    fn len(&self) -> usize {
+        self.queue.len()
+    }
+
+    const fn capacity(&self) -> usize {
+        self.capacity
+    }
+}
+
+/// A thread-safe handle to a shared [`BoundedQueue`].
+///
+/// `BufferHandle` wraps an `Arc<Mutex<BoundedQueue>>` and provides safe
+/// cross-thread access for pushing and popping [`GenericOwnedProp`] values.
+/// It is used by [`BufferProp`] to connect producer and consumer nodes
+/// across different graphs.
+///
+/// # Cloning
+///
+/// Cloning a `BufferHandle` creates a new reference to the same underlying
+/// buffer. Both the original and the clone share the same queue.
+#[derive(Clone)]
+pub struct BufferHandle(Arc<Mutex<BoundedQueue>>);
+
+impl BufferHandle {
+    /// Creates a new buffer handle with the given capacity.
+    ///
+    /// # Arguments
+    ///
+    /// * `capacity` - Maximum number of items the buffer can hold.
+    pub fn new(capacity: usize) -> Self {
+        Self(Arc::new(Mutex::new(BoundedQueue::new(capacity))))
+    }
+
+    /// Pushes a value into the buffer.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err("buffer full")` if the buffer is at capacity.
+    pub fn try_push(&self, item: GenericOwnedProp) -> Result<()> {
+        self.0
+            .lock()
+            .map_err(|_| "cannot lock buffer")?
+            .try_push(item)
+    }
+
+    /// Pops a value from the buffer, if any are available.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if the underlying mutex is poisoned.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Some(GenericOwnedProp))` if a value was available.
+    /// * `Ok(None)` if the buffer is empty.
+    pub fn try_pop(&self) -> Result<Option<GenericOwnedProp>> {
+        Ok(self.0.lock().map_err(|_| "cannot lock buffer")?.try_pop())
+    }
+
+    /// Returns the current number of items in the buffer.
+    pub fn len(&self) -> usize {
+        self.0.lock().map_or(0, |q| q.len())
+    }
+
+    /// Returns the maximum capacity of the buffer.
+    pub fn capacity(&self) -> usize {
+        self.0.lock().map_or(0, |q| q.capacity())
+    }
+
+    /// Returns true if the buffer is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+}
+
+impl std::fmt::Debug for BufferHandle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "BufferHandle({}/{})", self.len(), self.capacity())
+    }
+}
+
+/// A property type that wraps a local value and a shared cross-graph buffer.
+///
+/// `BufferProp<T>` provides two modes:
+/// - **Push mode**: Write to the local value via `DerefMut`, then call `push()` to
+///   publish to the shared buffer.
+/// - **Pop mode**: Call `pop()` to pull the next value from the shared buffer into
+///   the local value, then read via `Deref`.
+///
+/// # Type Parameters
+///
+/// * `T` - The type of value stored locally and serialized into the buffer.
+///   Must implement [`Ownable`] for thread-safe serialization.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// let mut prod = BufferProp::new(0);
+/// let mut cons = BufferProp::new(0);
+///
+/// let handle = BufferHandle::new(100);
+/// prod.link_buffer(handle.clone()).unwrap();
+/// cons.link_buffer(handle).unwrap();
+///
+/// *prod = 42;
+/// prod.push().unwrap();
+///
+/// cons.pop().unwrap();
+/// assert_eq!(*cons, 42);
+/// ```
+pub struct BufferProp<T> {
+    inner: Prop<T>,
+    buffer: Option<BufferHandle>,
+}
+
+impl<T: DeserializeOwned + Serialize + Ownable + 'static> BufferProp<T> {
+    /// Creates a new `BufferProp` with the given initial value and no buffer connection.
+    ///
+    /// Use [`link_buffer`](GenericPropInterface::link_buffer) to connect a buffer.
+    ///
+    /// # Arguments
+    ///
+    /// * `val` - The initial local value.
+    pub fn new(val: T) -> Self {
+        Self {
+            inner: Prop::new(val),
+            buffer: None,
+        }
+    }
+
+    /// Pushes the current local value into the shared buffer.
+    ///
+    /// The local value is serialized via [`GenericPropInterface::as_owned`] and
+    /// pushed into the buffer. This allows a consumer in another graph to
+    /// receive it via [`pop`](Self::pop).
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if the buffer is full or not connected.
+    pub fn push(&self) -> Result<()> {
+        self.buffer.as_ref().map_or_else(
+            || Err("buffer not connected".into()),
+            |handle| {
+                let owned = self.inner.as_owned();
+                handle.try_push(owned)
+            },
+        )
+    }
+
+    /// Pops the next value from the shared buffer into the local value.
+    ///
+    /// If a value is available, it is deserialized into the local prop via
+    /// [`GenericPropInterface::assign_owned`] and the method returns `Ok(true)`.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if the buffer is not connected, the underlying mutex is
+    /// poisoned, or the deserialization fails.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(true)` if a value was received.
+    /// * `Ok(false)` if the buffer was empty.
+    pub fn pop(&mut self) -> Result<bool> {
+        match &self.buffer {
+            Some(handle) => match handle.try_pop()? {
+                Some(owned) => {
+                    self.inner.assign_owned(owned)?;
+                    Ok(true)
+                }
+                None => Ok(false),
+            },
+            None => Err("buffer not connected".into()),
+        }
+    }
+
+    /// Returns true if this prop is connected to a shared buffer.
+    pub const fn is_connected(&self) -> bool {
+        self.buffer.is_some()
+    }
+
+    /// Returns the current number of items in the shared buffer.
+    ///
+    /// Returns 0 if not connected to a buffer.
+    pub fn len(&self) -> usize {
+        self.buffer.as_ref().map_or(0, BufferHandle::len)
+    }
+
+    /// Returns the capacity of the connected buffer.
+    ///
+    /// Returns 0 if not connected to a buffer.
+    pub fn capacity(&self) -> usize {
+        self.buffer.as_ref().map_or(0, BufferHandle::capacity)
+    }
+
+    /// Returns true if the connected buffer is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+}
+
+impl<T> std::ops::Deref for BufferProp<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl<T> std::ops::DerefMut for BufferProp<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
+    }
+}
+
+impl<T: DeserializeOwned + Serialize + Ownable + Default + 'static> GenericPropInterface
+    for BufferProp<T>
+{
+    fn link(&mut self, val: GenericProp) -> Result<()> {
+        self.inner.link(val)
+    }
+
+    fn load(&mut self, val: Value) -> Result<()> {
+        self.inner.load(val)
+    }
+
+    fn assign(&mut self, val: Value) -> Result<()> {
+        self.inner.assign(val)
+    }
+
+    fn dump(&self) -> Result<Value> {
+        self.inner.dump()
+    }
+
+    fn load_owned(&mut self, val: GenericOwnedProp) -> Result<()> {
+        self.inner.load_owned(val)
+    }
+
+    fn assign_owned(&mut self, val: GenericOwnedProp) -> Result<()> {
+        self.inner.assign_owned(val)
+    }
+
+    fn as_owned(&self) -> GenericOwnedProp {
+        self.inner.as_owned()
+    }
+
+    fn as_generic(&self) -> GenericProp {
+        self.inner.as_generic()
+    }
+
+    fn link_buffer(&mut self, handle: BufferHandle) -> Result<()> {
+        self.buffer = Some(handle);
+        Ok(())
+    }
+}
+
 /// Interface for managing property values and links in the graph system.
 ///
 /// This trait provides a common interface for properties that can be linked
@@ -342,6 +629,22 @@ pub trait GenericPropInterface {
     ///
     /// The output property if it exists, `None` otherwise.
     fn as_generic(&self) -> GenericProp;
+
+    /// Links this property to a shared cross-graph buffer.
+    ///
+    /// Only [`BufferProp`] implements this meaningfully. Other prop types
+    /// return `Err("not a buffer prop")`.
+    ///
+    /// # Arguments
+    ///
+    /// * `handle` - The buffer handle to link to.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if this prop type does not support buffer linking.
+    fn link_buffer(&mut self, _handle: BufferHandle) -> Result<()> {
+        Err("not a buffer prop".into())
+    }
 }
 
 /// A property that holds a value of type `T` with interior mutability.
@@ -884,5 +1187,177 @@ mod tests {
         assert_eq!(*prop1, 99);
         assert_eq!(*prop2, 99);
         assert_eq!(*prop3, 99);
+    }
+
+    #[test]
+    fn test_buffer_prop_push_pop_i32() {
+        let handle = BufferHandle::new(10);
+        let mut producer = BufferProp::new(0i32);
+        let mut consumer = BufferProp::new(0i32);
+
+        producer.link_buffer(handle.clone()).unwrap();
+        consumer.link_buffer(handle).unwrap();
+
+        *producer = 42;
+        producer.push().unwrap();
+        assert!(consumer.pop().unwrap());
+        assert_eq!(*consumer, 42);
+    }
+
+    #[test]
+    fn test_buffer_prop_multiple_values() {
+        let handle = BufferHandle::new(10);
+        let mut producer = BufferProp::new(0i32);
+        let mut consumer = BufferProp::new(0i32);
+
+        producer.link_buffer(handle.clone()).unwrap();
+        consumer.link_buffer(handle).unwrap();
+
+        for i in 0..5 {
+            *producer = i;
+            producer.push().unwrap();
+        }
+
+        for i in 0..5 {
+            assert!(consumer.pop().unwrap());
+            assert_eq!(*consumer, i);
+        }
+
+        assert!(!consumer.pop().unwrap());
+    }
+
+    #[test]
+    fn test_buffer_prop_full_returns_error() {
+        let handle = BufferHandle::new(2);
+        let mut producer = BufferProp::new(0i32);
+
+        producer.link_buffer(handle).unwrap();
+
+        *producer = 1;
+        producer.push().unwrap();
+        *producer = 2;
+        producer.push().unwrap();
+        *producer = 3;
+        assert!(producer.push().is_err());
+    }
+
+    #[test]
+    fn test_buffer_prop_empty_returns_false() {
+        let handle = BufferHandle::new(10);
+        let mut consumer = BufferProp::new(0i32);
+
+        consumer.link_buffer(handle).unwrap();
+
+        assert!(!consumer.pop().unwrap());
+    }
+
+    #[test]
+    fn test_buffer_prop_not_connected() {
+        let producer = BufferProp::new(42i32);
+        assert!(!producer.is_connected());
+        assert!(producer.push().is_err());
+
+        let mut consumer = BufferProp::new(0i32);
+        assert!(consumer.pop().is_err());
+    }
+
+    #[test]
+    fn test_buffer_prop_with_string() {
+        let handle = BufferHandle::new(10);
+        let mut producer = BufferProp::new(String::new());
+        let mut consumer = BufferProp::new(String::new());
+
+        producer.link_buffer(handle.clone()).unwrap();
+        consumer.link_buffer(handle).unwrap();
+
+        *producer = "hello".to_string();
+        producer.push().unwrap();
+
+        assert!(consumer.pop().unwrap());
+        assert_eq!(*consumer, "hello");
+    }
+
+    #[test]
+    fn test_buffer_prop_with_vec() {
+        let handle = BufferHandle::new(10);
+        let mut producer = BufferProp::<Vec<i32>>::new(Vec::new());
+        let mut consumer = BufferProp::<Vec<i32>>::new(Vec::new());
+
+        producer.link_buffer(handle.clone()).unwrap();
+        consumer.link_buffer(handle).unwrap();
+
+        *producer = vec![1, 2, 3];
+        producer.push().unwrap();
+
+        assert!(consumer.pop().unwrap());
+        assert_eq!(*consumer, vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn test_buffer_prop_cross_thread() {
+        let handle = std::sync::Arc::new(BufferHandle::new(10));
+
+        // Producer thread
+        let prod_handle = handle.clone();
+        let t1 = std::thread::spawn(move || {
+            let mut producer = BufferProp::new(0i32);
+            producer.link_buffer((*prod_handle).clone()).unwrap();
+
+            for i in 0..5 {
+                *producer = i;
+                producer.push().unwrap();
+            }
+        });
+
+        // Consumer thread (runs concurrently)
+        let cons_handle = handle;
+        let t2 = std::thread::spawn(move || {
+            let mut consumer = BufferProp::new(0i32);
+            consumer.link_buffer((*cons_handle).clone()).unwrap();
+
+            // Wait for values to be available
+            let mut received = Vec::new();
+            while received.len() < 5 {
+                if consumer.pop().unwrap() {
+                    received.push(*consumer);
+                } else {
+                    std::thread::yield_now();
+                }
+            }
+            assert_eq!(received, vec![0, 1, 2, 3, 4]);
+        });
+
+        t1.join().unwrap();
+        t2.join().unwrap();
+    }
+
+    #[test]
+    fn test_buffer_prop_len_capacity() {
+        let handle = BufferHandle::new(5);
+        let mut producer = BufferProp::new(0i32);
+
+        producer.link_buffer(handle.clone()).unwrap();
+
+        assert_eq!(producer.capacity(), 5);
+        assert_eq!(producer.len(), 0);
+        assert!(producer.is_empty());
+
+        *producer = 1;
+        producer.push().unwrap();
+        assert_eq!(producer.len(), 1);
+        assert!(!producer.is_empty());
+
+        *producer = 2;
+        producer.push().unwrap();
+        assert_eq!(producer.len(), 2);
+    }
+
+    #[test]
+    fn test_link_buffer_on_prop_returns_error() {
+        let handle = BufferHandle::new(10);
+        let mut prop = Prop::new(42i32);
+
+        let result = GenericPropInterface::link_buffer(&mut prop, handle);
+        assert!(result.is_err());
     }
 }
