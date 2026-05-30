@@ -21,18 +21,23 @@ use crate::repr::LinkKind;
 use crate::repr::SystemLink;
 use crate::repr::SystemRepr;
 
+use super::BufferHandle;
+
 use super::graph::Graph;
 use super::graph::StepResult;
 
 use super::GenericOwnedProp;
 use super::{GraphId, NodeId, ParamId, Result, Value};
 
+use std::collections::HashMap;
 use std::thread;
 use std::thread::{Builder, JoinHandle};
 use std::time::Duration;
 
 fn create_runner(
     repr: GraphRepr,
+    buffer_links: HashMap<crate::NodeId, HashMap<crate::ParamId, String>>,
+    buffer_registry: HashMap<String, BufferHandle>,
     receiver: BlockReceiver<InternalCommand>,
     senders: &IndexMap<GraphId, BlockSender<InternalCommand>>,
     registry: Registry,
@@ -41,7 +46,21 @@ fn create_runner(
     let requests = create_requests(senders, requests)?;
 
     Ok(move || {
-        let graph = repr.into_graph(&registry).expect("Cannot build graph");
+        let mut graph = repr.into_graph(&registry).expect("Cannot build graph");
+
+        // Wire buffer links
+        for (node_id, links) in &buffer_links {
+            if let Ok(node) = graph.get_node_mut(*node_id) {
+                for (param_id, buffer_name) in links {
+                    if let Some(prop) = node.get_prop_mut(*param_id)
+                        && let Some(handle) = buffer_registry.get(buffer_name)
+                    {
+                        prop.link_buffer(handle.clone())
+                            .expect("cannot link buffer");
+                    }
+                }
+            }
+        }
 
         Worker::new(graph, receiver, requests, registry).run();
     })
@@ -84,6 +103,13 @@ impl SystemRepr {
     ///
     /// Will return `Errors` when cannot create a runner
     pub fn to_system(self, registry: &Registry) -> Result<System> {
+        // Create buffer handles from buffer configurations
+        let buffer_registry: HashMap<String, BufferHandle> = self
+            .buffers
+            .into_iter()
+            .map(|(name, repr)| (name, BufferHandle::new(repr.capacity)))
+            .collect();
+
         // From the map of id, reprs create a map of ip, repr and receiver
         // and a map of id, sender.
         let (graphs, senders): (IndexMap<_, _>, IndexMap<_, _>) = self
@@ -98,17 +124,32 @@ impl SystemRepr {
         let runners = graphs
             .into_iter()
             .map(|(id, (repr, receiver))| {
+                // Extract buffer links from this graph's node representations
+                let buffer_links: HashMap<crate::NodeId, HashMap<crate::ParamId, String>> = repr
+                    .nodes
+                    .iter()
+                    .map(|internal| (internal.name, internal.node.buffer_links.clone()))
+                    .filter(|(_, links)| !links.is_empty())
+                    .collect();
+
                 let requests = self.requests.iter().filter(|l| l.dst.0 == id).collect();
 
-                create_runner(repr, receiver, &senders, registry.clone(), requests).and_then(
-                    |thread| -> Result<(GraphId, JoinHandle<()>)> {
-                        Builder::new()
-                            .name(id.to_string())
-                            .spawn(thread)
-                            .map(|thread| (id, thread))
-                            .map_err(std::convert::Into::into)
-                    },
+                create_runner(
+                    repr,
+                    buffer_links,
+                    buffer_registry.clone(),
+                    receiver,
+                    &senders,
+                    registry.clone(),
+                    requests,
                 )
+                .and_then(|thread| -> Result<(GraphId, JoinHandle<()>)> {
+                    Builder::new()
+                        .name(id.to_string())
+                        .spawn(thread)
+                        .map(|thread| (id, thread))
+                        .map_err(std::convert::Into::into)
+                })
             })
             .collect::<Result<IndexMap<_, _>>>()?;
 
@@ -116,6 +157,7 @@ impl SystemRepr {
             registry: registry.clone(),
             runners,
             senders,
+            buffer_registry,
         })
     }
 }
@@ -131,6 +173,8 @@ pub struct System {
     runners: IndexMap<GraphId, JoinHandle<()>>,
     /// Senders to communicate to graphs
     senders: IndexMap<GraphId, BlockSender<(Command, Response)>>,
+    /// Named buffer handles for cross-graph communication
+    buffer_registry: HashMap<String, BufferHandle>,
 }
 
 impl System {
@@ -156,6 +200,26 @@ impl System {
     /// Will return `Err` if the library cannot be loaded
     pub fn load_library(&mut self, file: &str) -> Result<()> {
         self.registry.load_library(file)
+    }
+
+    /// Returns buffer statistics for a named buffer.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the buffer.
+    ///
+    /// # Returns
+    ///
+    /// A tuple of `(current_len, capacity)`.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if the buffer name is not found.
+    pub fn buffer_stats(&self, name: &str) -> Result<(usize, usize)> {
+        self.buffer_registry
+            .get(name)
+            .map(|handle| (handle.len(), handle.capacity()))
+            .ok_or_else(|| format!("buffer '{name}' not found").into())
     }
 
     /// Return a specific graph view
@@ -924,8 +988,12 @@ impl Dispatcher {
 mod tests {
     use super::*;
     use crate::loader::Registry;
-    use crate::repr::{GraphRepr, InternalNodeRepr, NodeRepr, OnError};
+    use crate::props::BufferProp;
+    use crate::repr::{BufferRepr, GraphRepr, InternalNodeRepr, NodeRepr, OnError};
     use crate::test::{Constant, Empty};
+    use crate::{
+        MetadataProvider, NodeMetadata, ParamDirection, ParamInfo, PropInspector, Stepper,
+    };
     use std::collections::HashMap;
 
     fn create_test_registry() -> Registry {
@@ -942,7 +1010,7 @@ mod tests {
                 name: node_name,
                 node: NodeRepr {
                     typ: node_type.to_string(),
-                    props: HashMap::new(),
+                    ..Default::default()
                 },
                 on_error: OnError::Continue,
             }],
@@ -957,6 +1025,7 @@ mod tests {
         let mut system_repr = SystemRepr {
             graphs: HashMap::new(),
             requests: vec![],
+            ..Default::default()
         };
         system_repr.graphs.insert(GraphId(0), graph_repr);
 
@@ -978,6 +1047,7 @@ mod tests {
         let mut system_repr = SystemRepr {
             graphs: HashMap::new(),
             requests: vec![],
+            ..Default::default()
         };
         system_repr.graphs.insert(GraphId(0), graph1_repr);
         system_repr.graphs.insert(GraphId(1), graph2_repr);
@@ -995,6 +1065,7 @@ mod tests {
         let system_repr = SystemRepr {
             graphs: HashMap::new(),
             requests: vec![],
+            ..Default::default()
         };
 
         let system = system_repr.to_system(&registry);
@@ -1012,6 +1083,7 @@ mod tests {
         let mut system_repr = SystemRepr {
             graphs: HashMap::new(),
             requests: vec![],
+            ..Default::default()
         };
         system_repr.graphs.insert(GraphId(0), graph_repr);
 
@@ -1034,6 +1106,7 @@ mod tests {
         let mut system_repr = SystemRepr {
             graphs: HashMap::new(),
             requests: vec![],
+            ..Default::default()
         };
         system_repr.graphs.insert(GraphId(0), graph_repr);
 
@@ -1057,6 +1130,7 @@ mod tests {
         let mut system_repr = SystemRepr {
             graphs: HashMap::new(),
             requests: vec![],
+            ..Default::default()
         };
         system_repr.graphs.insert(GraphId(0), graph_repr);
 
@@ -1075,6 +1149,7 @@ mod tests {
         let mut system_repr = SystemRepr {
             graphs: HashMap::new(),
             requests: vec![],
+            ..Default::default()
         };
         system_repr.graphs.insert(GraphId(0), graph_repr);
 
@@ -1167,5 +1242,234 @@ mod tests {
 
         let system_repr = result.unwrap();
         assert!(system_repr.graphs.is_empty());
+    }
+
+    // Test node types for buffer integration test
+    struct BufferProducer {
+        output: BufferProp<i32>,
+        count: i32,
+        max: i32,
+        done: bool,
+    }
+
+    impl BufferProducer {
+        fn new(max: i32) -> Self {
+            Self {
+                output: BufferProp::new(0),
+                count: 0,
+                max,
+                done: false,
+            }
+        }
+    }
+
+    impl Stepper for BufferProducer {
+        fn step(&mut self) -> crate::Result<()> {
+            if !self.done {
+                for i in self.count..self.max {
+                    *self.output = i;
+                    self.output.push()?;
+                }
+                self.count = self.max;
+                self.done = true;
+            }
+            Ok(())
+        }
+    }
+
+    impl PropInspector for BufferProducer {
+        fn get_prop(&self, val: ParamId) -> Option<&dyn crate::props::GenericPropInterface> {
+            match val {
+                ParamId(0) => Some(&self.output),
+                _ => None,
+            }
+        }
+
+        fn get_prop_mut(
+            &mut self,
+            val: ParamId,
+        ) -> Option<&mut dyn crate::props::GenericPropInterface> {
+            match val {
+                ParamId(0) => Some(&mut self.output),
+                _ => None,
+            }
+        }
+
+        fn metadata(&self) -> &NodeMetadata {
+            use std::sync::OnceLock;
+            static METADATA: OnceLock<NodeMetadata> = OnceLock::new();
+            METADATA.get_or_init(<Self as MetadataProvider>::metadata)
+        }
+    }
+
+    impl MetadataProvider for BufferProducer {
+        fn metadata() -> NodeMetadata {
+            NodeMetadata {
+                name: "BufferProducer".to_string(),
+                description: "Test buffer producer".to_string(),
+                params: vec![ParamInfo {
+                    id: ParamId(0),
+                    name: "output".to_string(),
+                    description: "Output buffer prop".to_string(),
+                    directions: vec![ParamDirection::Output],
+                    type_name: "BufferProp<i32>".to_string(),
+                }],
+            }
+        }
+    }
+
+    struct BufferConsumer {
+        input: BufferProp<i32>,
+    }
+
+    impl BufferConsumer {
+        fn new() -> Self {
+            Self {
+                input: BufferProp::new(0),
+            }
+        }
+    }
+
+    impl Stepper for BufferConsumer {
+        fn step(&mut self) -> crate::Result<()> {
+            // Pop in a loop to drain as much as possible per step
+            loop {
+                if !self.input.pop()? {
+                    break;
+                }
+            }
+            Ok(())
+        }
+    }
+
+    impl PropInspector for BufferConsumer {
+        fn get_prop(&self, val: ParamId) -> Option<&dyn crate::props::GenericPropInterface> {
+            match val {
+                ParamId(0) => Some(&self.input),
+                _ => None,
+            }
+        }
+
+        fn get_prop_mut(
+            &mut self,
+            val: ParamId,
+        ) -> Option<&mut dyn crate::props::GenericPropInterface> {
+            match val {
+                ParamId(0) => Some(&mut self.input),
+                _ => None,
+            }
+        }
+
+        fn metadata(&self) -> &NodeMetadata {
+            use std::sync::OnceLock;
+            static METADATA: OnceLock<NodeMetadata> = OnceLock::new();
+            METADATA.get_or_init(<Self as MetadataProvider>::metadata)
+        }
+    }
+
+    impl MetadataProvider for BufferConsumer {
+        fn metadata() -> NodeMetadata {
+            NodeMetadata {
+                name: "BufferConsumer".to_string(),
+                description: "Test buffer consumer".to_string(),
+                params: vec![ParamInfo {
+                    id: ParamId(0),
+                    name: "input".to_string(),
+                    description: "Input buffer prop".to_string(),
+                    directions: vec![ParamDirection::Input],
+                    type_name: "BufferProp<i32>".to_string(),
+                }],
+            }
+        }
+    }
+
+    #[test]
+    fn test_integration_two_graphs_shared_buffer() {
+        let mut registry = create_test_registry();
+        registry.add("BufferProducer", || BufferProducer::new(100));
+        registry.add("BufferConsumer", BufferConsumer::new);
+
+        let mut system_repr = SystemRepr {
+            graphs: HashMap::new(),
+            requests: vec![],
+            ..Default::default()
+        };
+        system_repr
+            .buffers
+            .insert("shared".to_string(), BufferRepr { capacity: 100 });
+
+        // Producer graph (graph 0)
+        let mut producer_props = HashMap::new();
+        producer_props.insert(ParamId(0), crate::Value::load(&0i32).unwrap());
+        let mut producer_buffer_links = HashMap::new();
+        producer_buffer_links.insert(ParamId(0), "shared".to_string());
+
+        let producer_node = InternalNodeRepr {
+            name: NodeId(0),
+            node: NodeRepr {
+                typ: "BufferProducer".to_string(),
+                props: producer_props,
+                buffer_links: producer_buffer_links,
+                ..Default::default()
+            },
+            on_error: OnError::Continue,
+        };
+        system_repr.graphs.insert(
+            GraphId(0),
+            GraphRepr {
+                nodes: vec![producer_node],
+                links: vec![],
+            },
+        );
+
+        // Consumer graph (graph 1)
+        let mut consumer_props = HashMap::new();
+        consumer_props.insert(ParamId(0), crate::Value::load(&0i32).unwrap());
+        let mut consumer_buffer_links = HashMap::new();
+        consumer_buffer_links.insert(ParamId(0), "shared".to_string());
+
+        let consumer_node = InternalNodeRepr {
+            name: NodeId(0),
+            node: NodeRepr {
+                typ: "BufferConsumer".to_string(),
+                props: consumer_props,
+                buffer_links: consumer_buffer_links,
+                ..Default::default()
+            },
+            on_error: OnError::Continue,
+        };
+        system_repr.graphs.insert(
+            GraphId(1),
+            GraphRepr {
+                nodes: vec![consumer_node],
+                links: vec![],
+            },
+        );
+
+        // Build the system
+        let system = system_repr.to_system(&registry).unwrap();
+
+        // Buffer stats before running
+        let (len, cap) = system.buffer_stats("shared").unwrap();
+        assert_eq!(len, 0);
+        assert_eq!(cap, 100);
+
+        // Start both graphs
+        system.graph(GraphId(0)).unwrap().start().unwrap();
+        system.graph(GraphId(1)).unwrap().start().unwrap();
+
+        // Let them run — producer pushes 100 values, consumer drains them
+        std::thread::sleep(Duration::from_millis(500));
+
+        // Stop both
+        system.graph(GraphId(0)).unwrap().stop().unwrap();
+        system.graph(GraphId(1)).unwrap().stop().unwrap();
+
+        // Give threads time to terminate
+        std::thread::sleep(Duration::from_millis(100));
+
+        // All 100 values should have been consumed
+        let (len, _) = system.buffer_stats("shared").unwrap();
+        assert_eq!(len, 0);
     }
 }

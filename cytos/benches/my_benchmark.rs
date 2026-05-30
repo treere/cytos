@@ -62,7 +62,7 @@ fn create_graph(nodes_count: u64) -> Graph {
                 on_error: OnError::default(),
                 node: NodeRepr {
                     typ: "add".to_string(),
-                    props: HashMap::default(),
+                    ..Default::default()
                 },
             })
             .collect(),

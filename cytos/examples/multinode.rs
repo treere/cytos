@@ -60,7 +60,7 @@ fn main() {
                 on_error: OnError::default(),
                 node: NodeRepr {
                     typ: "add".to_string(),
-                    props: HashMap::default(),
+                    ..Default::default()
                 },
             })
             .collect(),
