@@ -1336,7 +1336,7 @@ mod tests {
         let handle = BufferHandle::new(5);
         let mut producer = BufferProp::new(0i32);
 
-        producer.link_buffer(handle.clone()).unwrap();
+        producer.link_buffer(handle).unwrap();
 
         assert_eq!(producer.capacity(), 5);
         assert_eq!(producer.len(), 0);

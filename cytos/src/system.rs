@@ -1410,7 +1410,6 @@ mod tests {
                 typ: "BufferProducer".to_string(),
                 props: producer_props,
                 buffer_links: producer_buffer_links,
-                ..Default::default()
             },
             on_error: OnError::Continue,
         };
@@ -1434,7 +1433,6 @@ mod tests {
                 typ: "BufferConsumer".to_string(),
                 props: consumer_props,
                 buffer_links: consumer_buffer_links,
-                ..Default::default()
             },
             on_error: OnError::Continue,
         };
