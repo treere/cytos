@@ -60,7 +60,7 @@ fn main() {
                 on_error: OnError::default(),
                 node: NodeRepr {
                     typ: "add".to_string(),
-                    props: HashMap::default(),
+                    ..Default::default()
                 },
             })
             .collect(),
@@ -70,6 +70,7 @@ fn main() {
     let mut system = SystemRepr {
         graphs: HashMap::from([(g, graph_repr)]),
         requests: vec![],
+        ..Default::default()
     }
     .to_system(&registry)
     .unwrap();

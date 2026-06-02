@@ -188,6 +188,7 @@ mod tests {
         let node_repr = NodeRepr {
             typ: "Empty".to_string(),
             props: std::collections::HashMap::new(),
+            ..Default::default()
         };
 
         let result = node_repr.into_node(&registry);
@@ -209,6 +210,7 @@ mod tests {
         let node_repr = NodeRepr {
             typ: "Constant".to_string(),
             props,
+            ..Default::default()
         };
 
         let result = node_repr.into_node(&registry);
@@ -220,8 +222,8 @@ mod tests {
         let registry = Registry::default();
 
         let node_repr = NodeRepr {
-            typ: "NonExistent".to_string(),
-            props: std::collections::HashMap::new(),
+            typ: "Empty".to_string(),
+            ..Default::default()
         };
 
         let result = node_repr.into_node(&registry);
@@ -292,7 +294,7 @@ mod tests {
 
         let node_repr = NodeRepr {
             typ: "Empty".to_string(),
-            props: std::collections::HashMap::new(),
+            ..Default::default()
         };
 
         let result = node_repr.into_node(&registry);

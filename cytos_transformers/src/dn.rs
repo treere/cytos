@@ -51,7 +51,7 @@ impl Stepper for Linear {
         for j in 0..output_size {
             let mut sum = bias[j];
             for i in 0..input_size {
-                sum += input[i] * weights[j * input_size + i];
+                sum = input[i].mul_add(weights[j * input_size + i], sum);
             }
             output[j] = sum;
         }
@@ -160,7 +160,7 @@ impl Stepper for LinearBackward {
         for i in 0..input_size {
             let mut sum = 0.0;
             for j in 0..output_size {
-                sum += gy[j] * w[j * input_size + i];
+                sum = gy[j].mul_add(w[j * input_size + i], sum);
             }
             gx[i] = sum;
         }
@@ -220,7 +220,7 @@ impl Stepper for Mse {
 
         for i in 0..pred.len() {
             let diff = pred[i] - target[i];
-            sum += diff * diff;
+            sum = diff.mul_add(diff, sum);
             gpred[i] = 2.0 / n * diff;
         }
 
