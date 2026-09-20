@@ -32,16 +32,8 @@ jobs:
       - name: Build rustdoc
         run: cargo doc --workspace --no-deps
 
-      - name: Generate crates index
-        run: |
-          {
-            echo '<!doctype html><meta charset="utf-8"><title>Cytos docs</title>'
-            echo '<h1>Cytos workspace crates</h1><ul>'
-            for d in target/doc/*/; do
-              [ -f "$d/index.html" ] && echo "<li><a href=\"${d#target/doc/}\">$(basename "$d")</a></li>"
-            done
-            echo '</ul>'
-          } > target/doc/index.html
+      - name: Redirect root to cytos docs
+        run: echo '<meta http-equiv="refresh" content="0; url=cytos/index.html">' > target/doc/index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
