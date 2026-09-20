@@ -1,5 +1,6 @@
 use cytos::{Prop, Result, Stepper};
 use cytos_derive::CytosNode;
+use rand::RngExt;
 
 /// Fully connected linear layer: output = input @ weights.T + bias
 #[derive(CytosNode, Default)]
@@ -323,12 +324,12 @@ impl Stepper for NormalDistribution {
         let std = *self.std;
         let size = *self.size;
 
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut output = Vec::with_capacity(size);
 
         for _ in 0..size {
-            let u1: f32 = rand::Rng::r#gen(&mut rng);
-            let u2: f32 = rand::Rng::r#gen(&mut rng);
+            let u1: f32 = rng.random();
+            let u2: f32 = rng.random();
             let z = (-2.0 * u1.ln()).sqrt() * (2.0 * std::f32::consts::PI * u2).cos();
             output.push(std.mul_add(z, mean));
         }
